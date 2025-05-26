@@ -1,0 +1,57 @@
+        // 4. Construir el JSON
+        const jsonPayload = {
+          empresa: {
+            token:datos.token_factintegral,
+            ruc: datos.documento_id,
+            razon_social: datos.razon_social,
+            nombre_comercial: datos.razon_social,
+            domicilio_fiscal: datos.direccion,
+            ubigeo: datos.ubigeo,
+            distrito: datos.distrito,
+            provincia: datos.provincia,
+            departamento: datos.departamento,
+            modo: "1", //0: prueba  1:produccion
+            usu_secundario_produccion_user: datos.secund_user,
+            usu_secundario_produccion_password: datos.secund_pwd,
+          },
+          cliente: {
+            razon_social_nombres: venta.r_razon_social,
+            documento_identidad: venta.r_documento_id,
+            tipo_identidad: venta.r_id_doc,  //1=dni, 6=ruc, ... etc
+            cliente_direccion: venta.r_direccion,
+          },
+          venta: {
+	    codigo: (venta.r_cod_ref==null)? venta.r_cod:venta.r_cod_ref, //new mod            
+	    serie: (venta.r_serie_ref==null)? venta.r_serie:venta.r_serie_ref,      //new mod
+            numero: (venta.r_numero_ref==null)? venta.r_numero:venta.r_numero_ref,  //new mod
+            
+            fecha_emision: venta.r_fecemi.toISOString().split("T")[0],
+            hora_emision: venta.ctrl_crea.toISOString().split("T")[1].split(".")[0],
+            
+            fecha_vencimiento: "",
+            moneda_id: "PEN",     //USD EUR
+            forma_pago_id: "Contado", //Credito requiere cuotas de pago
+            base_gravada: venta.r_base002,
+            base_exonerada: "",
+            base_inafecta: "",
+            total_igv: venta.r_igv002,
+	    total_venta: venta.r_monto_total, //sirve para validar campos enviados, notificar al cliente que tiene error, aunque sea por redondeo
+            nota: venta.glosa || "",
+            
+            relacionado_codigo:(venta.r_cod_ref==null)? '':venta.r_cod, //new mod
+            relacionado_serie:(venta.r_serie_ref==null)? '':venta.r_serie,      //new mod
+            relacionado_numero:(venta.r_numero_ref==null)? '':venta.r_numero,   //new mod
+            relacionado_motivo_id:"01" //anulacion hardcodeado temporal            
+                
+          },
+          items: ventadet.map((item) => ({
+            producto: item.descripcion,
+            cantidad: item.cantidad,
+            precio_base: item.monto_base,
+            codigo_sunat: "-", //codigo producto sunat
+            codigo_producto: item.id_producto,
+            codigo_unidad: item.cont_und,
+            tipo_igv_codigo: "10",
+	    porc_igv: "18"   //porcentaje igv registrado, antes era 19 ahora 18
+          })),
+        };

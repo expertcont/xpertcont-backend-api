@@ -1,4 +1,4 @@
-const {numeroALetras} = require('../utils/libreria.utils');
+const {numeroALetras} = require('../../utils/libreria.utils');
 
 function cpegeneracab(data) {
   //seccion enviada json.venta

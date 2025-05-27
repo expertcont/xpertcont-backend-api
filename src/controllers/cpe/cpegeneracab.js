@@ -20,8 +20,7 @@ function cpegeneracab(data) {
       ${data.codigo}
     </cbc:InvoiceTypeCode>
     <cbc:Note languageLocaleID="1000">${sMontoLetras}</cbc:Note>
-    <cbc:DocumentCurrencyCode>${data.moneda_id}</cbc:DocumentCurrencyCode>
-  `;
+    <cbc:DocumentCurrencyCode>${data.moneda_id}</cbc:DocumentCurrencyCode>`;
   //Campos comprobante: codigo,serie,numero,fecha,hora,moneda_id(PEN,USD,EUR)
   return sXml;
 }

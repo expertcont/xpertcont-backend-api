@@ -16,12 +16,15 @@ function cpegenerarxml(data) {
     ${cpegeneracab(data.venta)}
     ${cpegenerafirma(data.empresa)}
     ${cpegeneraemisor(data.empresa)}
-  </Invoice>`;
-}
-/* 
     ${cpegeneracliente(data.cliente)}
     ${cpegenerapago(data.venta)}
     ${cpegeneraimpuestos(data.venta)}
+  </Invoice>`;
+}
+/* 
+    
+    
+    
     ${cpegeneratotales(data.venta)}
     ${cpegeneradet(data.items)}
 

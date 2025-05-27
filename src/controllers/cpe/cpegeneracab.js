@@ -3,8 +3,8 @@ const {numeroALetras} = require('../../utils/libreria.utils');
 function cpegeneracab(data) {
   //seccion enviada json.venta
   const toNumber = (val) => Number(val) || 0;
-  let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.venta.base_inafecta);
-  let igv = toNumber(data.venta.total_igv);
+  let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.base_inafecta);
+  let igv = toNumber(data.total_igv);
   let sMontoLetras = numeroALetras(subtotal + igv);
 
   console.log(data);

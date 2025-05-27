@@ -14,11 +14,11 @@ function cpegenerarxml(data) {
            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
     ${cpegeneracab(data.empresa)}
+    ${cpegenerafirma(data.empresa)}
+    ${cpegeneraemisor(data.empresa)}
   </Invoice>`;
 }
 /* 
-    ${cpegenerafirma(data.empresa)}
-    ${cpegeneraemisor(data.empresa)}
     ${cpegeneracliente(data.cliente)}
     ${cpegenerapago(data.venta)}
     ${cpegeneraimpuestos(data.venta)}

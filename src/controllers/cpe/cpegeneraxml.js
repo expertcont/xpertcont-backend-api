@@ -8,12 +8,12 @@ const cpegeneratotales = require('./cpegeneratotales');
 const cpegeneradet = require('./cpegeneradet');
 
 function cpegenerarxml(data) {
-  console.log(data.empresa);
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
   <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
-    ${cpegeneracab(data.empresa)}
+    ${cpegeneracab(data.venta)}
     ${cpegenerafirma(data.empresa)}
     ${cpegeneraemisor(data.empresa)}
   </Invoice>`;

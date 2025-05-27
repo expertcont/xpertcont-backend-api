@@ -22,7 +22,6 @@ function cpegeneracab(data) {
     <cbc:Note languageLocaleID="1000">${sMontoLetras}</cbc:Note>
     <cbc:DocumentCurrencyCode>${data.moneda_id}</cbc:DocumentCurrencyCode>
   `;
-  console.log(sXml);
   //Campos comprobante: codigo,serie,numero,fecha,hora,moneda_id(PEN,USD,EUR)
   return sXml;
 }

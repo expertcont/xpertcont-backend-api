@@ -6,9 +6,8 @@ function cpegeneracab(data) {
   let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.venta.base_inafecta);
   let igv = toNumber(data.venta.total_igv);
   let sMontoLetras = numeroALetras(subtotal + igv);
-  
-  //Campos comprobante: codigo,serie,numero,fecha,hora,moneda_id(PEN,USD,EUR)
-  return `
+
+  let sXml = `
     <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
     <cbc:CustomizationID>2.0</cbc:CustomizationID>
     <cbc:ID>${data.serie}-${data.numero}</cbc:ID>
@@ -22,5 +21,8 @@ function cpegeneracab(data) {
     <cbc:Note languageLocaleID="1000">${sMontoLetras}</cbc:Note>
     <cbc:DocumentCurrencyCode>${data.moneda_id}</cbc:DocumentCurrencyCode>
   `;
+  console.log(sXml);
+  //Campos comprobante: codigo,serie,numero,fecha,hora,moneda_id(PEN,USD,EUR)
+  return sXml;
 }
 module.exports = cpegeneracab;

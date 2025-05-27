@@ -12,15 +12,17 @@ function cpegenerarxml(data) {
   <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
-    ${cpegeneracab(data)}
-    ${cpegenerafirma(data)}
-    ${cpegeneraemisor(data)}
-    ${cpegeneracliente(data)}
-    ${cpegenerapago(data)}
-    ${cpegeneraimpuestos(data)}
-    ${cpegeneratotales(data)}
-    ${cpegeneradet(data.items)}
+    ${cpegeneracab(data.empresa)}
   </Invoice>`;
 }
+/* 
+    ${cpegenerafirma(data.empresa)}
+    ${cpegeneraemisor(data.empresa)}
+    ${cpegeneracliente(data.cliente)}
+    ${cpegenerapago(data.venta)}
+    ${cpegeneraimpuestos(data.venta)}
+    ${cpegeneratotales(data.venta)}
+    ${cpegeneradet(data.items)}
 
+*/
 module.exports = cpegenerarxml;

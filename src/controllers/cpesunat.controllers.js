@@ -1,3 +1,5 @@
+const cpegeneraxml = require('./cpe/cpegeneraxml');
+
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
         const {id_usuario,id_invitado} = req.params;
@@ -25,15 +27,14 @@ const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
 
 
 const registrarCPESunat = async (req,res,next)=> {
-    const {
-        id_usuario,     //01
-        id_invitado,    //02    
-        id_menu,        //03    
-        id_comando      //04
-    } = req.body
-
     try {
-        const result = await pool.query("INSERT INTO mad_seguridad_comando VALUES ($1,$2,$3,$4) RETURNING *", 
+        const dataVenta = req.body;
+        console.log(dataVenta);
+
+        // Genera XML desde el servicio
+        const xmlComprobante = await cpegeneraxml(dataVenta);
+
+        /*const result = await pool.query("INSERT INTO mad_seguridad_comando VALUES ($1,$2,$3,$4) RETURNING *", 
         [   
             id_usuario,     //01
             id_invitado,   //02    
@@ -41,7 +42,9 @@ const registrarCPESunat = async (req,res,next)=> {
             id_comando      //04
         ]
         );
-        res.json(result.rows[0]);
+        res.json(result.rows[0]);*/
+        console.log(xmlComprobante);
+
     }catch(error){
         //res.json({error:error.message});
         next(error)

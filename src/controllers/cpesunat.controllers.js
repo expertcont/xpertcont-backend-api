@@ -29,7 +29,7 @@ const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
 const registrarCPESunat = async (req,res,next)=> {
     try {
         const dataVenta = req.body;
-        console.log(dataVenta);
+        //console.log(dataVenta);
 
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);

@@ -7,7 +7,6 @@ function cpegeneracab(data) {
   let igv = toNumber(data.total_igv);
   let sMontoLetras = numeroALetras(subtotal + igv);
 
-  console.log(data);
   let sXml = `
     <cbc:UBLVersionID>2.1</cbc:UBLVersionID>
     <cbc:CustomizationID>2.0</cbc:CustomizationID>

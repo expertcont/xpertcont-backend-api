@@ -44,6 +44,10 @@ const registrarCPESunat = async (req,res,next)=> {
         );
         res.json(result.rows[0]);*/
         console.log(xmlComprobante);
+        return res.status(200).json({
+                message:"xml generado"
+            });
+
 
     }catch(error){
         //res.json({error:error.message});

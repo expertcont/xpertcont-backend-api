@@ -19,12 +19,12 @@ function cpegenerarxml(data) {
     ${cpegeneracliente(data.cliente)}
     ${cpegenerapago(data.venta)}
     ${cpegeneraimpuestos(data.venta)}
-    ${cpegeneratotales(data.venta)}    
+    ${cpegeneratotales(data.venta)}
+    ${cpegeneradet(data.items, data.venta.moneda_id)}
   </Invoice>`;
 }
 /*
-    
-    ${cpegeneradet(data.items)}
+        
 
 */
 module.exports = cpegenerarxml;

@@ -4,8 +4,7 @@ function cpegeneratotales(data) {
   let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.base_inafecta);
   let igv = toNumber(data.total_igv);
   let nPrecioTotal = subtotal + igv;
-  console.log('cpegeneratotales:', data);
-
+  
   return `
   <cac:LegalMonetaryTotal>
     <cbc:LineExtensionAmount currencyID="${data.moneda_id}">${data.base_gravada}</cbc:LineExtensionAmount>

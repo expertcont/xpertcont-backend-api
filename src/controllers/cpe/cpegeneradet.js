@@ -1,7 +1,7 @@
-function cpegeneradet(items) {
+function cpegeneradet(items,moneda_id) {
   return items.map((item, index) => {
     // Variables previas para cálculos
-    const { codigo_unidad, cantidad, moneda_id, porc_igv, precio_base, producto, codigo_producto, codigo_sunat } = item;
+    const { producto, cantidad, precio_base, codigo_sunat, codigo_producto, codigo_unidad, tipo_igv_codigo, porc_igv } = item;
 
     //Nota: precio_base = precio unitario sin igv
 

@@ -24,10 +24,21 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido) {
 
   try {
     await sftp.connect(config);
+    console.log('despues de await sftp.connect(config)');
 
     // Crear carpetas si no existen
-    try { await sftp.mkdir(`/descargas/${ruc}`, true); } catch (e) {}
-    try { await sftp.mkdir(rutaFactura, true); } catch (e) {}
+    try { 
+      await sftp.mkdir(`/descargas/${ruc}`, true); 
+    } catch (e) 
+    {
+      console.log('error: ', e);
+    }
+
+    try { 
+      await sftp.mkdir(rutaFactura, true); 
+    } catch (e) {
+      console.log('error: ', e);
+    }
 
     // Subir archivo desde memoria
     await sftp.put(Buffer.from(contenido), rutaArchivo);

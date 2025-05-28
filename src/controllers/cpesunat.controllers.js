@@ -1,4 +1,6 @@
 const cpegeneraxml = require('./cpe/cpegeneraxml');
+const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
+
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -34,20 +36,15 @@ const registrarCPESunat = async (req,res,next)=> {
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
 
-        /*const result = await pool.query("INSERT INTO mad_seguridad_comando VALUES ($1,$2,$3,$4) RETURNING *", 
-        [   
-            id_usuario,     //01
-            id_invitado,   //02    
-            id_menu,        //03    
-            id_comando      //04
-        ]
-        );
+        /*const result = await pool.query("INSERT INTO mad_seguridad_comando VALUES ($1,$2,$3,$4) RETURNING *",[id_usuario,id_invitado,id_menu,id_comando]);
         res.json(result.rows[0]);*/
+
         console.log(xmlComprobante);
+        subirArchivoDesdeMemoria('20603417888','F001','254',xmlComprobante);
+
         return res.status(200).json({
                 message:"xml generado"
-            });
-
+        });
 
     }catch(error){
         //res.json({error:error.message});

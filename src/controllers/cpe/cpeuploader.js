@@ -3,7 +3,7 @@ const Client = require('ssh2-sftp-client');
 const sftp = new Client();
 
 const config = {
-  host: process.env.DB_HOST,
+  host: process.env.CPE_HOST,
   port: 22,
   username: process.env.CPE_USER,
   password: process.env.CPE_PASSWORD
@@ -17,9 +17,10 @@ const config = {
  * @param {Buffer|string} contenido - Contenido en memoria del archivo
  * @param {string} nombreRemoto - Nombre final del archivo remoto (incluyendo .xml o .cdr)
  */
-async function subirArchivoDesdeMemoria(ruc, serie, numero, contenido, nombreRemoto) {
-  const rutaFactura = `/descargas/${ruc}/${serie}-${numero}/`;
-  const rutaArchivo = `${rutaFactura}${nombreRemoto}`;
+
+async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido) {
+  const rutaFactura = `/descargas/${ruc}/`;
+  const rutaArchivo = `${rutaFactura}${codigo}-${serie}-${numero}.xml`;
 
   try {
     await sftp.connect(config);
@@ -33,7 +34,7 @@ async function subirArchivoDesdeMemoria(ruc, serie, numero, contenido, nombreRem
     console.log(`✅ Archivo subido desde memoria a: ${rutaArchivo}`);
 
   } catch (err) {
-    console.error(`❌ Error subiendo ${nombreRemoto}:`, err);
+    console.error(`❌ Error subiendo ${codigo}-${serie}-${numero}:`, err);
   } finally {
     await sftp.end();
   }

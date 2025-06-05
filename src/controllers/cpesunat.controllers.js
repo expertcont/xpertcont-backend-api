@@ -31,14 +31,14 @@ const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
 const registrarCPESunat = async (req,res,next)=> {
     try {
         const dataVenta = req.body;
-        console.log(dataVenta);
-        console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
+        //console.log(dataVenta);
+        //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
 
-        subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
-        //subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
+        //subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
+        subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
 
         return res.status(200).json({
                 message:"xml generado"

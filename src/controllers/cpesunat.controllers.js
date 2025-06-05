@@ -32,14 +32,13 @@ const registrarCPESunat = async (req,res,next)=> {
     try {
         const dataVenta = req.body;
         //console.log(dataVenta);
-
+        console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
+        
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
 
-        /*const result = await pool.query("INSERT INTO mad_seguridad_comando VALUES ($1,$2,$3,$4) RETURNING *",[id_usuario,id_invitado,id_menu,id_comando]);
-        res.json(result.rows[0]);*/
-
-        subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
+        //subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
+        subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
 
         return res.status(200).json({
                 message:"xml generado"

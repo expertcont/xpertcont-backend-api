@@ -32,7 +32,7 @@ const registrarCPESunat = async (req,res,next)=> {
     try {
         const dataVenta = req.body;
         console.log(dataVenta);
-        //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
+        console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);

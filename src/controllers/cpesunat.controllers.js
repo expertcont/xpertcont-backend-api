@@ -37,8 +37,8 @@ const registrarCPESunat = async (req,res,next)=> {
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
 
-        //subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
-        subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
+        subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
+        //subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
 
         return res.status(200).json({
                 message:"xml generado"

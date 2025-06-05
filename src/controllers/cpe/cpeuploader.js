@@ -20,7 +20,7 @@ const config = {
 
 async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido) {
   const rutaFactura = `/descargas/${ruc}/`;
-  const rutaArchivo = `${rutaFactura}${codigo}-${serie}-${numero}.xml`;
+  const rutaArchivo = `${rutaFactura}${ruc}-${codigo}-${serie}-${numero}.xml`;
 
   try {
     await sftp.connect(config);
@@ -45,7 +45,7 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido) {
     console.log(`✅ Archivo subido desde memoria a: ${rutaArchivo}`);
 
   } catch (err) {
-    console.error(`❌ Error subiendo ${codigo}-${serie}-${numero}:`, err);
+    console.error(`❌ Error subiendo ${ruc}-${codigo}-${serie}-${numero}:`, err);
   } finally {
     await sftp.end();
   }

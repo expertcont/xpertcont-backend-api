@@ -13,17 +13,17 @@ function cpegenerarxml(data) {
   <Invoice xmlns="urn:oasis:names:specification:ubl:schema:xsd:Invoice-2"
            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2">
-    ${cpegeneradet(data.items, data.venta.moneda_id)}
+          ${cpegeneracab(data.venta)}
+          ${cpegenerafirma(data.empresa)}
+          ${cpegeneraemisor(data.empresa)}
+          ${cpegeneracliente(data.cliente)}
+          ${cpegenerapago(data.venta)}
+          ${cpegeneraimpuestos(data.venta)}
+          ${cpegeneratotales(data.venta)}
+          ${cpegeneradet(data.items, data.venta.moneda_id)}
   </Invoice>`;
 }
 /*
-    ${cpegeneracab(data.venta)}
-    ${cpegenerafirma(data.empresa)}
-    ${cpegeneraemisor(data.empresa)}
-    ${cpegeneracliente(data.cliente)}
-    ${cpegenerapago(data.venta)}
-    ${cpegeneraimpuestos(data.venta)}
-    ${cpegeneratotales(data.venta)}
         
 
 */

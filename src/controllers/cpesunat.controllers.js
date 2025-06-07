@@ -69,7 +69,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   }
 
   const certificadoBuffer = res.rows[0].certificado;
-  const password = res.rows[0].password_cert;
+  const password = res.rows[0].password;
 
   // 2️⃣ Cargamos el PFX desde buffer y extraemos clave privada y certificado público
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));

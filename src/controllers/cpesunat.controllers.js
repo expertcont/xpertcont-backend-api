@@ -40,7 +40,7 @@ const registrarCPESunat = async (req,res,next)=> {
         //Se firma con datos del emisor (empresa: correo y ruc)
         const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
 
-        subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
+        subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlFirmado);
 
         return res.status(200).json({
                 message:"xml generado"
@@ -64,7 +64,7 @@ async function firmarXMLUBL(xmlString, ruc) {
   if (res.rows.length === 0) {
     throw new Error('Certificado no encontrado para el usuario y RUC indicados.');
   }
-
+  console.log(res.rows[0]);
   const certificadoBuffer = res.rows[0].certificado;
   const password = res.rows[0].password_cert;
   console.log(password);

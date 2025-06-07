@@ -37,7 +37,9 @@ const registrarCPESunat = async (req,res,next)=> {
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
 
-        //subirArchivoDesdeMemoria('20603417888','01','F001','254',xmlComprobante);
+        //Se firma con datos del emisor (empresa: correo y ruc)
+        const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
+
         subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
 
         return res.status(200).json({
@@ -48,6 +50,75 @@ const registrarCPESunat = async (req,res,next)=> {
         //res.json({error:error.message});
         next(error)
     }
+};
+
+async function firmarXMLUBL(xmlString, ruc) {
+ 
+  // Consultamos el certificado y su password
+  const res = await pool.query(`
+    SELECT certificado, password
+    FROM mad_usuariocertificado 
+    WHERE documento_id = $1
+  `, [ruc]);
+
+  if (res.rows.length === 0) {
+    throw new Error('Certificado no encontrado para el usuario y RUC indicados.');
+  }
+
+  const certificadoBuffer = res.rows[0].certificado;
+  const password = res.rows[0].password_cert;
+  console.log(password);
+  
+  // Cargamos el .pfx desde buffer
+  const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
+  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);  
+
+  // Extraer clave privada y certificado público
+  const keyObj = p12.getBags({ bagType: forge.pki.oids.keyBag })[forge.pki.oids.keyBag][0];
+  const certObj = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0];
+
+  const privateKeyPem = forge.pki.privateKeyToPem(keyObj.key);
+  const certificatePem = forge.pki.certificateToPem(certObj.cert);
+
+  // Parsear XML original
+  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
+
+  // Crear firma digital
+  const sig = new SignedXml();
+  sig.signatureAlgorithm = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
+  sig.keyInfoProvider = {
+    getKeyInfo: () => `<X509Data><X509Certificate>${extractCertContent(certificatePem)}</X509Certificate></X509Data>`,
+    getKey: () => privateKeyPem
+  };
+
+  sig.addReference(
+    "/*", // Referencia al nodo raíz del documento
+    ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
+    'http://www.w3.org/2000/09/xmldsig#sha1'
+  );
+
+  // Firmar documento
+  sig.signingKey = privateKeyPem;
+  sig.computeSignature(xmlString);
+
+  // Obtener firma generada
+  const signatureXml = sig.getSignatureXml();
+
+  // Insertar firma en el tag <ext:UBLExtensions>
+  const ublExtensionsNode = doc.getElementsByTagName('ext:UBLExtensions')[0];
+  const signatureDoc = new DOMParser().parseFromString(signatureXml, 'text/xml');
+  ublExtensionsNode.appendChild(signatureDoc.documentElement);
+
+  // Serializar XML final
+  const finalXml = doc.toString();
+  return finalXml;
+};
+
+function extractCertContent(pem) {
+  return pem
+    .replace('-----BEGIN CERTIFICATE-----', '')
+    .replace('-----END CERTIFICATE-----', '')
+    .replace(/\r?\n|\r/g, '');
 };
 
 

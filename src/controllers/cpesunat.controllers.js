@@ -3,6 +3,7 @@ const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
 const forge = require('node-forge');
+const xpath = require('xpath');
 const { DOMParser } = require('xmldom');
 const { SignedXml } = require('xml-crypto');
 

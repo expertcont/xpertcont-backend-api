@@ -59,7 +59,7 @@ const registrarCPESunat = async (req,res,next)=> {
 async function firmarXMLUBL(unsignedXML, ruc) {
   // 1️⃣ Consultamos certificado y password desde la base de datos
   const res = await pool.query(`
-    SELECT certificado, password_cert
+    SELECT certificado, password
     FROM mad_usuariocertificado 
     WHERE documento_id = $1
   `, [ruc]);

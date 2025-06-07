@@ -64,10 +64,10 @@ async function firmarXMLUBL(xmlString, ruc) {
   if (res.rows.length === 0) {
     throw new Error('Certificado no encontrado para el usuario y RUC indicados.');
   }
-  console.log(res.rows[0]);
+  
   const certificadoBuffer = res.rows[0].certificado;
-  const password = res.rows[0].password_cert;
-  console.log(password);
+  const password = res.rows[0].password;
+  //console.log(password);
 
   // Cargamos el .pfx desde buffer
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));

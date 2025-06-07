@@ -1,6 +1,6 @@
 const cpegeneraxml = require('./cpe/cpegeneraxml');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
-
+const pool = require('../db');
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -68,7 +68,7 @@ async function firmarXMLUBL(xmlString, ruc) {
   const certificadoBuffer = res.rows[0].certificado;
   const password = res.rows[0].password_cert;
   console.log(password);
-  
+
   // Cargamos el .pfx desde buffer
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
   const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);  

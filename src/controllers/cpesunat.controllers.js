@@ -56,75 +56,84 @@ const registrarCPESunat = async (req,res,next)=> {
     }
 };
 
-async function firmarXMLUBL(xmlString, ruc) {
- 
-  // Consultamos el certificado y su password
+async function firmarXMLUBL(unsignedXML, ruc) {
+  // 1️⃣ Consultamos certificado y password desde la base de datos
   const res = await pool.query(`
-    SELECT certificado, password
+    SELECT certificado, password_cert
     FROM mad_usuariocertificado 
     WHERE documento_id = $1
   `, [ruc]);
 
   if (res.rows.length === 0) {
-    throw new Error('Certificado no encontrado para el usuario y RUC indicados.');
+    throw new Error('Certificado no encontrado para el RUC indicado.');
   }
-  
+
   const certificadoBuffer = res.rows[0].certificado;
-  const password = res.rows[0].password;
-  //console.log(password);
+  const password = res.rows[0].password_cert;
 
-  // Cargamos el .pfx desde buffer
+  // 2️⃣ Cargamos el PFX desde buffer y extraemos clave privada y certificado público
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
-  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);  
+  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
 
-  // Extraer clave privada y certificado público
-  const keyObj = p12.getBags({ bagType: forge.pki.oids.keyBag })[forge.pki.oids.keyBag][0];
-  const certObj = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0];
+  const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+  const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
 
-  const privateKeyPem = forge.pki.privateKeyToPem(keyObj.key);
-  const certificatePem = forge.pki.certificateToPem(certObj.cert);
+  const privateKeyPem = forge.pki.privateKeyToPem(keyBags[forge.pki.oids.pkcs8ShroudedKeyBag][0].key);
+  const certificatePem = forge.pki.certificateToPem(certBags[forge.pki.oids.certBag][0].cert);
 
-  // Parsear XML original
-  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
+  // 3️⃣ Limpiamos el certificado para dejarlo sin los headers PEM
+  const certificateClean = certificatePem
+    .replace(/-----BEGIN CERTIFICATE-----/g, '')
+    .replace(/-----END CERTIFICATE-----/g, '')
+    .replace(/\r?\n|\r/g, '');
 
-  // Crear firma digital
+  // 4️⃣ Procesamos el XML sin firmar
+  const doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
+
+  // Buscamos el nodo UBLExtensions y lo dejamos vacío
+  const select = xpath.useNamespaces({
+    ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
+  });
+  const ublExtensions = select('//ext:UBLExtensions', doc)[0];
+
+  if (ublExtensions) {
+    while (ublExtensions.firstChild) {
+      ublExtensions.removeChild(ublExtensions.firstChild);
+    }
+  }
+
+  // 5️⃣ Preparamos la firma
   const sig = new SignedXml();
-  sig.signatureAlgorithm = 'http://www.w3.org/2000/09/xmldsig#rsa-sha1';
-  sig.keyInfoProvider = {
-    getKeyInfo: () => `<X509Data><X509Certificate>${extractCertContent(certificatePem)}</X509Certificate></X509Data>`,
-    getKey: () => privateKeyPem
-  };
-
   sig.addReference(
-    "/*", // Referencia al nodo raíz del documento
+    "/*", // firmamos todo el XML
     ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-    'http://www.w3.org/2000/09/xmldsig#sha1'
+    'http://www.w3.org/2001/04/xmlenc#sha256'
   );
 
-  // Firmar documento
   sig.signingKey = privateKeyPem;
-  sig.computeSignature(xmlString);
 
-  // Obtener firma generada
-  const signatureXml = sig.getSignatureXml();
+  // Proveedor de KeyInfo usando el certificado limpio
+  sig.keyInfoProvider = {
+    getKeyInfo: () =>
+      `<X509Data><X509Certificate>${certificateClean}</X509Certificate></X509Data>`
+  };
 
-  // Insertar firma en el tag <ext:UBLExtensions>
-  const ublExtensionsNode = doc.getElementsByTagName('ext:UBLExtensions')[0];
-  const signatureDoc = new DOMParser().parseFromString(signatureXml, 'text/xml');
-  ublExtensionsNode.appendChild(signatureDoc.documentElement);
+  // 6️⃣ Generamos la firma sobre el XML sin firmar
+  sig.computeSignature(unsignedXML);
 
-  // Serializar XML final
-  const finalXml = doc.toString();
-  return finalXml;
-};
+  // 7️⃣ Insertamos la firma en el nodo UBLExtensions
+  const signatureNode = new DOMParser()
+    .parseFromString(sig.getSignedXml(), 'text/xml')
+    .documentElement;
 
-function extractCertContent(pem) {
-  return pem
-    .replace('-----BEGIN CERTIFICATE-----', '')
-    .replace('-----END CERTIFICATE-----', '')
-    .replace(/\r?\n|\r/g, '');
-};
+  ublExtensions.appendChild(doc.importNode(signatureNode, true));
 
+  // 8️⃣ Serializamos XML final
+  const serializer = new (require('xmldom')).XMLSerializer();
+  const signedXML = serializer.serializeToString(doc);
+
+  return signedXML;
+}
 
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,

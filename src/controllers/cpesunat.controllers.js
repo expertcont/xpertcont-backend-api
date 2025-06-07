@@ -108,7 +108,10 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   sig.addReference(
     "/*", // firmamos todo el XML
     ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-    'http://www.w3.org/2001/04/xmlenc#sha256'
+    'http://www.w3.org/2001/04/xmlenc#sha256',
+    '', '', '', '', {
+      digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256' // 🔥 obligatorio ahora
+    }
   );
 
   sig.signingKey = privateKeyPem;
@@ -121,6 +124,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   // 6️⃣ Generamos la firma sobre el XML sin firmar
   sig.computeSignature(unsignedXML);
+
 
   // 7️⃣ Insertamos la firma en el nodo UBLExtensions
   const signatureNode = new DOMParser()

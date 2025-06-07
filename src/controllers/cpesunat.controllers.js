@@ -107,11 +107,12 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   // 📌 Definimos qué parte del XML se va a firmar (todo en este caso)
   sig.addReference(
-    "/*", // Nodo raíz completo
-    ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'], // Transforms
-    'http://www.w3.org/2001/04/xmlenc#sha256' // Digest Algorithm obligatorio desde xml-crypto v6
+    "/*", // Firmar todo el XML
+    ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'], // Transformaciones
+    {
+      digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256' // Digest Algorithm requerido en v6.x
+    }
   );
-
 
   // 📌 Establecemos clave privada para firmar
   sig.signingKey = privateKey;

@@ -2,6 +2,10 @@ const cpegeneraxml = require('./cpe/cpegeneraxml');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
+const forge = require('node-forge');
+const { DOMParser } = require('xmldom');
+const { SignedXml } = require('xml-crypto');
+
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
         const {id_usuario,id_invitado} = req.params;

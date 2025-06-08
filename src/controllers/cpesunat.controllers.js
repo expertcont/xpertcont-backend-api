@@ -64,7 +64,6 @@ const registrarCPESunat = async (req,res,next)=> {
     }
 };
 
-
 async function firmarXMLUBL(unsignedXML, ruc) {
   // 📌 Consulta certificado y contraseña desde base de datos
   const res = await pool.query(`
@@ -86,7 +85,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   // 📌 Obtenemos la clave privada desde el contenedor P12
   const keyObj = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
-  const privateKeyPem = forge.pki.privateKeyToPem(keyObj[forge.pki.oids.pkcs8ShroudedKeyBag][0].key);
+  const privateKey = keyObj[forge.pki.oids.pkcs8ShroudedKeyBag][0].key;
 
   // 📌 Obtenemos el certificado público en formato PEM
   const certObj = p12.getBags({ bagType: forge.pki.oids.certBag });
@@ -110,10 +109,16 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   }
 
   console.log('antes de importar clave');
+
+  // 📌 Exportamos la clave privada en formato DER (PKCS#8)
+  const privateKeyAsn1 = forge.pki.wrapRsaPrivateKey(privateKey);
+  const privateKeyDer = forge.asn1.toDer(privateKeyAsn1).getBytes();
+  const privateKeyBuffer = Buffer.from(privateKeyDer, 'binary');
+
   // 📌 Importamos la clave privada al formato crypto.subtle
   const privateKeyCrypto = await xadesjs.Application.crypto.subtle.importKey(
     "pkcs8",
-    Buffer.from(privateKeyPem.replace(/(-----(BEGIN|END) PRIVATE KEY-----|\n)/g, ""), 'base64'),
+    privateKeyBuffer,
     {
       name: "RSASSA-PKCS1-v1_5",
       hash: { name: "SHA-256" },
@@ -123,6 +128,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   );
 
   console.log('antes de configurar');
+
   // 📌 Configuramos la firma digital
   const xmlSig = new xadesjs.SignedXml();
   xmlSig.SigningKey = privateKeyCrypto;
@@ -140,7 +146,6 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const x509 = new xadesjs.KeyInfoX509Data(rawCert);
   xmlSig.KeyInfo.Add(x509);
 
-  
   // 📌 Firmamos el XML
   await xmlSig.Sign(
     {
@@ -161,6 +166,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   // 📌 Devolvemos el XML firmado como string
   return signedXML;
 }
+
+
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,
     registrarCPESunat

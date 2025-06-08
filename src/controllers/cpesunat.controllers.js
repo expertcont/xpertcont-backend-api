@@ -109,12 +109,11 @@ sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
 sig.canonicalizationAlgorithm = "http://www.w3.org/2001/10/xml-exc-c14n#";
 
 // 📌 Definimos qué parte del XML se va a firmar (ej. UBLExtensions)
- sig.addReference({
-   xpath: "//ext:UBLExtensions",
-   transforms: ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-   digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256'
- });
-
+sig.addReference({
+  xpath: "//*[local-name()='UBLExtensions']",
+  transforms: ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
+  digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256'
+});
 
 // 📌 Establecemos la clave privada para firmar
 sig.signingKey = privateKey;

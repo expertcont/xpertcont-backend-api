@@ -122,9 +122,6 @@ sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
 // 📌 Establecemos la clave privada para firmar
 sig.signingKey = privateKey;
 
-// 📌 
-console.log('vamos si se puede');
-
   // 📌 Definimos proveedor de información de clave pública
   sig.keyInfoProvider = {
     getKeyInfo: () => `<X509Data><X509Certificate>${certificatePEM
@@ -138,6 +135,9 @@ console.log('antes de firmar');
 
   // 📌 Generamos la firma digital
   sig.computeSignature(unsignedXML);
+
+  // 📌 
+console.log('vamos si se puede');
 
   // 📌 Parseamos el nodo Signature generado
   const signatureNode = new DOMParser().parseFromString(sig.getSignedXml(), 'text/xml').documentElement;

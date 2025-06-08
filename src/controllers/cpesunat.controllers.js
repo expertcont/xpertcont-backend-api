@@ -195,6 +195,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     }
   }
 
+  console.log('antes de importar clave');
   // 📌 Importamos la clave privada al formato crypto.subtle
   const privateKeyCrypto = await xadesjs.Application.crypto.subtle.importKey(
     "pkcs8",
@@ -224,6 +225,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const x509 = new xadesjs.KeyInfoX509Data(rawCert);
   xmlSig.KeyInfo.Add(x509);
 
+  console.log('antes de firmar');
   // 📌 Firmamos el XML
   await xmlSig.Sign(
     {

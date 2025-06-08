@@ -208,6 +208,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     ["sign"]
   );
 
+  console.log('antes de configurar');
   // 📌 Configuramos la firma digital
   const xmlSig = new xadesjs.SignedXml();
   xmlSig.SigningKey = privateKeyCrypto;
@@ -225,7 +226,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const x509 = new xadesjs.KeyInfoX509Data(rawCert);
   xmlSig.KeyInfo.Add(x509);
 
-  console.log('antes de firmar');
+  
   // 📌 Firmamos el XML
   await xmlSig.Sign(
     {

@@ -106,15 +106,15 @@ const sig = new SignedXml();
 sig.signatureAlgorithm = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
 sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
 
-// 📌 Mostramos versión instalada en runtime (para verificar conflictos)
-console.log('Versión xml-crypto:', require('xml-crypto/package.json').version);
-
 // 📌 Definimos qué parte del XML se va a firmar (ej. UBLExtensions)
 sig.addReference(
   "//ext:UBLExtensions", // Ruta XPath del nodo a firmar
   ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'], // Transformaciones aplicadas
   'http://www.w3.org/2001/04/xmlenc#sha256' // Digest Algorithm como string plano
 );
+
+// 📌 Mostramos versión instalada en runtime (para verificar conflictos)
+console.log('Versión xml-crypto:', require('xml-crypto/package.json').version);
 
 // 📌 Establecemos la clave privada para firmar
 sig.signingKey = privateKey;

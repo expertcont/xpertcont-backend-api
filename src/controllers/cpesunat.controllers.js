@@ -109,9 +109,10 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   }
 
   console.log('antes de exportar clave privada PKCS#8');
-  // 📌 Exportamos la clave privada en formato DER (PKCS#8)
-  const privateKeyAsn1 = forge.pki.wrapRsaPrivateKey(privateKey);
-  const privateKeyDer = forge.asn1.toDer(privateKeyAsn1).getBytes();
+  // 📌 Exportamos la clave privada en formato PKCS#8 DER
+  const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
+  const privateKeyInfo = forge.pki.wrapPrivateKeyInfo(privateKeyAsn1);
+  const privateKeyDer = forge.asn1.toDer(privateKeyInfo).getBytes();
   const privateKeyBuffer = Buffer.from(privateKeyDer, 'binary');
 
   console.log('antes de importar clave privada');

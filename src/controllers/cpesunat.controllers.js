@@ -118,11 +118,12 @@ sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
    digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256'
  });
 
-// 📌 Mostramos versión instalada en runtime (para verificar conflictos)
-console.log('vamos si se puede');
 
 // 📌 Establecemos la clave privada para firmar
 sig.signingKey = privateKey;
+
+// 📌 
+console.log('vamos si se puede');
 
   // 📌 Definimos proveedor de información de clave pública
   sig.keyInfoProvider = {
@@ -131,6 +132,9 @@ sig.signingKey = privateKey;
       .replace(/-----END CERTIFICATE-----/g, '')
       .replace(/\r?\n|\r/g, '')}</X509Certificate></X509Data>`,
   };
+
+  // 📌 
+console.log('antes de firmar');
 
   // 📌 Generamos la firma digital
   sig.computeSignature(unsignedXML);

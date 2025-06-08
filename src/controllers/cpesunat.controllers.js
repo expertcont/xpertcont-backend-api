@@ -126,7 +126,7 @@ sig.signingKey = privateKey;
       .replace(/\r?\n|\r/g, '')}</X509Certificate></X509Data>`,
   };
 
-
+console.log("privateKey:", privateKey);
   // 📌 Generamos la firma digital
   sig.computeSignature(unsignedXML);
 

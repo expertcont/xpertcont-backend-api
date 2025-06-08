@@ -119,6 +119,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     }
   );
 
+  console.log("firma",sig); //sale 6.1.2
+
   // 📌 Establecemos clave privada para firmar
   sig.signingKey = privateKey;
 

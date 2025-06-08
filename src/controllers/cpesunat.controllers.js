@@ -99,30 +99,25 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     }
   }
 
-  // 📌 Creamos objeto de firma XML
-  const sig = new SignedXml();
+// 📌 Creamos objeto de firma XML
+const sig = new SignedXml();
 
-  // 📌 Definimos algoritmo de digest SHA-256 (para hash del contenido)
-  sig.digestAlgorithm = 'http://www.w3.org/2001/04/xmlenc#sha256';
+// 📌 Definimos algoritmo de digest SHA-256 (para hash del contenido)
+sig.signatureAlgorithm = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
+sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
 
-  console.log(require('xml-crypto/package.json').version); //sale 6.1.2
+// 📌 Mostramos versión instalada en runtime (para verificar conflictos)
+console.log('Versión xml-crypto:', require('xml-crypto/package.json').version);
 
-  sig.signatureAlgorithm = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
-  sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
-  
-  // 📌 Definimos qué parte del XML se va a firmar (todo en este caso)
-  sig.addReference(
-    "//ext:UBLExtensions",
-    ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
-    {
-      digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256'
-    }
-  );
+// 📌 Definimos qué parte del XML se va a firmar (ej. UBLExtensions)
+sig.addReference(
+  "//ext:UBLExtensions", // Ruta XPath del nodo a firmar
+  ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'], // Transformaciones aplicadas
+  'http://www.w3.org/2001/04/xmlenc#sha256' // Digest Algorithm como string plano
+);
 
-  console.log("firma",sig); //sale 6.1.2
-
-  // 📌 Establecemos clave privada para firmar
-  sig.signingKey = privateKey;
+// 📌 Establecemos la clave privada para firmar
+sig.signingKey = privateKey;
 
   // 📌 Definimos proveedor de información de clave pública
   sig.keyInfoProvider = {

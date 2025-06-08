@@ -2,13 +2,14 @@ const cpegeneraxml = require('./cpe/cpegeneraxml');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
+// 📌 Inyecta WebCrypto compatible en globalThis
+const { Crypto } = require('@peculiar/webcrypto');
+globalThis.crypto = new Crypto();
+
 const { DOMParser, XMLSerializer } = require('xmldom');
 const forge = require('node-forge');
 const xpath = require('xpath');
 const xadesjs = require('xadesjs');
-const { Crypto } = require('@peculiar/webcrypto');
-const webcrypto = new Crypto();
-global.crypto = webcrypto;
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {

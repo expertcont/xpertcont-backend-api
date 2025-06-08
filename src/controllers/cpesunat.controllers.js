@@ -113,7 +113,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
   const privateKeyInfo = forge.pki.wrapPrivateKeyInfo(privateKeyAsn1);
   const privateKeyDer = forge.asn1.toDer(privateKeyInfo).getBytes();
-  const privateKeyBuffer = Buffer.from(privateKeyDer, 'binary');
+  //const privateKeyBuffer = Buffer.from(privateKeyDer, 'binary');
+  const privateKeyBuffer = convertPrivateKeyToPkcs8Buffer(privateKey);
 
   console.log('antes de importar clave privada');
   // 📌 Importamos la clave privada al formato crypto.subtle
@@ -168,6 +169,52 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   return signedXML;
 }
 
+//////////////////////////////////////////////////////////////////////////////
+function convertPrivateKeyToPkcs8Buffer(privateKey) {
+  // 📌 Convertimos la clave privada a ASN.1 (PKCS#1)
+  const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
+
+  // 📌 Armamos la estructura PKCS#8 (PrivateKeyInfo)
+  const privateKeyInfoAsn1 = forge.asn1.create(
+    forge.asn1.Class.UNIVERSAL,
+    forge.asn1.Type.SEQUENCE,
+    true,
+    [
+      // version (INTEGER 0)
+      forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.INTEGER, false, String.fromCharCode(0)),
+
+      // algorithm (SEQUENCE)
+      forge.asn1.create(
+        forge.asn1.Class.UNIVERSAL,
+        forge.asn1.Type.SEQUENCE,
+        true,
+        [
+          // algorithm OID for rsaEncryption
+          forge.asn1.create(
+            forge.asn1.Class.UNIVERSAL,
+            forge.asn1.Type.OID,
+            false,
+            forge.asn1.oidToDer(forge.pki.oids.rsaEncryption).getBytes()
+          ),
+          // parameters (NULL)
+          forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.NULL, false, '')
+        ]
+      ),
+
+      // PrivateKey (OCTET STRING)
+      forge.asn1.create(
+        forge.asn1.Class.UNIVERSAL,
+        forge.asn1.Type.OCTETSTRING,
+        false,
+        forge.asn1.toDer(privateKeyAsn1).getBytes()
+      )
+    ]
+  );
+
+  // 📌 Convertimos a DER y luego a Buffer
+  const privateKeyDer = forge.asn1.toDer(privateKeyInfoAsn1).getBytes();
+  return Buffer.from(privateKeyDer, 'binary');
+}
 
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,

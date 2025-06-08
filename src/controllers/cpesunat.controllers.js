@@ -187,6 +187,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   });
   const ublExtensions = select('//ext:UBLExtensions', doc)[0];
 
+  console.log('vamos si se puede');
+
   if (ublExtensions) {
     while (ublExtensions.firstChild) {
       ublExtensions.removeChild(ublExtensions.firstChild);

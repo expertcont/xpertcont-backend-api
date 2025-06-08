@@ -105,13 +105,10 @@ const sig = new SignedXml();
 // 📌 Definimos algoritmo de digest SHA-256 (para hash del contenido)
 sig.signatureAlgorithm = "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256";
 sig.digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
+// 📌 IMPORTANTE: Definimos algoritmo de canonicalización (OBLIGATORIO)
+sig.canonicalizationAlgorithm = "http://www.w3.org/2001/10/xml-exc-c14n#";
 
 // 📌 Definimos qué parte del XML se va a firmar (ej. UBLExtensions)
-/*sig.addReference(
-  "//ext:UBLExtensions", // Ruta XPath del nodo a firmar
-  ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'], // Transformaciones aplicadas
-  'http://www.w3.org/2001/04/xmlenc#sha256' // Digest Algorithm como string plano
-);*/
  sig.addReference({
    xpath: "//ext:UBLExtensions",
    transforms: ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
@@ -130,8 +127,6 @@ sig.signingKey = privateKey;
       .replace(/\r?\n|\r/g, '')}</X509Certificate></X509Data>`,
   };
 
-  // 📌 
-console.log('antes de firmar');
 
   // 📌 Generamos la firma digital
   sig.computeSignature(unsignedXML);

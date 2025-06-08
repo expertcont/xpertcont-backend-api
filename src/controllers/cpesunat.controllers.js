@@ -109,10 +109,10 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   // 📌 Definimos qué parte del XML se va a firmar (todo en este caso)
   sig.addReference(
-    "/*", // Firmar todo el XML
-    ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'], // Transformaciones
+    "//ext:UBLExtensions",
+    ['http://www.w3.org/2000/09/xmldsig#enveloped-signature'],
     {
-      digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256' // Digest Algorithm requerido en v6.x
+      digestAlgorithm: 'http://www.w3.org/2001/04/xmlenc#sha256'
     }
   );
 

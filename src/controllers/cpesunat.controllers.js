@@ -105,6 +105,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   // 📌 Definimos algoritmo de digest SHA-256 (para hash del contenido)
   sig.digestAlgorithm = 'http://www.w3.org/2001/04/xmlenc#sha256';
 
+  console.log(require('xml-crypto/package.json').version);
+
   // 📌 Definimos qué parte del XML se va a firmar (todo en este caso)
   sig.addReference(
     "/*", // Firmar todo el XML

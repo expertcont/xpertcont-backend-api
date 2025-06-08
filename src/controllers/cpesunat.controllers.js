@@ -108,13 +108,13 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     }
   }
 
-  console.log('antes de importar clave');
-
+  console.log('antes de exportar clave privada PKCS#8');
   // 📌 Exportamos la clave privada en formato DER (PKCS#8)
   const privateKeyAsn1 = forge.pki.wrapRsaPrivateKey(privateKey);
   const privateKeyDer = forge.asn1.toDer(privateKeyAsn1).getBytes();
   const privateKeyBuffer = Buffer.from(privateKeyDer, 'binary');
 
+  console.log('antes de importar clave privada');
   // 📌 Importamos la clave privada al formato crypto.subtle
   const privateKeyCrypto = await xadesjs.Application.crypto.subtle.importKey(
     "pkcs8",

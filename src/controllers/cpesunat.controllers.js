@@ -188,6 +188,13 @@ function verificarAPIXAdES() {
   }
 }
 
+function convertPrivateKeyToPkcs8Buffer(privateKey) {
+  const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
+  const privateKeyInfoAsn1 = forge.pki.wrapRsaPrivateKey(privateKeyAsn1);
+  const derBuffer = forge.asn1.toDer(privateKeyInfoAsn1).getBytes();
+  return new Uint8Array([...derBuffer].map(c => c.charCodeAt(0)));
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*function convertPrivateKeyToPkcs8Buffer(privateKey) {
   // 📌 Convertimos la clave privada a ASN.1 (PKCS#1)

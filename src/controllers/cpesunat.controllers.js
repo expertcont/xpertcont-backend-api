@@ -151,14 +151,22 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     signatureElement.appendChild(keyInfo);
   }
 
-  // Insertar Signature dentro de UBLExtensions > UBLExtension > ExtensionContent
+  // Crear UBLExtension con la firma
   const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
   const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
   const importedSignature = doc.importNode(signatureElement, true);
 
   extensionContent.appendChild(importedSignature);
   ublExtension.appendChild(extensionContent);
-  ublExtensions.appendChild(ublExtension);
+
+  // 📌 Insertar como segundo hijo dentro de UBLExtensions
+  if (ublExtensions.childNodes.length === 0) {
+    ublExtensions.appendChild(ublExtension);
+  } else if (ublExtensions.childNodes.length === 1) {
+    ublExtensions.appendChild(ublExtension);
+  } else {
+    ublExtensions.insertBefore(ublExtension, ublExtensions.childNodes[1]);
+  }
 
   // Devolver XML firmado serializado
   return new XMLSerializer().serializeToString(doc);

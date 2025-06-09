@@ -111,10 +111,11 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   // Crear objeto SignedXml
   const xmlSig = new xadesjs.SignedXml();
   xmlSig.SigningKey = privateKeyCrypto;
-
+  
+  console.log('antes del await firma xmlSig.Sign');
   // Firmar XML pasando referencias directo en options
   await xmlSig.Sign(
-    { name: "RSASSA-PKCS1-v1_5" },
+    privateKeyCrypto,
     doc.documentElement,
     {
       references: [
@@ -128,6 +129,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
       ]
     }
   );
+  console.log('despues del await firma xmlSig.Sign');
 
   // Obtener elemento Signature generado
   const signatureElement = xmlSig.XmlSignature || (typeof xmlSig.GetXml === 'function' && xmlSig.GetXml());

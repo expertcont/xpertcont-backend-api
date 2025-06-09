@@ -64,6 +64,7 @@ const registrarCPESunat = async (req,res,next)=> {
     }
 };
 
+
 async function firmarXMLUBL(unsignedXML, ruc) {
   // 📌 Consulta certificado y contraseña desde base de datos
   const res = await pool.query(`
@@ -120,21 +121,15 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     ["sign"]
   );
 
-  // 📌 SOLUCIÓN: Usar SignedXml directamente sin crear SignedInfo manualmente
+  console.log('antes de crear SignedXml');
+
+  // 📌 SOLUCIÓN PARA xadesjs v2.4.4: Usar la API correcta
   const xmlSig = new xadesjs.SignedXml();
+  
+  // 📌 Configurar el algoritmo de firma
   xmlSig.SigningKey = privateKeyCrypto;
-
-  console.log('antes de referencia');
-
-  // 📌 MÉTODO CORRECTO: Agregar referencia usando AddReference
-  xmlSig.AddReference({
-    uri: "",
-    transforms: [
-      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
-    ],
-    digestAlgorithm: "SHA-256"
-  });
+  xmlSig.SignatureAlgorithm = "RSASSA-PKCS1-v1_5";
+  xmlSig.CanonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
 
   console.log('antes de certificado público');
   
@@ -143,24 +138,64 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const x509 = new xadesjs.KeyInfoX509Data(rawCert);
   xmlSig.KeyInfo.Add(x509);
 
-  // 📌 Firmamos el XML
-  await xmlSig.Sign(
-    {
-      name: "RSASSA-PKCS1-v1_5",
-      hash: "SHA-256"
-    },
-    doc.documentElement
-  );
+  console.log('antes de crear referencias');
 
-  // 📌 Insertamos Signature en UBLExtensions
-  const signatureNode = xmlSig.XmlSignature.GetXml();
-  ublExtensions.appendChild(signatureNode);
+  // 📌 MÉTODO CORRECTO para v2.4.4: Crear referencias manualmente
+  try {
+    // Crear una referencia al documento completo
+    const reference = new xadesjs.xml.Reference();
+    reference.Uri = "";
+    reference.DigestMethod = "http://www.w3.org/2001/04/xmlenc#sha256";
+    
+    // Agregar transformaciones
+    const envelopedTransform = new xadesjs.xml.Transform();
+    envelopedTransform.Algorithm = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
+    
+    const canonicalTransform = new xadesjs.xml.Transform();
+    canonicalTransform.Algorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
+    
+    reference.Transforms.Add(envelopedTransform);
+    reference.Transforms.Add(canonicalTransform);
+    
+    // Agregar la referencia al SignedInfo
+    xmlSig.SignedInfo.References.Add(reference);
+    
+  } catch (error) {
+    console.log('Error creando referencias manualmente, intentando método alternativo:', error.message);
+    
+    // 📌 MÉTODO ALTERNATIVO para v2.4.4
+    xmlSig.AddReference("", [
+      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
+    ], "http://www.w3.org/2001/04/xmlenc#sha256");
+  }
+
+  console.log('antes de firmar');
+
+  // 📌 Firmar el documento
+  await xmlSig.ComputeSignature(doc.documentElement);
+
+  console.log('antes de obtener XML firmado');
+
+  // 📌 Obtener el elemento signature
+  const signatureElement = xmlSig.GetXml();
+
+  // 📌 Crear la estructura UBL correcta
+  const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
+  const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
+  
+  // 📌 Importar el nodo signature al documento
+  const importedSignature = doc.importNode(signatureElement, true);
+  extensionContent.appendChild(importedSignature);
+  ublExtension.appendChild(extensionContent);
+  ublExtensions.appendChild(ublExtension);
+
+  console.log('Signature insertada correctamente');
 
   // 📌 Serializamos el XML firmado a string
   const serializer = new XMLSerializer();
   const signedXML = serializer.serializeToString(doc);
 
-  // 📌 Devolvemos el XML firmado como string
   return signedXML;
 }
 

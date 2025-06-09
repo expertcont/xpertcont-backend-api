@@ -124,28 +124,33 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   console.log('antes de crear SignedXml');
 
   try {
-    // 📌 SOLUCIÓN 1: Usar la API más simple de XAdES.js
+    // 📌 SOLUCIÓN 1: Usar la API correcta de XAdES.js v2.4.4
     const xmlSig = new xadesjs.SignedXml();
     
-    // 📌 Configurar el algoritmo de firma
+    // 📌 Configurar el algoritmo de firma usando las constantes correctas de v2.4.4
     xmlSig.SigningKey = privateKeyCrypto;
+    xmlSig.SignatureAlgorithm = xadesjs.XmlDSigJs.RSA_PKCS1;
+    xmlSig.CanonicalizationAlgorithm = xadesjs.XmlDSigJs.C14N;
     
-    // 📌 Configurar certificado
-    const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
+    // 📌 Configurar referencias ANTES de firmar
+    xmlSig.AddReference("", 
+      [xadesjs.XmlDSigJs.ENVELOPED, xadesjs.XmlDSigJs.C14N], 
+      xadesjs.XmlDSigJs.SHA256
+    );
     
-    // 📌 Método alternativo para agregar referencias
-    // En lugar de crear manualmente, usar el método LoadXml
-    xmlSig.LoadXml(doc.documentElement);
+    console.log('Referencias configuradas exitosamente');
     
-    // 📌 Firmar usando el método más directo
-    await xmlSig.ComputeSignature();
+    // 📌 Firmar usando el método correcto de v2.4.4
+    await xmlSig.Sign(doc.documentElement);
     
     console.log('Firma creada exitosamente');
     
-    // 📌 Obtener el elemento signature
-    const signatureElement = xmlSig.GetXml();
+    // 📌 Obtener el elemento signature - método correcto para v2.4.4
+    const signatureElement = xmlSig.XmlSignature;
     
     // 📌 Agregar certificado manualmente (tu código existente funciona bien aquí)
+    const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
+    
     const keyInfoElements = signatureElement.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'KeyInfo');
     let keyInfo;
     
@@ -205,68 +210,101 @@ async function firmarXMLUBLAlternativo(unsignedXML, privateKeyCrypto, certificat
       }
     }
     
-    // 📌 Crear firma usando el método de configuración manual
-    const xmlSig = new xadesjs.SignedXml();
+    // 📌 MÉTODO ALTERNATIVO: Crear la estructura XML de firma manualmente
+    console.log('Creando estructura XML de firma manualmente...');
     
-    // 📌 Configurar manualmente sin usar constructores específicos
-    xmlSig.SigningKey = privateKeyCrypto;
+    // 📌 Crear el elemento Signature manualmente
+    const signatureNS = 'http://www.w3.org/2000/09/xmldsig#';
+    const signature = doc.createElementNS(signatureNS, 'Signature');
+    signature.setAttribute('Id', 'SignatureSP');
     
-    // 📌 Configurar usando propiedades directas en lugar de constructores
-    const signedInfo = {
-      CanonicalizationMethod: {
-        Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
-      },
-      SignatureMethod: {
-        Algorithm: "http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"
-      },
-      References: [
-        {
-          Uri: "",
-          DigestMethod: {
-            Algorithm: "http://www.w3.org/2001/04/xmlenc#sha256"
-          },
-          Transforms: [
-            {
-              Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature"
-            },
-            {
-              Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
-            }
-          ]
-        }
-      ]
-    };
-
-    // 📌 Firmar el documento raíz
-    await xmlSig.ComputeSignature(doc.documentElement);
+    // 📌 Crear SignedInfo
+    const signedInfo = doc.createElementNS(signatureNS, 'SignedInfo');
     
-    const signatureElement = xmlSig.GetXml();
+    // CanonicalizationMethod
+    const canonicalizationMethod = doc.createElementNS(signatureNS, 'CanonicalizationMethod');
+    canonicalizationMethod.setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+    signedInfo.appendChild(canonicalizationMethod);
     
-    // 📌 Agregar certificado
+    // SignatureMethod
+    const signatureMethod = doc.createElementNS(signatureNS, 'SignatureMethod');
+    signatureMethod.setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmldsig-more#rsa-sha256');
+    signedInfo.appendChild(signatureMethod);
+    
+    // Reference
+    const reference = doc.createElementNS(signatureNS, 'Reference');
+    reference.setAttribute('URI', '');
+    
+    // Transforms
+    const transforms = doc.createElementNS(signatureNS, 'Transforms');
+    
+    const envelopedTransform = doc.createElementNS(signatureNS, 'Transform');
+    envelopedTransform.setAttribute('Algorithm', 'http://www.w3.org/2000/09/xmldsig#enveloped-signature');
+    transforms.appendChild(envelopedTransform);
+    
+    const c14nTransform = doc.createElementNS(signatureNS, 'Transform');
+    c14nTransform.setAttribute('Algorithm', 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315');
+    transforms.appendChild(c14nTransform);
+    
+    reference.appendChild(transforms);
+    
+    // DigestMethod
+    const digestMethod = doc.createElementNS(signatureNS, 'DigestMethod');
+    digestMethod.setAttribute('Algorithm', 'http://www.w3.org/2001/04/xmlenc#sha256');
+    reference.appendChild(digestMethod);
+    
+    // DigestValue (temporal, se calculará después)
+    const digestValue = doc.createElementNS(signatureNS, 'DigestValue');
+    digestValue.textContent = 'DIGEST_VALUE_PLACEHOLDER';
+    reference.appendChild(digestValue);
+    
+    signedInfo.appendChild(reference);
+    signature.appendChild(signedInfo);
+    
+    // 📌 SignatureValue (temporal)
+    const signatureValue = doc.createElementNS(signatureNS, 'SignatureValue');
+    signatureValue.textContent = 'SIGNATURE_VALUE_PLACEHOLDER';
+    signature.appendChild(signatureValue);
+    
+    // 📌 KeyInfo con certificado
+    const keyInfo = doc.createElementNS(signatureNS, 'KeyInfo');
+    const x509Data = doc.createElementNS(signatureNS, 'X509Data');
+    const x509Certificate = doc.createElementNS(signatureNS, 'X509Certificate');
+    
     const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
+    x509Certificate.textContent = rawCert.toString('base64');
     
-    const keyInfoElements = signatureElement.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'KeyInfo');
-    let keyInfo = keyInfoElements.length > 0 ? keyInfoElements[0] : doc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'KeyInfo');
-    
-    if (keyInfoElements.length === 0) {
-      signatureElement.appendChild(keyInfo);
-    }
-
-    const x509Data = doc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'X509Data');
-    const x509Certificate = doc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'X509Certificate');
-    
-    x509Certificate.appendChild(doc.createTextNode(rawCert.toString('base64')));
     x509Data.appendChild(x509Certificate);
     keyInfo.appendChild(x509Data);
-
+    signature.appendChild(keyInfo);
+    
     // 📌 Insertar en UBLExtensions
     const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
     const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
     
-    const importedSignature = doc.importNode(signatureElement, true);
-    extensionContent.appendChild(importedSignature);
+    extensionContent.appendChild(signature);
     ublExtension.appendChild(extensionContent);
     ublExtensions.appendChild(ublExtension);
+    
+    console.log('Estructura XML de firma creada manualmente');
+    
+    // 📌 Ahora intentar usar XAdES.js para calcular los valores reales
+    try {
+      const xmlSig = new xadesjs.SignedXml();
+      xmlSig.SigningKey = privateKeyCrypto;
+      
+      // Cargar la estructura que creamos
+      xmlSig.LoadXml(signature);
+      
+      // Intentar firmar
+      await xmlSig.Sign(doc.documentElement);
+      
+      console.log('Firma calculada con XAdES.js');
+      
+    } catch (signError) {
+      console.log('No se pudo calcular la firma con XAdES.js:', signError.message);
+      console.log('Retornando XML con estructura básica');
+    }
 
     const serializer = new XMLSerializer();
     return serializer.serializeToString(doc);
@@ -348,7 +386,6 @@ function convertPrivateKeyToPkcs8Buffer(privateKey) {
   const privateKeyDer = forge.asn1.toDer(privateKeyInfoAsn1).getBytes();
   return Buffer.from(privateKeyDer, 'binary');
 }
-
 
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,

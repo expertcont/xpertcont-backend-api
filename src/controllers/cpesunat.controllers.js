@@ -68,7 +68,6 @@ const registrarCPESunat = async (req,res,next)=> {
 async function firmarXMLUBL(unsignedXML, ruc) {
   verificarAPIXAdES();
 
-  // 📌 Consultar certificado y contraseña desde la base de datos
   const { rows } = await pool.query(`
     SELECT certificado, password
     FROM mad_usuariocertificado 
@@ -79,7 +78,6 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   const { certificado: certificadoBuffer, password } = rows[0];
 
-  // 📌 Cargar PFX desde buffer y obtener clave y certificado
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
   const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
 
@@ -88,17 +86,14 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0].cert
   );
 
-  // 📌 Parsear XML sin firmar
   const doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
 
-  // 📌 Limpiar contenido de UBLExtensions
   const select = xpath.useNamespaces({
     ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
   });
   const ublExtensions = select('//ext:UBLExtensions', doc)[0];
   if (ublExtensions) while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
 
-  // 📌 Convertir clave privada y cargar en crypto.subtle
   const privateKeyBuffer = convertPrivateKeyToPkcs8Buffer(privateKey);
   const privateKeyCrypto = await xadesjs.Application.crypto.subtle.importKey(
     "pkcs8",
@@ -112,28 +107,32 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     const xmlSig = new xadesjs.SignedXml();
     xmlSig.SigningKey = privateKeyCrypto;
 
-    const transforms = [
-      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
-    ];
-    const digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
+    // 📌 Crear referencia manual
+    const reference = new xadesjs.xml.Reference();
+    reference.Uri = "";
+    reference.DigestMethod.Algorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
 
-    if (typeof xmlSig.AddReference === 'function') {
-      xmlSig.AddReference("", transforms, digestAlgorithm);
-    } else {
-      throw new Error('Método AddReference no disponible');
-    }
+    // 📌 Transformaciones: enveloped y canonicalization
+    const transform1 = new xadesjs.xml.Transform();
+    transform1.Algorithm = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
+    reference.Transforms.Add(transform1);
 
-    if (typeof xmlSig.Sign === 'function') {
-      await xmlSig.Sign(doc.documentElement);
-    } else if (typeof xmlSig.ComputeSignature === 'function') {
-      await xmlSig.ComputeSignature(doc.documentElement);
-    } else {
-      throw new Error('No se encontró método de firma válido');
-    }
+    const transform2 = new xadesjs.xml.Transform();
+    transform2.Algorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
+    reference.Transforms.Add(transform2);
+
+    // 📌 Agregar referencia al SignedInfo
+    xmlSig.SignedInfo.References.Add(reference);
+
+    // 📌 Firmar
+    await xmlSig.Sign(
+      { name: "RSASSA-PKCS1-v1_5" },
+      privateKeyCrypto,
+      doc.documentElement
+    );
 
     // 📌 Obtener signature generado
-    const signatureElement = xmlSig.XmlSignature || (typeof xmlSig.GetXml === 'function' && xmlSig.GetXml());
+    const signatureElement = xmlSig.XmlSignature;
     if (!signatureElement) throw new Error('No se pudo obtener el elemento signature');
 
     // 📌 Agregar certificado manualmente al KeyInfo
@@ -161,7 +160,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     return new XMLSerializer().serializeToString(doc);
 
   } catch (error) {
-    throw new Error('Error en proceso de firma: ' + error.message);
+    console.log(error);
+    next(error)
   }
 }
 

@@ -106,12 +106,6 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     }
   }
 
-    // 📌 Exportamos la clave privada en formato PKCS#8 DER
-  /*const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
-  const privateKeyInfo = forge.pki.wrapPrivateKeyInfo(privateKeyAsn1);
-  const privateKeyDer = forge.asn1.toDer(privateKeyInfo).getBytes();
-  const privateKeyBuffer = Buffer.from(privateKeyDer, 'binary');*/
-  
   const privateKeyBuffer = convertPrivateKeyToPkcs8Buffer(privateKey);
 
   // 📌 Importamos la clave privada al formato crypto.subtle
@@ -126,18 +120,13 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     ["sign"]
   );
 
-  // 📌 Configuramos la firma digital
+  // 📌 SOLUCIÓN: Usar SignedXml directamente sin crear SignedInfo manualmente
   const xmlSig = new xadesjs.SignedXml();
   xmlSig.SigningKey = privateKeyCrypto;
 
   console.log('antes de referencia');
 
-// Crear SignedInfo
-xmlSig.SignedInfo = new xadesjs.xml.SignedInfo();
-xmlSig.SignedInfo.References = [];
-
-// Agregar referencia
-// 📌 MÉTODO CORRECTO: Agregar referencia usando AddReference
+  // 📌 MÉTODO CORRECTO: Agregar referencia usando AddReference
   xmlSig.AddReference({
     uri: "",
     transforms: [
@@ -148,6 +137,7 @@ xmlSig.SignedInfo.References = [];
   });
 
   console.log('antes de certificado público');
+  
   // 📌 Incluimos el certificado público en el KeyInfo
   const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
   const x509 = new xadesjs.KeyInfoX509Data(rawCert);

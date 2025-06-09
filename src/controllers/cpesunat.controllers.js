@@ -3,7 +3,7 @@ const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
 // 📌 Inyecta WebCrypto compatible en globalThis
-const { Crypto } = require('@peculiar/webcrypto');
+/*const { Crypto } = require('@peculiar/webcrypto');
 globalThis.crypto = new Crypto();
 
 const xadesjs = require('xadesjs');
@@ -11,8 +11,17 @@ xadesjs.Application.setEngine("NodeJS WebCrypto", globalThis.crypto);
 
 const { DOMParser, XMLSerializer } = require('xmldom');
 const forge = require('node-forge');
-const xpath = require('xpath');
+const xpath = require('xpath');*/
 
+// Dependencias
+const xadesjs = require("xadesjs");
+const { Crypto } = require("@peculiar/webcrypto");
+
+// Configurar motor criptográfico para NodeJS
+xadesjs.Application.setEngine("NodeJS", new Crypto());
+
+// Variables globales para llaves
+let privateKey, publicKey;
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -47,22 +56,89 @@ const registrarCPESunat = async (req,res,next)=> {
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
         // Genera XML desde el servicio
-        const xmlComprobante = await cpegeneraxml(dataVenta);
-
+        //const xmlComprobante = await cpegeneraxml(dataVenta);
         //Se firma con datos del emisor (empresa: correo y ruc)
-        const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
+        //const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
+        //subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlFirmado);
         
-        subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlFirmado);
+        try {
+            // Generar par de claves RSA
+            const keyPair = await generateKeyPair();
+            privateKey = keyPair.privateKey;
+            publicKey = keyPair.publicKey;
 
-        return res.status(200).json({
-                message:"xml generado"
-        });
+            // XML de prueba a firmar
+            const xmlString = `<player bats="left" id="10012" throws="right">
+          <!-- Here's a comment -->
+          <name>Alfonso Soriano</name>
+          <position>2B</position>
+          <team>New York Yankees</team>
+        </player>`;
+
+            // Firmar XML
+            const signedXml = await signXml(xmlString, keyPair);
+            console.log("Documento firmado:\n\n", signedXml);
+          } catch (error) {
+            console.error("Error firmando XML:", error);
+          }
+
 
     }catch(error){
         //res.json({error:error.message});
         next(error)
     }
 };
+
+
+function generateKeyPair() {
+  return xadesjs.Application.crypto.subtle.generateKey(
+    {
+      name: "RSASSA-PKCS1-v1_5",
+      modulusLength: 1024,
+      publicExponent: new Uint8Array([1, 0, 1]),
+      hash: { name: "SHA-1" },
+    },
+    false,
+    ["sign", "verify"]
+  );
+}
+
+/**
+ * Firma un XML usando XAdESJS
+ * @param {string} xmlString - El contenido XML como string
+ * @param {CryptoKeyPair} keys - Par de claves generado
+ * @returns {Promise<string>} - XML firmado como string
+ */
+async function signXml(xmlString, keys) {
+  // Parsear XML string a XMLDocument
+  const xmlDoc = xadesjs.Parse(xmlString);
+
+  // Crear instancia SignedXml
+  const signedXml = new xadesjs.SignedXml();
+
+  // Firmar el XML con opciones XAdES
+  await signedXml.Sign(
+    { name: "RSASSA-PKCS1-v1_5", hash: { name: "SHA-1" } },
+    keys.privateKey,
+    xmlDoc,
+    {
+      keyValue: keys.publicKey,
+      references: [
+        { hash: "SHA-256", transforms: ["enveloped"] },
+      ],
+      productionPlace: {
+        country: "Peru",
+        state: "Arequipa",
+        city: "Majes",
+        code: "001",
+      },
+      signingCertificate: "MIIGgTCCBGmgAwIBAgIUeaHFHm5f58zYv20JfspVJ3hossYwDQYJKoZIhvcNAQEFBQAwgZIxCzAJ...", // puedes reemplazar por un base64 de certificado real o de prueba
+    }
+  );
+
+  // Retornar XML firmado como string
+  return signedXml.toString();
+}
 
 
 async function firmarXMLUBL(unsignedXML, ruc) {

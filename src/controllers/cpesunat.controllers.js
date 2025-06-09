@@ -48,10 +48,11 @@ const registrarCPESunat = async (req,res,next)=> {
 
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
+        console.log(xmlComprobante);
 
         //Se firma con datos del emisor (empresa: correo y ruc)
         const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
-
+        
         subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlFirmado);
 
         return res.status(200).json({
@@ -67,7 +68,7 @@ const registrarCPESunat = async (req,res,next)=> {
 
 async function firmarXMLUBL(unsignedXML, ruc) {
   verificarAPIXAdES();
-  
+
   // Consulta certificado y password
   const { rows } = await pool.query(`
     SELECT certificado, password

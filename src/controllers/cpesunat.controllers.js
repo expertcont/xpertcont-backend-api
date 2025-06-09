@@ -66,6 +66,9 @@ const registrarCPESunat = async (req,res,next)=> {
 
 
 async function firmarXMLUBL(unsignedXML, ruc) {
+
+  verificarAPIXAdES();
+  
   // 📌 Consulta certificado y contraseña desde base de datos
   const res = await pool.query(`
     SELECT certificado, password

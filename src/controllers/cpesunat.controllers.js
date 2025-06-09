@@ -48,7 +48,6 @@ const registrarCPESunat = async (req,res,next)=> {
 
         // Genera XML desde el servicio
         const xmlComprobante = await cpegeneraxml(dataVenta);
-        console.log(xmlComprobante);
 
         //Se firma con datos del emisor (empresa: correo y ruc)
         const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);

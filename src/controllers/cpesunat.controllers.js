@@ -100,8 +100,6 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   });
   const ublExtensions = select('//ext:UBLExtensions', doc)[0];
 
-  console.log('vamos si se puede');
-
   if (ublExtensions) {
     while (ublExtensions.firstChild) {
       ublExtensions.removeChild(ublExtensions.firstChild);
@@ -116,7 +114,6 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   
   const privateKeyBuffer = convertPrivateKeyToPkcs8Buffer(privateKey);
 
-  console.log('antes de importar clave privada');
   // 📌 Importamos la clave privada al formato crypto.subtle
   const privateKeyCrypto = await xadesjs.Application.crypto.subtle.importKey(
     "pkcs8",
@@ -128,8 +125,6 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     false,
     ["sign"]
   );
-
-  console.log('antes de configurar');
 
   // 📌 Configuramos la firma digital
   const xmlSig = new xadesjs.SignedXml();
@@ -155,7 +150,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     })
   );
 
-
+  console.log('antes de certificado público');
   // 📌 Incluimos el certificado público en el KeyInfo
   const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
   const x509 = new xadesjs.KeyInfoX509Data(rawCert);

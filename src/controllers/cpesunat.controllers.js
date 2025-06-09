@@ -123,7 +123,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   console.log('antes de crear SignedXml');
 
-  // 📌 SOLUCIÓN PARA xadesjs v2.4.4: Usar la API correcta
+  // 📌 Crear SignedXml para v2.4.4
   const xmlSig = new xadesjs.SignedXml();
   
   // 📌 Configurar el algoritmo de firma
@@ -131,52 +131,20 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   xmlSig.SignatureAlgorithm = "RSASSA-PKCS1-v1_5";
   xmlSig.CanonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
 
-  console.log('antes de certificado público');
+  console.log('antes de configurar certificado');
   
-  // 📌 SOLUCIÓN para v2.4.4: Incluir certificado usando la API correcta
+  // 📌 SOLUCIÓN DIRECTA: Crear el KeyInfo manualmente en el DOM
   const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
-  
-  try {
-    // Método 1: Usar xml.KeyInfoX509Data
-    const x509 = new xadesjs.xml.KeyInfoX509Data();
-    x509.AddCertificate(rawCert);
-    xmlSig.KeyInfo.Add(x509);
-    console.log('Certificado agregado con método 1');
-  } catch (error1) {
-    console.log('Método 1 falló, intentando método 2:', error1.message);
-    try {
-      // Método 2: Usar KeyInfo.AddCertificate directamente
-      xmlSig.KeyInfo.AddCertificate(rawCert);
-      console.log('Certificado agregado con método 2');
-    } catch (error2) {
-      console.log('Método 2 falló, intentando método 3:', error2.message);
-      try {
-        // Método 3: Crear manualmente el elemento X509Data
-        const x509Data = new xadesjs.xml.KeyInfoX509Data();
-        const x509Certificate = new xadesjs.xml.X509Certificate();
-        x509Certificate.Value = rawCert;
-        x509Data.Certificates.Add(x509Certificate);
-        xmlSig.KeyInfo.Add(x509Data);
-        console.log('Certificado agregado con método 3');
-      } catch (error3) {
-        console.log('Método 3 falló, intentando método 4:', error3.message);
-        // Método 4: Agregar certificado como string base64
-        xmlSig.KeyInfo.AddCertificate(rawCert.toString('base64'));
-        console.log('Certificado agregado con método 4');
-      }
-    }
-  }
+  const certBase64 = rawCert.toString('base64');
 
   console.log('antes de crear referencias');
 
-  // 📌 MÉTODO CORRECTO para v2.4.4: Crear referencias manualmente
+  // 📌 Crear referencias para v2.4.4
   try {
-    // Crear una referencia al documento completo
     const reference = new xadesjs.xml.Reference();
     reference.Uri = "";
     reference.DigestMethod = "http://www.w3.org/2001/04/xmlenc#sha256";
     
-    // Agregar transformaciones
     const envelopedTransform = new xadesjs.xml.Transform();
     envelopedTransform.Algorithm = "http://www.w3.org/2000/09/xmldsig#enveloped-signature";
     
@@ -186,17 +154,12 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     reference.Transforms.Add(envelopedTransform);
     reference.Transforms.Add(canonicalTransform);
     
-    // Agregar la referencia al SignedInfo
     xmlSig.SignedInfo.References.Add(reference);
     
+    console.log('Referencias creadas exitosamente');
   } catch (error) {
-    console.log('Error creando referencias manualmente, intentando método alternativo:', error.message);
-    
-    // 📌 MÉTODO ALTERNATIVO para v2.4.4
-    xmlSig.AddReference("", [
-      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
-      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
-    ], "http://www.w3.org/2001/04/xmlenc#sha256");
+    console.log('Error creando referencias:', error.message);
+    throw new Error(`No se pudieron crear las referencias: ${error.message}`);
   }
 
   console.log('antes de firmar');
@@ -208,6 +171,30 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   // 📌 Obtener el elemento signature
   const signatureElement = xmlSig.GetXml();
+
+  // 📌 AGREGAR CERTIFICADO MANUALMENTE AL SIGNATURE
+  // Buscar el elemento KeyInfo en el signature
+  const keyInfoElements = signatureElement.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'KeyInfo');
+  let keyInfo;
+  
+  if (keyInfoElements.length > 0) {
+    keyInfo = keyInfoElements[0];
+  } else {
+    // Crear KeyInfo si no existe
+    keyInfo = doc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'KeyInfo');
+    signatureElement.appendChild(keyInfo);
+  }
+
+  // 📌 Crear estructura X509Data manualmente
+  const x509Data = doc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'X509Data');
+  const x509Certificate = doc.createElementNS('http://www.w3.org/2000/09/xmldsig#', 'X509Certificate');
+  
+  // Agregar el certificado como texto
+  x509Certificate.appendChild(doc.createTextNode(certBase64));
+  x509Data.appendChild(x509Certificate);
+  keyInfo.appendChild(x509Data);
+
+  console.log('Certificado agregado manualmente al KeyInfo');
 
   // 📌 Crear la estructura UBL correcta
   const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');

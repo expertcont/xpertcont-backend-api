@@ -137,18 +137,15 @@ xmlSig.SignedInfo = new xadesjs.xml.SignedInfo();
 xmlSig.SignedInfo.References = [];
 
 // Agregar referencia
-xmlSig.SignedInfo.References.push(
-  new xadesjs.xml.Reference({
-    HashAlgorithm: "SHA-256",
-    Uri: "",
-    Transforms: [
-      new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature" }),
-      new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315" }),
+// 📌 MÉTODO CORRECTO: Agregar referencia usando AddReference
+  xmlSig.AddReference({
+    uri: "",
+    transforms: [
+      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
     ],
-    DigestMethod: "http://www.w3.org/2001/04/xmlenc#sha256"
-  })
-);
-
+    digestAlgorithm: "SHA-256"
+  });
 
   console.log('antes de certificado público');
   // 📌 Incluimos el certificado público en el KeyInfo

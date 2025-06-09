@@ -186,6 +186,25 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 // 📌 MÉTODO ALTERNATIVO para versiones diferentes de XAdES.js
 async function firmarXMLUBLAlternativo(unsignedXML, privateKeyCrypto, certificatePEM, doc, ublExtensions) {
   try {
+    // 📌 Si no tenemos el doc parseado, lo parseamos desde unsignedXML
+    if (!doc) {
+      doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
+    }
+    
+    // 📌 Si no tenemos ublExtensions, lo buscamos
+    if (!ublExtensions) {
+      const select = xpath.useNamespaces({
+        ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
+      });
+      ublExtensions = select('//ext:UBLExtensions', doc)[0];
+      
+      if (ublExtensions) {
+        while (ublExtensions.firstChild) {
+          ublExtensions.removeChild(ublExtensions.firstChild);
+        }
+      }
+    }
+    
     // 📌 Crear firma usando el método de configuración manual
     const xmlSig = new xadesjs.SignedXml();
     
@@ -258,20 +277,28 @@ async function firmarXMLUBLAlternativo(unsignedXML, privateKeyCrypto, certificat
   }
 }
 
-// 📌 SOLUCIÓN 3: Verificar la versión y API disponible
+// 📌 SOLUCIÓN 3: Verificar la versión y API disponible para v2.4.4
 function verificarAPIXAdES() {
-  console.log('Verificando API de XAdES.js disponible:');
+  console.log('Verificando API de XAdES.js v2.4.4:');
   console.log('xadesjs:', typeof xadesjs);
-  console.log('xadesjs.xml:', typeof xadesjs.xml);
-  console.log('xadesjs.xml.Reference:', typeof xadesjs.xml?.Reference);
   console.log('xadesjs.SignedXml:', typeof xadesjs.SignedXml);
+  console.log('xadesjs.XmlDSigJs:', typeof xadesjs.XmlDSigJs);
   
-  // Verificar qué constructores están disponibles
-  if (xadesjs.xml) {
-    console.log('Constructores disponibles en xadesjs.xml:');
-    Object.keys(xadesjs.xml).forEach(key => {
-      console.log(`- ${key}:`, typeof xadesjs.xml[key]);
-    });
+  // Verificar constantes específicas de v2.4.4
+  if (xadesjs.XmlDSigJs) {
+    console.log('Constantes disponibles en XmlDSigJs:');
+    console.log('- SHA256:', xadesjs.XmlDSigJs.SHA256);
+    console.log('- RSA_PKCS1:', xadesjs.XmlDSigJs.RSA_PKCS1);
+    console.log('- C14N:', xadesjs.XmlDSigJs.C14N);
+    console.log('- ENVELOPED:', xadesjs.XmlDSigJs.ENVELOPED);
+  }
+  
+  // Verificar constructores de SignedXml
+  if (xadesjs.SignedXml) {
+    console.log('Constructores en SignedXml:');
+    console.log('- Reference:', typeof xadesjs.SignedXml.Reference);
+    console.log('- Transform:', typeof xadesjs.SignedXml.Transform);
+    console.log('- Transforms:', typeof xadesjs.SignedXml.Transforms);
   }
 }
 

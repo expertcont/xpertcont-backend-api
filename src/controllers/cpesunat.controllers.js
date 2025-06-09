@@ -131,24 +131,24 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   xmlSig.SigningKey = privateKeyCrypto;
 
   console.log('antes de referencia');
-  // 📌 Añadimos referencia a UBLExtensions
-  /*xmlSig.AddReference({
-    Hash: "SHA-256",
-    transforms: ["enveloped", "c14n"],
+
+// Crear SignedInfo
+xmlSig.SignedInfo = new xadesjs.xml.SignedInfo();
+xmlSig.SignedInfo.References = [];
+
+// Agregar referencia
+xmlSig.SignedInfo.References.push(
+  new xadesjs.xml.Reference({
+    HashAlgorithm: "SHA-256",
     Uri: "",
+    Transforms: [
+      new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature" }),
+      new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315" }),
+    ],
     DigestMethod: "http://www.w3.org/2001/04/xmlenc#sha256"
-  });*/
-  xmlSig.SignedInfo.References.push(
-    new xadesjs.xml.Reference({
-      HashAlgorithm: "SHA-256",
-      Uri: "",
-      Transforms: [
-        new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature" }),
-        new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315" }),
-      ],
-      DigestMethod: "http://www.w3.org/2001/04/xmlenc#sha256"
-    })
-  );
+  })
+);
+
 
   console.log('antes de certificado público');
   // 📌 Incluimos el certificado público en el KeyInfo

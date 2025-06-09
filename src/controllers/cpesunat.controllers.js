@@ -108,8 +108,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     }
   }
 
-  console.log('antes de exportar clave privada PKCS#8');
-  // 📌 Exportamos la clave privada en formato PKCS#8 DER
+    // 📌 Exportamos la clave privada en formato PKCS#8 DER
   /*const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
   const privateKeyInfo = forge.pki.wrapPrivateKeyInfo(privateKeyAsn1);
   const privateKeyDer = forge.asn1.toDer(privateKeyInfo).getBytes();
@@ -136,13 +135,26 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const xmlSig = new xadesjs.SignedXml();
   xmlSig.SigningKey = privateKeyCrypto;
 
+  console.log('antes de referencia');
   // 📌 Añadimos referencia a UBLExtensions
-  xmlSig.AddReference({
+  /*xmlSig.AddReference({
     Hash: "SHA-256",
     transforms: ["enveloped", "c14n"],
     Uri: "",
     DigestMethod: "http://www.w3.org/2001/04/xmlenc#sha256"
-  });
+  });*/
+  xmlSig.SignedInfo.References.push(
+    new xadesjs.xml.Reference({
+      HashAlgorithm: "SHA-256",
+      Uri: "",
+      Transforms: [
+        new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature" }),
+        new xadesjs.xml.Transform({ Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315" }),
+      ],
+      DigestMethod: "http://www.w3.org/2001/04/xmlenc#sha256"
+    })
+  );
+
 
   // 📌 Incluimos el certificado público en el KeyInfo
   const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');

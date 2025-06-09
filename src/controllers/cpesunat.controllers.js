@@ -66,7 +66,6 @@ const registrarCPESunat = async (req,res,next)=> {
 
 
 async function firmarXMLUBL(unsignedXML, ruc) {
-
   verificarAPIXAdES();
   
   // 📌 Consulta certificado y contraseña desde base de datos
@@ -126,32 +125,71 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   console.log('antes de crear SignedXml');
 
+  console.log('antes de crear SignedXml');
+
   try {
-    // 📌 SOLUCIÓN 1: Usar la API correcta de XAdES.js v2.4.4
+    // 📌 SOLUCIÓN 1: Usar la API simple de XAdES.js v2.4.4
     const xmlSig = new xadesjs.SignedXml();
     
-    // 📌 Configurar el algoritmo de firma usando las constantes correctas de v2.4.4
+    // 📌 Configurar el algoritmo de firma usando strings directos (no hay constantes)
     xmlSig.SigningKey = privateKeyCrypto;
-    xmlSig.SignatureAlgorithm = xadesjs.XmlDSigJs.RSA_PKCS1;
-    xmlSig.CanonicalizationAlgorithm = xadesjs.XmlDSigJs.C14N;
     
-    // 📌 Configurar referencias ANTES de firmar
-    xmlSig.AddReference("", 
-      [xadesjs.XmlDSigJs.ENVELOPED, xadesjs.XmlDSigJs.C14N], 
-      xadesjs.XmlDSigJs.SHA256
-    );
+    // 📌 Configurar referencias usando métodos disponibles
+    // Como no hay XmlDSigJs, usar strings directos
+    console.log('Configurando referencias...');
     
-    console.log('Referencias configuradas exitosamente');
+    // 📌 Método directo sin constructores específicos
+    const referenceUri = "";
+    const transforms = [
+      "http://www.w3.org/2000/09/xmldsig#enveloped-signature",
+      "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"
+    ];
+    const digestAlgorithm = "http://www.w3.org/2001/04/xmlenc#sha256";
     
-    // 📌 Firmar usando el método correcto de v2.4.4
-    await xmlSig.Sign(doc.documentElement);
+    // 📌 Intentar usar AddReference si existe
+    if (typeof xmlSig.AddReference === 'function') {
+      xmlSig.AddReference(referenceUri, transforms, digestAlgorithm);
+      console.log('Referencias configuradas con AddReference');
+    } else {
+      console.log('AddReference no disponible, usando método manual');
+    }
     
-    console.log('Firma creada exitosamente');
+    console.log('antes de firmar');
     
-    // 📌 Obtener el elemento signature - método correcto para v2.4.4
-    const signatureElement = xmlSig.XmlSignature;
+    // 📌 Firmar usando el método más compatible
+    if (typeof xmlSig.Sign === 'function') {
+      await xmlSig.Sign(doc.documentElement);
+      console.log('Firmado con Sign()');
+    } else if (typeof xmlSig.ComputeSignature === 'function') {
+      await xmlSig.ComputeSignature(doc.documentElement);
+      console.log('Firmado con ComputeSignature()');
+    } else {
+      throw new Error('No se encontró método de firma válido');
+    }
     
-    // 📌 Agregar certificado manualmente (tu código existente funciona bien aquí)
+    console.log('antes de obtener XML firmado');
+    
+    // 📌 Obtener el elemento signature usando diferentes métodos
+    let signatureElement;
+    if (xmlSig.XmlSignature) {
+      signatureElement = xmlSig.XmlSignature;
+      console.log('Signature obtenido con XmlSignature');
+    } else if (typeof xmlSig.GetXml === 'function') {
+      signatureElement = xmlSig.GetXml();
+      console.log('Signature obtenido con GetXml()');
+    } else if (xmlSig.Signature) {
+      signatureElement = xmlSig.Signature;
+      console.log('Signature obtenido con Signature');
+    } else {
+      throw new Error('No se pudo obtener el elemento signature');
+    }
+    
+    // 📌 Verificar que signatureElement sea válido antes de continuar
+    if (!signatureElement || typeof signatureElement.getElementsByTagNameNS !== 'function') {
+      throw new Error('El elemento signature no es válido o no tiene métodos DOM');
+    }
+
+    // 📌 Agregar certificado manualmente
     const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
     
     const keyInfoElements = signatureElement.getElementsByTagNameNS('http://www.w3.org/2000/09/xmldsig#', 'KeyInfo');
@@ -171,6 +209,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     x509Data.appendChild(x509Certificate);
     keyInfo.appendChild(x509Data);
 
+    console.log('Certificado agregado manualmente al KeyInfo');
+
     // 📌 Insertar en UBLExtensions
     const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
     const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
@@ -179,6 +219,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
     extensionContent.appendChild(importedSignature);
     ublExtension.appendChild(extensionContent);
     ublExtensions.appendChild(ublExtension);
+
+    console.log('Signature insertada correctamente');
 
     const serializer = new XMLSerializer();
     return serializer.serializeToString(doc);
@@ -318,20 +360,34 @@ async function firmarXMLUBLAlternativo(unsignedXML, privateKeyCrypto, certificat
   }
 }
 
-// 📌 SOLUCIÓN 3: Verificar la versión y API disponible para v2.4.4
+// 📌 SOLUCIÓN 3: Verificar qué métodos están disponibles en tu versión específica
 function verificarAPIXAdES() {
   console.log('Verificando API de XAdES.js v2.4.4:');
   console.log('xadesjs:', typeof xadesjs);
   console.log('xadesjs.SignedXml:', typeof xadesjs.SignedXml);
   console.log('xadesjs.XmlDSigJs:', typeof xadesjs.XmlDSigJs);
   
-  // Verificar constantes específicas de v2.4.4
-  if (xadesjs.XmlDSigJs) {
-    console.log('Constantes disponibles en XmlDSigJs:');
-    console.log('- SHA256:', xadesjs.XmlDSigJs.SHA256);
-    console.log('- RSA_PKCS1:', xadesjs.XmlDSigJs.RSA_PKCS1);
-    console.log('- C14N:', xadesjs.XmlDSigJs.C14N);
-    console.log('- ENVELOPED:', xadesjs.XmlDSigJs.ENVELOPED);
+  // Verificar una instancia de SignedXml
+  if (typeof xadesjs.SignedXml === 'function') {
+    try {
+      const testInstance = new xadesjs.SignedXml();
+      console.log('Métodos disponibles en SignedXml:');
+      console.log('- Sign:', typeof testInstance.Sign);
+      console.log('- ComputeSignature:', typeof testInstance.ComputeSignature);
+      console.log('- AddReference:', typeof testInstance.AddReference);
+      console.log('- LoadXml:', typeof testInstance.LoadXml);
+      console.log('- GetXml:', typeof testInstance.GetXml);
+      
+      console.log('Propiedades disponibles:');
+      console.log('- XmlSignature:', typeof testInstance.XmlSignature);
+      console.log('- Signature:', typeof testInstance.Signature);
+      console.log('- SigningKey:', typeof testInstance.SigningKey);
+      console.log('- SignatureAlgorithm:', typeof testInstance.SignatureAlgorithm);
+      console.log('- CanonicalizationAlgorithm:', typeof testInstance.CanonicalizationAlgorithm);
+      
+    } catch (e) {
+      console.log('Error creando instancia de prueba:', e.message);
+    }
   }
   
   // Verificar constructores de SignedXml

@@ -133,10 +133,39 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   console.log('antes de certificado público');
   
-  // 📌 Incluimos el certificado público en el KeyInfo
+  // 📌 SOLUCIÓN para v2.4.4: Incluir certificado usando la API correcta
   const rawCert = Buffer.from(certificatePEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
-  const x509 = new xadesjs.KeyInfoX509Data(rawCert);
-  xmlSig.KeyInfo.Add(x509);
+  
+  try {
+    // Método 1: Usar xml.KeyInfoX509Data
+    const x509 = new xadesjs.xml.KeyInfoX509Data();
+    x509.AddCertificate(rawCert);
+    xmlSig.KeyInfo.Add(x509);
+    console.log('Certificado agregado con método 1');
+  } catch (error1) {
+    console.log('Método 1 falló, intentando método 2:', error1.message);
+    try {
+      // Método 2: Usar KeyInfo.AddCertificate directamente
+      xmlSig.KeyInfo.AddCertificate(rawCert);
+      console.log('Certificado agregado con método 2');
+    } catch (error2) {
+      console.log('Método 2 falló, intentando método 3:', error2.message);
+      try {
+        // Método 3: Crear manualmente el elemento X509Data
+        const x509Data = new xadesjs.xml.KeyInfoX509Data();
+        const x509Certificate = new xadesjs.xml.X509Certificate();
+        x509Certificate.Value = rawCert;
+        x509Data.Certificates.Add(x509Certificate);
+        xmlSig.KeyInfo.Add(x509Data);
+        console.log('Certificado agregado con método 3');
+      } catch (error3) {
+        console.log('Método 3 falló, intentando método 4:', error3.message);
+        // Método 4: Agregar certificado como string base64
+        xmlSig.KeyInfo.AddCertificate(rawCert.toString('base64'));
+        console.log('Certificado agregado con método 4');
+      }
+    }
+  }
 
   console.log('antes de crear referencias');
 

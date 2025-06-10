@@ -6,8 +6,6 @@ const pool = require('../db');
 const { Crypto } = require('@peculiar/webcrypto');
 globalThis.crypto = new Crypto();
 
-const xadesjs = require('xadesjs');
-xadesjs.Application.setEngine("NodeJS WebCrypto", globalThis.crypto);
 
 const { DOMParser, XMLSerializer } = require('xmldom');
 const forge = require('node-forge');
@@ -96,7 +94,10 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const canonXml = new XMLSerializer().serializeToString(doc.documentElement)
     .replace(/(\r\n|\n|\r)/gm, "");
 
-  const digest = crypto.createHash('sha256').update(canonXml).digest('base64');
+  // 📌 Digest SHA256 manual con forge
+  const mdCanon = forge.md.sha256.create();
+  mdCanon.update(canonXml, 'utf8');
+  const digest = forge.util.encode64(mdCanon.digest().bytes());
 
   // Construir Signature manualmente
   const signatureDoc = new DOMParser().parseFromString(`
@@ -127,10 +128,10 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const canonSignedInfo = new XMLSerializer().serializeToString(signedInfo)
     .replace(/(\r\n|\n|\r)/gm, "");
 
-  const md = forge.md.sha256.create();
-  md.update(canonSignedInfo, 'utf8');
+  const mdSignedInfo = forge.md.sha256.create();
+  mdSignedInfo.update(canonSignedInfo, 'utf8');
 
-  const signature = forge.util.encode64(privateKey.sign(md));
+  const signature = forge.util.encode64(privateKey.sign(mdSignedInfo));
 
   // Insertar SignatureValue
   signatureDoc.getElementsByTagName("ds:SignatureValue")[0].textContent = signature;

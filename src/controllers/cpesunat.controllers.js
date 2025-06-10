@@ -148,7 +148,8 @@ async function firmarXMLUBL(unsignedXML, ruc) {
 
   // Retornar XML firmado
   const signedXmlString = new XMLSerializer().serializeToString(doc);
-  return String(signedXmlString);
+  console.log(signedXmlString);
+  return signedXmlString;
 
 }
 

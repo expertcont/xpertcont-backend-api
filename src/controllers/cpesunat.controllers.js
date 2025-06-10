@@ -50,7 +50,8 @@ const registrarCPESunat = async (req,res,next)=> {
         //const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
         let contenidoFirmado = await firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
         await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, contenidoFirmado);
-
+        
+        res.status(200).send('Archivo subido correctamente');
         //subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
         
 

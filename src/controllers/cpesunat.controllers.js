@@ -45,10 +45,13 @@ const registrarCPESunat = async (req,res,next)=> {
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
         // Genera XML desde el servicio
-        const xmlComprobante = await cpegeneraxml(dataVenta);
+        let xmlComprobante = await cpegeneraxml(dataVenta);
+        xmlComprobante = limpiarXML(xmlComprobante);
+
         //Se firma con datos del emisor (empresa: correo y ruc)
         //const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
         let contenidoFirmado = await firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
+        contenidoFirmado = limpiarXML(contenidoFirmado);
         await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, contenidoFirmado);
         
         res.status(200).send('Archivo subido correctamente');
@@ -61,6 +64,18 @@ const registrarCPESunat = async (req,res,next)=> {
     }
 };
 
+function limpiarXML(xml) {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+
+  // Serializar sin saltos de línea ni espacios innecesarios
+  let serializer = new XMLSerializer();
+  let xmlStr = serializer.serializeToString(doc);
+
+  // Limpiar saltos de línea y tabs
+  xmlStr = xmlStr.replace(/>\s+</g, '><').trim();
+
+  return xmlStr;
+}
 async function firmarXMLUBL(unsignedXML, ruc) {
   // Consulta certificado y password
   const { rows } = await pool.query(`

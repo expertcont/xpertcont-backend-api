@@ -48,7 +48,7 @@ const registrarCPESunat = async (req,res,next)=> {
         const xmlComprobante = await cpegeneraxml(dataVenta);
         //Se firma con datos del emisor (empresa: correo y ruc)
         //const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
-        let contenidoFirmado = await firmarXMLUBL(xmlComprobante, ruc);
+        let contenidoFirmado = await firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
         await subirArchivoDesdeMemoria(ruc, cod, serie, num, contenidoFirmado);
 
         //subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);

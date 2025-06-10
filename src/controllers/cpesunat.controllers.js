@@ -147,7 +147,9 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   ublExtensions.appendChild(ublExtension);
 
   // Retornar XML firmado
-  return new XMLSerializer().serializeToString(doc);
+  const signedXmlString = new XMLSerializer().serializeToString(doc);
+  return String(signedXmlString);
+
 }
 
 //////////////////////////////////////////////////////////////////////////////

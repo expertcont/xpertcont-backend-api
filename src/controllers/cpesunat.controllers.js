@@ -168,15 +168,14 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
 }
 
 function canonicalizarXML(xmlFragment) {
-  /*const { DOMParser } = require('xmldom');
-  const { SignedXml } = require('xml-crypto');*/
-
   const doc = new DOMParser().parseFromString(xmlFragment, 'text/xml');
 
-  const sig = new SignedXml();
-  sig.canonicalizationAlgorithm = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315";
+  let serializer = new XMLSerializer();
+  let canonicalized = serializer.serializeToString(doc.documentElement)
+    .replace(/(\r\n|\n|\r)/gm, "")
+    .replace(/\t/g, "")
+    .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
 
-  const canonicalized = sig.getCanonXml(sig.canonicalizationAlgorithm, doc.documentElement);
   return canonicalized;
 }
 

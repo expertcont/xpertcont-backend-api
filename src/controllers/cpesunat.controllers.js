@@ -65,7 +65,7 @@ const registrarCPESunat = async (req,res,next)=> {
         
         //04. Construir SOAP
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,contenidoFirmado,secundario_user,secundario_passwd);
-        contenidoSOAP = limpiarXML(contenidoSOAP);
+        contenidoSOAP = canonicalizarXML(limpiarXML(contenidoSOAP));
         
         //05. Enviar SOAP
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP);

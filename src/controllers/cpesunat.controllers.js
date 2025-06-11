@@ -13,6 +13,7 @@ const xpath = require('xpath');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
+const { SignedXml } = require('xml-crypto');
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -47,7 +48,7 @@ const registrarCPESunat = async (req,res,next)=> {
 
         //01. Genera XML desde el servicio
         let xmlComprobante = await cpegeneraxml(dataVenta);
-        xmlComprobante = limpiarXML(xmlComprobante);
+        xmlComprobante = canonicalizarXML(limpiarXML(xmlComprobante));
         
         //02. Consulta previa Firma y Envio: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
@@ -180,6 +181,20 @@ function limpiarXML(xml) {
   return xmlStr;
 }
 
+function canonicalizarXML(xmlFragment) {
+  const doc = new DOMParser().parseFromString(xmlFragment, 'text/xml');
+
+  const canAlgo = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"; // canonicalización sin comentarios
+  const sig = new SignedXml();
+
+  const canonicalized = sig.getCanonXml(
+    null, // node name para SignedXml, lo ignoramos
+    doc.documentElement, // nodo raíz del fragmento
+    canAlgo
+  );
+
+  return canonicalized;
+}
 function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlString, secundario_user,secundario_passwd) {
   const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;
   const nombreArchivoZip = `${ruc}-${codigo}-${serie}-${numero}.zip`;

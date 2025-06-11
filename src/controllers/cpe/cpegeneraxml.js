@@ -14,7 +14,7 @@ function cpegenerarxml(data) {
            xmlns:cac="urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2"
            xmlns:cbc="urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
            xmlns:ext="urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2">
-          <ext:UBLExtensions><ext:UBLExtension/></ext:UBLExtensions>
+          <ext:UBLExtensions></ext:UBLExtensions>
           ${cpegeneracab(data.venta)}
           ${cpegenerafirma(data.empresa)}
           ${cpegeneraemisor(data.empresa)}

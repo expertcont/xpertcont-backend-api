@@ -104,7 +104,7 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   if (!ublExtensions) throw new Error('No se encontró el nodo UBLExtensions');
 
   // Limpiar cualquier firma previa
-  //while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
+  while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
 
   // Canonicalizar todo el documento raíz para DigestValue
   const canonXml = canonicalizarXML(new XMLSerializer().serializeToString(doc.documentElement));

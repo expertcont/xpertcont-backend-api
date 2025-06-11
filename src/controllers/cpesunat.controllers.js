@@ -40,32 +40,30 @@ const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     }
 };
 
-
 const registrarCPESunat = async (req,res,next)=> {
     try {
         const dataVenta = req.body;
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
-        //01. Genera XML desde el servicio
-        let xmlComprobante = await cpegeneraxml(dataVenta);
-        xmlComprobante = canonicalizarXML(limpiarXML(xmlComprobante));
-        
-        //02. Consulta previa Firma y Envio: certificado,password, usuario secundario, url
+        //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
           SELECT certificado, password, secundario_user,secundario_passwd, url_envio
           FROM mad_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio} = rows[0];
+
+        //01. Genera XML desde el servicio y canonicalizo el resultado
+        let xmlComprobante = await cpegeneraxml(dataVenta);
         
-        //03. Firma con datos del emisor (empresa) y se guarda copia en servidor linux (ubuntu)
-        let contenidoFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        contenidoFirmado = limpiarXML(contenidoFirmado);
-        await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, contenidoFirmado);
+        //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
+        let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
+        
+        //me guardo una copia del xmlFirmado en servidor ubuntu
+        await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado);
         
         //04. Construir SOAP
-        let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,contenidoFirmado,secundario_user,secundario_passwd);
-        contenidoSOAP = canonicalizarXML(limpiarXML(contenidoSOAP));
+        let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
         
         //05. Enviar SOAP
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP);
@@ -163,150 +161,25 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   return signedXmlString;
 }
 
-function canonicalizarXML(xmlFragment) {
-  const doc = new DOMParser().parseFromString(xmlFragment, 'text/xml');
+function canonicalizarXML(xmlString) {
+  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
 
-  let serializer = new XMLSerializer();
-  let canonicalized = serializer.serializeToString(doc.documentElement)
-    .replace(/(\r\n|\n|\r)/gm, "")
-    .replace(/\t/g, "")
-    .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
-
-  return canonicalized;
-}
-
-function limpiarXML(xml) {
-  const { DOMParser, XMLSerializer } = require('xmldom');
-  const doc = new DOMParser().parseFromString(xml, 'text/xml');
-
-  let serializer = new XMLSerializer();
-  let xmlStr = serializer.serializeToString(doc);
-  xmlStr = xmlStr.replace(/>\s+</g, '><').trim();
-
-  return xmlStr;
-}
-
-/*async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
-
-  // Cargar PFX desde buffer
-  const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
-  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
-
-  const privateKey = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag][0].key;
-  const certForge = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0].cert;
-  const certPEM = forge.pki.certificateToPem(certForge);
-  const rawCert = Buffer.from(certPEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
-
-  // Parsear XML
-  const doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
-
-  // Buscar nodo UBLExtensions
-  const select = xpath.useNamespaces({
-    ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
-  });
-  const ublExtensions = select('//ext:UBLExtensions', doc)[0];
-  if (!ublExtensions) throw new Error('No se encontró el nodo UBLExtensions');
-
-  while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
-
-  // Serializar Canonicalizado
-  const canonXml = new XMLSerializer().serializeToString(doc.documentElement)
-    .replace(/(\r\n|\n|\r)/gm, "");
-
-  // 📌 Digest SHA256 manual con forge
-  const mdCanon = forge.md.sha256.create();
-  mdCanon.update(canonXml, 'utf8');
-  const digest = forge.util.encode64(mdCanon.digest().bytes());
-
-  // Construir Signature manualmente
-  const signatureDoc = new DOMParser().parseFromString(`
-    <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
-      <ds:SignedInfo>
-        <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-        <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha256"/>
-        <ds:Reference URI="">
-          <ds:Transforms>
-            <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-            <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-          </ds:Transforms>
-          <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-          <ds:DigestValue>${digest}</ds:DigestValue>
-        </ds:Reference>
-      </ds:SignedInfo>
-      <ds:SignatureValue></ds:SignatureValue>
-      <ds:KeyInfo>
-        <ds:X509Data>
-          <ds:X509Certificate>${rawCert.toString('base64')}</ds:X509Certificate>
-        </ds:X509Data>
-      </ds:KeyInfo>
-    </ds:Signature>
-  `, 'text/xml');
-  //estaba anteriormente del sfs, pero aqui lo cambio la IA   <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256"/> 
-
-  // Firmar el SignedInfo
-  const signedInfo = signatureDoc.getElementsByTagName("ds:SignedInfo")[0];
-  const canonSignedInfo = new XMLSerializer().serializeToString(signedInfo)
-    .replace(/(\r\n|\n|\r)/gm, "");
-
-  const mdSignedInfo = forge.md.sha256.create();
-  mdSignedInfo.update(canonSignedInfo, 'utf8');
-
-  const signature = forge.util.encode64(privateKey.sign(mdSignedInfo));
-
-  // Insertar SignatureValue
-  signatureDoc.getElementsByTagName("ds:SignatureValue")[0].textContent = signature;
-
-  // Crear UBLExtension con la firma
-  const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
-  const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
-
-  const importedSignature = doc.importNode(signatureDoc.documentElement, true);
-  extensionContent.appendChild(importedSignature);
-  ublExtension.appendChild(extensionContent);
-
-  ublExtensions.appendChild(ublExtension);
-
-  // Retornar XML firmado
-  const signedXmlString = new XMLSerializer().serializeToString(doc);
-  //console.log(signedXmlString);
-  return signedXmlString;
-}
-
-function canonicalizarXML(xmlFragment) {
-  const doc = new DOMParser().parseFromString(xmlFragment, 'text/xml');
-
-  const canAlgo = "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"; // canonicalización sin comentarios
   const sig = new SignedXml();
+  const xmlCanonicalized = sig.getCanonXml(doc.documentElement, {
+    inclusiveNamespacesPrefixList: '',
+    algorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315'
+  });
 
-  const canonicalized = sig.getCanonXml(
-    null, // node name para SignedXml, lo ignoramos
-    doc.documentElement, // nodo raíz del fragmento
-    canAlgo
-  );
-
-  return canonicalized;
+  return xmlCanonicalized;
 }
 
-function limpiarXML(xml) {
-  const doc = new DOMParser().parseFromString(xml, 'text/xml');
-
-  // Serializar sin saltos de línea ni espacios innecesarios
-  let serializer = new XMLSerializer();
-  let xmlStr = serializer.serializeToString(doc);
-
-  // Limpiar saltos de línea y tabs
-  xmlStr = xmlStr.replace(/>\s+</g, '><').trim();
-
-  return xmlStr;
-}*/
-
-function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlString, secundario_user,secundario_passwd) {
+function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, secundario_user,secundario_passwd) {
   const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;
   const nombreArchivoZip = `${ruc}-${codigo}-${serie}-${numero}.zip`;
 
   // Crear ZIP en memoria
   const zip = new AdmZip();
-  zip.addFile(nombreArchivoXml, Buffer.from(xmlString));
+  zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
 
   // Obtener contenido ZIP en buffer
   const zipBuffer = zip.toBuffer();
@@ -356,6 +229,18 @@ async function enviarSOAPSunat(soapXml) {
   }
 }
 //////////////////////////////////////////////////////////////////////////////
+
+function limpiarXML(xmlString) {
+  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
+
+  let serializer = new XMLSerializer();
+  let xmlLimpio = serializer.serializeToString(doc.documentElement)
+    .replace(/(\r\n|\n|\r)/gm, "")
+    .replace(/\t/g, "")
+    .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
+
+  return xmlLimpio;
+}
 
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,

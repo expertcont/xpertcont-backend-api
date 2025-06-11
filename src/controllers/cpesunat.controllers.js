@@ -11,6 +11,7 @@ const { DOMParser, XMLSerializer } = require('xmldom');
 const forge = require('node-forge');
 const xpath = require('xpath');
 
+const AdmZip = require('adm-zip');
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -41,44 +42,44 @@ const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
 const registrarCPESunat = async (req,res,next)=> {
     try {
         const dataVenta = req.body;
-        //console.log(dataVenta);
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
-        // Genera XML desde el servicio
+        //01. Genera XML desde el servicio
         let xmlComprobante = await cpegeneraxml(dataVenta);
         xmlComprobante = limpiarXML(xmlComprobante);
-
-        //Se firma con datos del emisor (empresa: correo y ruc)
-        //const xmlFirmado = firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
-        let contenidoFirmado = await firmarXMLUBL(xmlComprobante, dataVenta.empresa.ruc);
+        
+        //02. Consulta previa Firma y Envio: certificado,password, usuario secundario, url
+        const { rows } = await pool.query(`
+          SELECT certificado, password, secundario_user,secundario_passwd, url_envio
+          FROM mad_usuariocertificado 
+          WHERE documento_id = $1
+        `, [dataVenta.empresa.ruc]);
+        const { certificado: certificadoBuffer, password, secundario_user,secundario_passwd,url_envio } = rows[0];
+        
+        //03. Firma con datos del emisor (empresa) y se guarda copia en servidor linux (ubuntu)
+        let contenidoFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
         contenidoFirmado = limpiarXML(contenidoFirmado);
         await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, contenidoFirmado);
         
-        res.status(200).send('Archivo subido correctamente');
-        //subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobante);
+        //04. Construir SOAP
+        let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,contenidoFirmado,secundario_user,secundario_passwd);
+        console.log(contenidoSOAP);
         
+        //05. Enviar SOAP
 
+        //06. Almacenar Certificado en tabla temporal ticket
+
+        res.status(200).send('Archivo subido correctamente');
+        
     }catch(error){
         //res.json({error:error.message});
         next(error)
     }
 };
 
-function limpiarXML(xml) {
-  const doc = new DOMParser().parseFromString(xml, 'text/xml');
-
-  // Serializar sin saltos de línea ni espacios innecesarios
-  let serializer = new XMLSerializer();
-  let xmlStr = serializer.serializeToString(doc);
-
-  // Limpiar saltos de línea y tabs
-  xmlStr = xmlStr.replace(/>\s+</g, '><').trim();
-
-  return xmlStr;
-}
-async function firmarXMLUBL(unsignedXML, ruc) {
+async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   // Consulta certificado y password
-  const { rows } = await pool.query(`
+  /*const { rows } = await pool.query(`
     SELECT certificado, password
     FROM mad_usuariocertificado 
     WHERE documento_id = $1
@@ -87,6 +88,7 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   if (rows.length === 0) throw new Error('Certificado no encontrado para el RUC indicado.');
 
   const { certificado: certificadoBuffer, password } = rows[0];
+  */
 
   // Cargar PFX desde buffer
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
@@ -169,55 +171,68 @@ async function firmarXMLUBL(unsignedXML, ruc) {
   const signedXmlString = new XMLSerializer().serializeToString(doc);
   //console.log(signedXmlString);
   return signedXmlString;
+}
 
+function limpiarXML(xml) {
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+
+  // Serializar sin saltos de línea ni espacios innecesarios
+  let serializer = new XMLSerializer();
+  let xmlStr = serializer.serializeToString(doc);
+
+  // Limpiar saltos de línea y tabs
+  xmlStr = xmlStr.replace(/>\s+</g, '><').trim();
+
+  return xmlStr;
+}
+
+function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlString, secundario_user,secundario_passwd) {
+  const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;
+  const nombreArchivoZip = `${ruc}-${codigo}-${serie}-${numero}.zip`;
+
+  // Crear ZIP en memoria
+  const zip = new AdmZip();
+  zip.addFile(nombreArchivoXml, Buffer.from(xmlString));
+
+  // Obtener contenido ZIP en buffer
+  const zipBuffer = zip.toBuffer();
+
+  // Convertir buffer a Base64
+  const zipBase64 = zipBuffer.toString('base64');
+
+  // Armar SOAP manualmente
+  /*const soapXml = `<?xml version="1.0" encoding="UTF-8"?>
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+                    xmlns:ser="http://service.sunat.gob.pe">
+    <soapenv:Header/>
+    <soapenv:Body>
+      <ser:sendBill>
+        <fileName>${nombreArchivoZip}</fileName>
+        <contentFile>${zipBase64}</contentFile>
+      </ser:sendBill>
+    </soapenv:Body>
+  </soapenv:Envelope>`;*/
+
+  const soapXml = `<?xml version="1.0" encoding="UTF-8"?>
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.sunat.gob.pe" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
+  <soapenv:Header>
+      <wsse:Security>
+          <wsse:UsernameToken>
+              <wsse:Username>${ruc}${secundario_user}</wsse:Username>
+              <wsse:Password>${secundario_passwd}</wsse:Password>
+          </wsse:UsernameToken>
+      </wsse:Security>
+  </soapenv:Header>
+  <soapenv:Body>
+          <fileName>${nombreArchivoZip}</fileName>
+          <contentFile>${zipBase64}</contentFile>
+  </soapenv:Body>
+  </soapenv:Envelope>`;
+
+  return soapXml;
 }
 
 //////////////////////////////////////////////////////////////////////////////
-function convertPrivateKeyToPkcs8Buffer(privateKey) {
-  // 📌 Convertimos la clave privada a ASN.1 (PKCS#1)
-  const privateKeyAsn1 = forge.pki.privateKeyToAsn1(privateKey);
-
-  // 📌 Armamos la estructura PKCS#8 (PrivateKeyInfo)
-  const privateKeyInfoAsn1 = forge.asn1.create(
-    forge.asn1.Class.UNIVERSAL,
-    forge.asn1.Type.SEQUENCE,
-    true,
-    [
-      // version (INTEGER 0)
-      forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.INTEGER, false, String.fromCharCode(0)),
-
-      // algorithm (SEQUENCE)
-      forge.asn1.create(
-        forge.asn1.Class.UNIVERSAL,
-        forge.asn1.Type.SEQUENCE,
-        true,
-        [
-          // algorithm OID for rsaEncryption
-          forge.asn1.create(
-            forge.asn1.Class.UNIVERSAL,
-            forge.asn1.Type.OID,
-            false,
-            forge.asn1.oidToDer(forge.pki.oids.rsaEncryption).getBytes()
-          ),
-          // parameters (NULL)
-          forge.asn1.create(forge.asn1.Class.UNIVERSAL, forge.asn1.Type.NULL, false, '')
-        ]
-      ),
-
-      // PrivateKey (OCTET STRING)
-      forge.asn1.create(
-        forge.asn1.Class.UNIVERSAL,
-        forge.asn1.Type.OCTETSTRING,
-        false,
-        forge.asn1.toDer(privateKeyAsn1).getBytes()
-      )
-    ]
-  );
-
-  // 📌 Convertimos a DER y luego a Buffer
-  const privateKeyDer = forge.asn1.toDer(privateKeyInfoAsn1).getBytes();
-  return Buffer.from(privateKeyDer, 'binary');
-}
 
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,

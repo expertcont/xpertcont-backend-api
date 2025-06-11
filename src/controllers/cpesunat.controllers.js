@@ -12,6 +12,7 @@ const forge = require('node-forge');
 const xpath = require('xpath');
 
 const AdmZip = require('adm-zip');
+const fetch = require('node-fetch');
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -54,7 +55,7 @@ const registrarCPESunat = async (req,res,next)=> {
           FROM mad_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
-        const { certificado: certificadoBuffer, password, secundario_user,secundario_passwd,url_envio } = rows[0];
+        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio} = rows[0];
         
         //03. Firma con datos del emisor (empresa) y se guarda copia en servidor linux (ubuntu)
         let contenidoFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
@@ -63,9 +64,12 @@ const registrarCPESunat = async (req,res,next)=> {
         
         //04. Construir SOAP
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,contenidoFirmado,secundario_user,secundario_passwd);
-        console.log(contenidoSOAP);
+        contenidoSOAP = limpiarXML(contenidoSOAP);
         
         //05. Enviar SOAP
+        const respuestaSoap = await enviarSOAPSunat(contenidoSOAP);
+        console.log('📩 Respuesta recibida de SUNAT:');
+        console.log(respuestaSoap);
 
         //06. Almacenar Certificado en tabla temporal ticket
 
@@ -78,17 +82,6 @@ const registrarCPESunat = async (req,res,next)=> {
 };
 
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
-  // Consulta certificado y password
-  /*const { rows } = await pool.query(`
-    SELECT certificado, password
-    FROM mad_usuariocertificado 
-    WHERE documento_id = $1
-  `, [ruc]);
-
-  if (rows.length === 0) throw new Error('Certificado no encontrado para el RUC indicado.');
-
-  const { certificado: certificadoBuffer, password } = rows[0];
-  */
 
   // Cargar PFX desde buffer
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
@@ -201,18 +194,6 @@ function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlString, secundari
   const zipBase64 = zipBuffer.toString('base64');
 
   // Armar SOAP manualmente
-  /*const soapXml = `<?xml version="1.0" encoding="UTF-8"?>
-  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
-                    xmlns:ser="http://service.sunat.gob.pe">
-    <soapenv:Header/>
-    <soapenv:Body>
-      <ser:sendBill>
-        <fileName>${nombreArchivoZip}</fileName>
-        <contentFile>${zipBase64}</contentFile>
-      </ser:sendBill>
-    </soapenv:Body>
-  </soapenv:Envelope>`;*/
-
   const soapXml = `<?xml version="1.0" encoding="UTF-8"?>
   <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.sunat.gob.pe" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
   <soapenv:Header>
@@ -232,6 +213,27 @@ function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlString, secundari
   return soapXml;
 }
 
+async function enviarSOAPSunat(soapXml) {
+  try {
+    const response = await fetch('https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'text/xml; charset=utf-8',
+        'SOAPAction': ''  // obligatorio pero vacío
+      },
+      body: soapXml
+    });
+
+    const respuestaTexto = await response.text();
+
+    console.log('✅ Respuesta SUNAT:', respuestaTexto);
+    return respuestaTexto;
+
+  } catch (error) {
+    console.error('❌ Error al enviar SOAP:', error);
+    throw error;
+  }
+}
 //////////////////////////////////////////////////////////////////////////////
 
 module.exports = {

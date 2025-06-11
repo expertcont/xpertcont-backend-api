@@ -83,10 +83,6 @@ const registrarCPESunat = async (req,res,next)=> {
 };
 
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
-  /*const forge = require('node-forge');
-  const { DOMParser, XMLSerializer } = require('xmldom');
-  const xpath = require('xpath');
-  const { SignedXml } = require('xml-crypto');*/
 
   // Cargar PFX desde buffer
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
@@ -101,14 +97,14 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   const doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
 
   // Buscar nodo UBLExtensions
-  const select = xpath.useNamespaces({
+  /*const select = xpath.useNamespaces({
     ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
   });
   const ublExtensions = select('//ext:UBLExtensions', doc)[0];
   if (!ublExtensions) throw new Error('No se encontró el nodo UBLExtensions');
 
   // Limpiar cualquier firma previa
-  while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
+  while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);*/
 
   // Canonicalizar todo el documento raíz para DigestValue
   const canonXml = canonicalizarXML(new XMLSerializer().serializeToString(doc.documentElement));

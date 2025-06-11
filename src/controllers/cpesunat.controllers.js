@@ -205,8 +205,10 @@ function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlString, secundari
       </wsse:Security>
   </soapenv:Header>
   <soapenv:Body>
+        <ser:sendBill>
           <fileName>${nombreArchivoZip}</fileName>
           <contentFile>${zipBase64}</contentFile>
+        </ser:sendBill>
   </soapenv:Body>
   </soapenv:Envelope>`;
 
@@ -225,8 +227,6 @@ async function enviarSOAPSunat(soapXml) {
     });
 
     const respuestaTexto = await response.text();
-
-    console.log('✅ Respuesta SUNAT:', respuestaTexto);
     return respuestaTexto;
 
   } catch (error) {

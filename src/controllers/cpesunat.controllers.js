@@ -124,7 +124,7 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
             <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
             <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
           </ds:Transforms>
-          <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256"/>
+          <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
           <ds:DigestValue>${digest}</ds:DigestValue>
         </ds:Reference>
       </ds:SignedInfo>
@@ -136,6 +136,7 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
       </ds:KeyInfo>
     </ds:Signature>
   `, 'text/xml');
+  //estaba anteriormente del sfs, pero aqui lo cambio la IA   <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha256"/> 
 
   // Firmar el SignedInfo
   const signedInfo = signatureDoc.getElementsByTagName("ds:SignedInfo")[0];

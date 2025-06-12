@@ -15,9 +15,7 @@ function cpegeneracab(data) {
     <cbc:IssueTime>${data.hora_emision}</cbc:IssueTime>
     <cbc:InvoiceTypeCode listID="0101" listAgencyName="PE:SUNAT"
       listName="Tipo de Documento" listURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo01"
-      name="Tipo de Operacion" listSchemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo51">
-      ${data.codigo}
-    </cbc:InvoiceTypeCode>
+      name="Tipo de Operacion" listSchemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo51">${data.codigo}</cbc:InvoiceTypeCode>
     <cbc:Note languageLocaleID="1000">${sMontoLetras}</cbc:Note>
     <cbc:DocumentCurrencyCode>${data.moneda_id}</cbc:DocumentCurrencyCode>`;
   //Campos comprobante: codigo,serie,numero,fecha,hora,moneda_id(PEN,USD,EUR)

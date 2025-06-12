@@ -56,6 +56,7 @@ const registrarCPESunat = async (req,res,next)=> {
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante = await cpegeneraxml(dataVenta);
+        xmlComprobante = canonicalizarManual(xmlComprobante);
         
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
         let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
@@ -81,7 +82,13 @@ const registrarCPESunat = async (req,res,next)=> {
         next(error)
     }
 };
-
+function canonicalizarManual(xmlStr) {
+  return xmlStr
+    .replace(/(\r\n|\n|\r)/g, '')
+    .replace(/\t/g, '')
+    .replace(/>\s+</g, '><')
+    .trim();
+}
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   try {
     // 📌 Generar ruta temporal única para el PFX

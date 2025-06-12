@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "@peculiar/webcrypto": "^1.5.0",
+    "@supernova-team/xml-sunat": "^0.9.6",
     "adm-zip": "^0.5.16",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",

@@ -2,18 +2,19 @@ const cpegeneraxml = require('./cpe/cpegeneraxml');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
-// 📌 Inyecta WebCrypto compatible en globalThis
-const { Crypto } = require('@peculiar/webcrypto');
-globalThis.crypto = new Crypto();
-
-
-const { DOMParser, XMLSerializer } = require('xmldom');
+/////////////////////////////////////////////////////////
+/*const { DOMParser, XMLSerializer } = require('xmldom');
 const forge = require('node-forge');
-const xpath = require('xpath');
+const xpath = require('xpath');*/
+
+const { XmlSignature } = require('@supernova-team/xml-sunat');
+const fs = require('fs/promises');
+const path = require('path');
+const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
-let digestOriginal;
+//let digestOriginal;
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -58,7 +59,7 @@ const registrarCPESunat = async (req,res,next)=> {
         
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
         let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        verificarDigest(digestOriginal, xmlComprobanteFirmado);
+        //verificarDigest(digestOriginal, xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
         await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado);
@@ -82,6 +83,29 @@ const registrarCPESunat = async (req,res,next)=> {
 };
 
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
+  try {
+    // 📌 Generar ruta temporal única para el PFX
+    const pfxTempPath = path.join('/tmp', `cert-${randomUUID()}.pfx`);
+
+    // 📌 Escribir buffer del certificado a archivo temporal
+    await fs.writeFile(pfxTempPath, certificadoBuffer);
+
+    // 📌 Instanciar firmador y firmar XML
+    const signer = new XmlSignature(pfxTempPath, password, unsignedXML);
+    const signedXml = await signer.getSignedXML();
+
+    // 📌 Eliminar el archivo temporal una vez firmado
+    await fs.unlink(pfxTempPath);
+
+    // 📌 Retornar XML firmado como string
+    return signedXml;
+  } catch (err) {
+    console.error('❌ Error firmando XML:', err);
+    throw err;
+  }
+}
+
+/*async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   // 1️⃣ Leer PFX desde buffer y obtener privateKey y certificado
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
   const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
@@ -180,16 +204,8 @@ function canonicalizarXML(xmlString) {
   const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
   return canonicalizarNodo(doc.documentElement);
 }
+*/
 
-/*function canonicalizarXML(node) {
-  const sig = new SignedXml();
-  const xmlCanonicalized = sig.getCanonXml(node, {
-    inclusiveNamespacesPrefixList: '',
-    algorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315'
-  });
-
-  return xmlCanonicalized;
-}*/
 
 function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, secundario_user,secundario_passwd) {
   const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;
@@ -247,7 +263,7 @@ async function enviarSOAPSunat(soapXml) {
   }
 }
 //////////////////////////////////////////////////////////////////////////////
-function limpiarXML(xmlString) {
+/*function limpiarXML(xmlString) {
   const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
 
   let serializer = new XMLSerializer();
@@ -257,9 +273,9 @@ function limpiarXML(xmlString) {
     .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
 
   return xmlLimpio;
-}
+}*/
 /////////////////////////////////////////////////////////////////////////////
-function obtenerDocumentoRaizSinFirma(xmlFirmado) {
+/*function obtenerDocumentoRaizSinFirma(xmlFirmado) {
   const doc = new DOMParser().parseFromString(xmlFirmado, 'text/xml');
   const select = xpath.useNamespaces({
     ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
@@ -279,18 +295,12 @@ function obtenerDocumentoRaizSinFirma(xmlFirmado) {
   return xmlCanon;
 }
 
-/**
- * 📌 Calcula el digest SHA-1 (SUNAT usa SHA-1 para DigestValue)
- */
 function calcularDigest(xmlCanonizado) {
   const md = forge.md.sha1.create();
   md.update(xmlCanonizado, 'utf8');
   return forge.util.encode64(md.digest().bytes());
 }
 
-/**
- * 📌 Valida DigestValue original vs digest calculado del XML sin firma
- */
 function verificarDigest(digestValueOriginal, xmlFirmado) {
   const xmlCanonizado = obtenerDocumentoRaizSinFirma(xmlFirmado);
   const digestCalculado = calcularDigest(xmlCanonizado);
@@ -308,7 +318,7 @@ function verificarDigest(digestValueOriginal, xmlFirmado) {
 
   return coincide;
 }
-
+*/
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,
     registrarCPESunat

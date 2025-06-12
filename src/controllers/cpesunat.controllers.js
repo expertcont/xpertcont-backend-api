@@ -196,11 +196,10 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   // Limpiar cualquier firma previa
   while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
 
-  console.log('antes 1er canonicalizarXML(doc.documentElement)');
+  console.log('antes canonicalizarNodo(doc.documentElement)');
   // Canonicalizar todo el documento raíz para DigestValue
-  //const canonXml = canonicalizarXML(doc.documentElement);
-  const canonXml = canonicalizarXML(new XMLSerializer().serializeToString(doc.documentElement));
-  console.log('despues 1er canonicalizarXML(doc.documentElement)');
+  const canonXml = canonicalizarNodo(doc.documentElement);
+  console.log('despues canonicalizarNodo(doc.documentElement)');
 
   // Digest SHA256
   const mdCanon = forge.md.sha256.create();
@@ -233,9 +232,9 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
 
   // Firmar el SignedInfo canonicalizado
   const signedInfoNode = signatureDoc.getElementsByTagName("ds:SignedInfo")[0];
-  console.log('antes 2do canonicalizarXML(signedInfoNode)');
-  const canonSignedInfo = canonicalizarXML(signedInfoNode);
-  console.log('despues 2do canonicalizarXML(signedInfoNode)');
+  console.log('antes canonicalizarNodo(signedInfoNode)');
+  const canonSignedInfo = canonicalizarNodo(signedInfoNode);
+  console.log('despues canonicalizarNodo(signedInfoNode)');
 
   const mdSignedInfo = forge.md.sha256.create();
   mdSignedInfo.update(canonSignedInfo, 'utf8');
@@ -245,8 +244,14 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   signatureDoc.getElementsByTagName("ds:SignatureValue")[0].textContent = signature;
 
   // Crear UBLExtension con la firma
-  const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
-  const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
+  const ublExtension = doc.createElementNS(
+    'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2',
+    'ext:UBLExtension'
+  );
+  const extensionContent = doc.createElementNS(
+    'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2',
+    'ext:ExtensionContent'
+  );
 
   const importedSignature = doc.importNode(signatureDoc.documentElement, true);
   extensionContent.appendChild(importedSignature);
@@ -258,7 +263,20 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   return signedXmlString;
 }
 
-function canonicalizarXML(node) {
+function canonicalizarXML(xmlString) {
+  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
+  return canonicalizarNodo(doc.documentElement);
+}
+
+function canonicalizarNodo(node) {
+  const sig = new SignedXml();
+  return sig.getCanonXml(node, {
+    inclusiveNamespacesPrefixList: '',
+    algorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315'
+  });
+}
+
+/*function canonicalizarXML(node) {
   const sig = new SignedXml();
   const xmlCanonicalized = sig.getCanonXml(node, {
     inclusiveNamespacesPrefixList: '',
@@ -266,7 +284,7 @@ function canonicalizarXML(node) {
   });
 
   return xmlCanonicalized;
-}
+}*/
 
 function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, secundario_user,secundario_passwd) {
   const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;

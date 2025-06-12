@@ -1,13 +1,13 @@
 function cpegeneradet(items,moneda_id) {
   return items.map((item, index) => {
     // Variables previas para cálculos
-    const { producto, cantidad, precio_base, codigo_sunat, codigo_producto, codigo_unidad, tipo_igv_codigo, porc_igv } = item;
+    let { producto, cantidad, precio_base, codigo_sunat, codigo_producto, codigo_unidad, tipo_igv_codigo, porc_igv } = item;
 
     //Nota: precio_base = precio unitario sin igv
-
+    //precio_base = precio_base.toFixed(2);
     // Calcular momtos subtotal,igv 
-    const subtotal_item = precio_base*cantidad;
-    const igv_item = subtotal_item*(porc_igv / 100);
+    const subtotal_item = (precio_base*cantidad).toFixed(2);
+    const igv_item = (subtotal_item*(porc_igv / 100)).toFixed(2);
 
 
     return `

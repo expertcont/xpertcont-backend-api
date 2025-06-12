@@ -198,7 +198,8 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
 
   console.log('antes 1er canonicalizarXML(doc.documentElement)');
   // Canonicalizar todo el documento raíz para DigestValue
-  const canonXml = canonicalizarXML(doc.documentElement);
+  //const canonXml = canonicalizarXML(doc.documentElement);
+  const canonXml = canonicalizarXML(new XMLSerializer().serializeToString(doc.documentElement));
   console.log('despues 1er canonicalizarXML(doc.documentElement)');
 
   // Digest SHA256

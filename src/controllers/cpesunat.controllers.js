@@ -196,9 +196,10 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   // Limpiar cualquier firma previa
   while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
 
+  console.log('antes 1er canonicalizarXML(doc.documentElement)', doc.documentElement);
   // Canonicalizar todo el documento raíz para DigestValue
   const canonXml = canonicalizarXML(doc.documentElement);
-  console.log('despues 1er canonicalizarXML(doc.documentElement)', doc.documentElement);
+  
 
   // Digest SHA256
   const mdCanon = forge.md.sha256.create();
@@ -231,9 +232,9 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
 
   // Firmar el SignedInfo canonicalizado
   const signedInfoNode = signatureDoc.getElementsByTagName("ds:SignedInfo")[0];
+  console.log('antes 2do canonicalizarXML(signedInfoNode)', signedInfoNode);
   const canonSignedInfo = canonicalizarXML(signedInfoNode);
-  console.log('despues 2do canonicalizarXML(signedInfoNode)', signedInfoNode);
-
+  
   const mdSignedInfo = forge.md.sha256.create();
   mdSignedInfo.update(canonSignedInfo, 'utf8');
   const signature = forge.util.encode64(privateKey.sign(mdSignedInfo));

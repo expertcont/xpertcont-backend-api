@@ -13,6 +13,7 @@ const xpath = require('xpath');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
+let digestOriginal;
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -57,7 +58,8 @@ const registrarCPESunat = async (req,res,next)=> {
         
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
         let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        
+        verificarDigest(digestOriginal, xmlComprobanteFirmado);
+
         //me guardo una copia del xmlFirmado en servidor ubuntu
         await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado);
         
@@ -201,6 +203,7 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   const mdCanon = forge.md.sha1.create();
   mdCanon.update(canonXml, 'utf8');
   const digest = forge.util.encode64(mdCanon.digest().bytes());
+  digestOriginal = digest; //prueba
 
   // 6️⃣ Construir Signature XML con DigestValue calculado
   const signatureXml = `
@@ -338,7 +341,6 @@ async function enviarSOAPSunat(soapXml) {
   }
 }
 //////////////////////////////////////////////////////////////////////////////
-
 function limpiarXML(xmlString) {
   const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
 
@@ -349,6 +351,56 @@ function limpiarXML(xmlString) {
     .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
 
   return xmlLimpio;
+}
+/////////////////////////////////////////////////////////////////////////////
+function obtenerDocumentoRaizSinFirma(xmlFirmado) {
+  const doc = new DOMParser().parseFromString(xmlFirmado, 'text/xml');
+  const select = xpath.useNamespaces({
+    ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
+  });
+
+  const ublExtensions = select('//ext:UBLExtensions', doc)[0];
+  if (ublExtensions) {
+    while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
+  }
+
+  const xmlCanon = new XMLSerializer().serializeToString(doc.documentElement)
+    .replace(/(\r\n|\n|\r)/g, '')
+    .replace(/\t/g, '')
+    .replace(/>\s+</g, '><')
+    .trim();
+
+  return xmlCanon;
+}
+
+/**
+ * 📌 Calcula el digest SHA-1 (SUNAT usa SHA-1 para DigestValue)
+ */
+function calcularDigest(xmlCanonizado) {
+  const md = forge.md.sha1.create();
+  md.update(xmlCanonizado, 'utf8');
+  return forge.util.encode64(md.digest().bytes());
+}
+
+/**
+ * 📌 Valida DigestValue original vs digest calculado del XML sin firma
+ */
+function verificarDigest(digestValueOriginal, xmlFirmado) {
+  const xmlCanonizado = obtenerDocumentoRaizSinFirma(xmlFirmado);
+  const digestCalculado = calcularDigest(xmlCanonizado);
+
+  console.log('📄 Digest original generado: ', digestValueOriginal);
+  console.log('📄 Digest recalculado ahora: ', digestCalculado);
+
+  const coincide = digestValueOriginal === digestCalculado;
+
+  if (coincide) {
+    console.log('✅ DigestValue OK ✅');
+  } else {
+    console.error('❌ DigestValue distinto ❌');
+  }
+
+  return coincide;
 }
 
 module.exports = {

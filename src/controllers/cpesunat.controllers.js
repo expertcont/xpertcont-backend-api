@@ -80,7 +80,7 @@ const registrarCPESunat = async (req,res,next)=> {
     }
 };
 
-async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
+/*async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
 
   // Cargar PFX desde buffer
   const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
@@ -160,12 +160,104 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   const signedXmlString = new XMLSerializer().serializeToString(doc);
   return signedXmlString;
 }
-
 function canonicalizarXML(xmlString) {
   const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
 
   const sig = new SignedXml();
   const xmlCanonicalized = sig.getCanonXml(doc.documentElement, {
+    inclusiveNamespacesPrefixList: '',
+    algorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315'
+  });
+
+  return xmlCanonicalized;
+}
+*/
+
+async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
+  // Cargar PFX desde buffer
+  const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
+  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
+
+  const privateKey = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag][0].key;
+  const certForge = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0].cert;
+  const certPEM = forge.pki.certificateToPem(certForge);
+  const rawCert = Buffer.from(certPEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ""), 'base64');
+
+  // Parsear XML
+  const doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
+
+  // Buscar nodo UBLExtensions
+  const select = xpath.useNamespaces({
+    ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
+  });
+  const ublExtensions = select('//ext:UBLExtensions', doc)[0];
+  if (!ublExtensions) throw new Error('No se encontró el nodo UBLExtensions');
+
+  // Limpiar cualquier firma previa
+  while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
+
+  // Canonicalizar todo el documento raíz para DigestValue
+  const canonXml = canonicalizarXML(doc.documentElement);
+  console.log('despues 1er canonicalizarXML(doc.documentElement)', doc.documentElement);
+
+  // Digest SHA256
+  const mdCanon = forge.md.sha256.create();
+  mdCanon.update(canonXml, 'utf8');
+  const digest = forge.util.encode64(mdCanon.digest().bytes());
+
+  // Construir Signature XML
+  const signatureDoc = new DOMParser().parseFromString(`
+    <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
+      <ds:SignedInfo>
+        <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+        <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha256"/>
+        <ds:Reference URI="">
+          <ds:Transforms>
+            <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+            <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+          </ds:Transforms>
+          <ds:DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
+          <ds:DigestValue>${digest}</ds:DigestValue>
+        </ds:Reference>
+      </ds:SignedInfo>
+      <ds:SignatureValue></ds:SignatureValue>
+      <ds:KeyInfo>
+        <ds:X509Data>
+          <ds:X509Certificate>${rawCert.toString('base64')}</ds:X509Certificate>
+        </ds:X509Data>
+      </ds:KeyInfo>
+    </ds:Signature>
+  `, 'text/xml');
+
+  // Firmar el SignedInfo canonicalizado
+  const signedInfoNode = signatureDoc.getElementsByTagName("ds:SignedInfo")[0];
+  const canonSignedInfo = canonicalizarXML(signedInfoNode);
+  console.log('despues 2do canonicalizarXML(signedInfoNode)', signedInfoNode);
+
+  const mdSignedInfo = forge.md.sha256.create();
+  mdSignedInfo.update(canonSignedInfo, 'utf8');
+  const signature = forge.util.encode64(privateKey.sign(mdSignedInfo));
+
+  // Colocar SignatureValue
+  signatureDoc.getElementsByTagName("ds:SignatureValue")[0].textContent = signature;
+
+  // Crear UBLExtension con la firma
+  const ublExtension = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:UBLExtension');
+  const extensionContent = doc.createElementNS('urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2', 'ext:ExtensionContent');
+
+  const importedSignature = doc.importNode(signatureDoc.documentElement, true);
+  extensionContent.appendChild(importedSignature);
+  ublExtension.appendChild(extensionContent);
+  ublExtensions.appendChild(ublExtension);
+
+  // Retornar XML firmado
+  const signedXmlString = new XMLSerializer().serializeToString(doc);
+  return signedXmlString;
+}
+
+function canonicalizarXML(node) {
+  const sig = new SignedXml();
+  const xmlCanonicalized = sig.getCanonXml(node, {
     inclusiveNamespacesPrefixList: '',
     algorithm: 'http://www.w3.org/TR/2001/REC-xml-c14n-20010315'
   });

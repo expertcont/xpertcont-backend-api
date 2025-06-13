@@ -177,34 +177,33 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
     numero: dataVenta.venta.numero
   };
 
-  // Parsear respuesta SOAP para extraer <applicationResponse>
   const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
   const select = xpath.useNamespaces({
-    'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
-    'br': 'http://service.sunat.gob.pe'
+    'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
   });
 
-// Buscar applicationResponse sin prefijo
   const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
   if (!appRespNode) throw new Error('No se encontró applicationResponse en SOAP.');
 
   const base64Zip = appRespNode.textContent;
-
-  // Decodificar base64 y leer ZIP
   const zipBuffer = Buffer.from(base64Zip, 'base64');
   const zip = new AdmZip(zipBuffer);
   const entries = zip.getEntries();
 
   if (entries.length === 0) throw new Error('ZIP devuelto está vacío.');
 
-  // Normalmente hay una sola entrada, la respuesta SUNAT CDR XML
   const entry = entries[0];
-  const contenidoCDR = entry.getData().toString('utf8');
+  const rawBuffer = entry.getData();
 
-  // Guardar con tu función 
+  // Verificar contenido
+  console.log('Tamaño del CDR:', rawBuffer.length);
+  console.log('Primeros bytes:', rawBuffer.slice(0, 50));
+
+  const contenidoCDR = rawBuffer.toString('utf8');
+  console.log('Contenido CDR:', contenidoCDR);
+
   await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR,'R');
-
-  console.log(`✅ CDR de SUNAT guardado exitosamente como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
+  console.log(`✅ CDR SUNAT guardado como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
 }
 
 //////////////////////////////////////////////////////////////////////////////

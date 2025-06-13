@@ -18,9 +18,11 @@ const config = {
  * @param {string} nombreRemoto - Nombre final del archivo remoto (incluyendo .xml o .cdr)
  */
 
-async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido) {
+async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, respuesta) {
   const rutaFactura = `/descargas/${ruc}/`;
-  const rutaArchivo = `${rutaFactura}${ruc}-${codigo}-${serie}-${numero}.xml`;
+  let rutaArchivo = (respuesta=='R') ?  `${rutaFactura}${respuesta}-${ruc}-${codigo}-${serie}-${numero}.xml`
+                                          : 
+                                        `${rutaFactura}-${ruc}-${codigo}-${serie}-${numero}.xml`;
 
   try {
     await sftp.connect(config);
@@ -45,7 +47,7 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido) {
     console.log(`✅ Archivo subido desde memoria a: ${rutaArchivo}`);
 
   } catch (err) {
-    console.error(`❌ Error subiendo ${ruc}-${codigo}-${serie}-${numero}:`, err);
+    console.error(`❌ Error subiendo ${rutaArchivo}:`, err);
   } finally {
     await sftp.end();
   }

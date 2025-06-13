@@ -62,7 +62,7 @@ const registrarCPESunat = async (req,res,next)=> {
         //verificarDigest(digestOriginal, xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
-        await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado);
+        await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado,'');
         
         //04. Construir SOAP
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
@@ -187,7 +187,7 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
 // Buscar applicationResponse sin prefijo
   const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
   if (!appRespNode) throw new Error('No se encontró applicationResponse en SOAP.');
-  
+
   const base64Zip = appRespNode.textContent;
 
   // Decodificar base64 y leer ZIP
@@ -202,7 +202,7 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
   const contenidoCDR = entry.getData().toString('utf8');
 
   // Guardar con tu función subirArchivoDesdeMemoria
-  await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR);
+  await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR,'R');
 
   console.log(`✅ CDR de SUNAT guardado exitosamente como ${ruc}-${codigo}-${serie}-${numero}.xml`);
 }

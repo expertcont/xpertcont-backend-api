@@ -9,7 +9,8 @@ const xpath = require('xpath');*/
 
 const { XmlSignature } = require('@supernova-team/xml-sunat');
 const fs = require('fs/promises');
-const xpath = require('path');
+const xpath = require('xpath');
+const path = require('path');
 const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');
@@ -180,7 +181,7 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
 
   // Parsear respuesta SOAP para extraer <applicationResponse>
   const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
-  const select = xpath.useNamespaces({
+  const select = path.useNamespaces({
     'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
     'br': 'http://service.sunat.gob.pe'
   });

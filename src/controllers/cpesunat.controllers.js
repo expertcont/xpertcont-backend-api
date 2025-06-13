@@ -9,7 +9,7 @@ const xpath = require('xpath');*/
 
 const { XmlSignature } = require('@supernova-team/xml-sunat');
 const fs = require('fs/promises');
-const xpath = require('xpath');
+const xpath = require('path');
 const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');

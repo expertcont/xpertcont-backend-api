@@ -3,8 +3,8 @@ const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
 /////////////////////////////////////////////////////////
-/*const { DOMParser, XMLSerializer } = require('xmldom');
-const forge = require('node-forge');
+const { DOMParser} = require('xmldom');
+/*const forge = require('node-forge');
 const xpath = require('xpath');*/
 
 const { XmlSignature } = require('@supernova-team/xml-sunat');

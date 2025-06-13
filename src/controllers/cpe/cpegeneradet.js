@@ -6,8 +6,8 @@ function cpegeneradet(items,moneda_id) {
     //Nota: precio_base = precio unitario sin igv
     //precio_base = precio_base.toFixed(2);
     // Calcular momtos subtotal,igv 
-    const subtotal_item = (precio_base*cantidad).toFixed(4);
-    const igv_item = (subtotal_item*(porc_igv / 100)).toFixed(4);
+    const subtotal_item = (precio_base*cantidad).toFixed(2);
+    const igv_item = (subtotal_item*(porc_igv / 100)).toFixed(2);
 
 
     return `

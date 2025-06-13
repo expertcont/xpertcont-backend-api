@@ -177,32 +177,45 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
     numero: dataVenta.venta.numero
   };
 
+  // Parsear SOAP XML
   const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
   const select = xpath.useNamespaces({
     'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
   });
 
+  // Localizar applicationResponse
   const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
-  if (!appRespNode) throw new Error('No se encontró applicationResponse en SOAP.');
+  if (!appRespNode) {
+    throw new Error('❌ No se encontró applicationResponse en SOAP.');
+  }
 
-  const base64Zip = appRespNode.textContent;
+  // Decodificar base64 a buffer ZIP
+  const base64Zip = appRespNode.textContent.trim();
   const zipBuffer = Buffer.from(base64Zip, 'base64');
+
+  // Leer ZIP
   const zip = new AdmZip(zipBuffer);
   const entries = zip.getEntries();
+  if (entries.length === 0) {
+    throw new Error('❌ ZIP devuelto está vacío.');
+  }
 
-  if (entries.length === 0) throw new Error('ZIP devuelto está vacío.');
+  // Obtener primer archivo XML CDR dentro del ZIP
+  const entry = entries.find(e => e.entryName.endsWith('.xml'));
+  if (!entry) {
+    throw new Error('❌ No se encontró archivo XML dentro del ZIP.');
+  }
 
-  const entry = entries[0];
   const rawBuffer = entry.getData();
-
-  // Verificar contenido
-  console.log('Tamaño del CDR:', rawBuffer.length);
-  console.log('Primeros bytes:', rawBuffer.slice(0, 50));
-
   const contenidoCDR = rawBuffer.toString('utf8');
-  console.log('Contenido CDR:', contenidoCDR);
 
-  await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR,'R');
+  console.log(`📦 CDR descomprimido (${rawBuffer.length} bytes)`);
+  console.log(`📝 Nombre CDR: ${entry.entryName}`);
+  console.log('📑 Primeros bytes:', rawBuffer.slice(0, 80));
+
+  // Subir CDR con prefijo R-
+  await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR, 'R');
+
   console.log(`✅ CDR SUNAT guardado como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
 }
 

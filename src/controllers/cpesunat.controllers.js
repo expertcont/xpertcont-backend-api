@@ -4,8 +4,6 @@ const pool = require('../db');
 
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
-/*const forge = require('node-forge');
-const xpath = require('xpath');*/
 
 const { XmlSignature } = require('@supernova-team/xml-sunat');
 const fs = require('fs/promises');
@@ -94,7 +92,7 @@ function canonicalizarManual(xmlStr) {
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   try {
     // 📌 Generar ruta temporal única para el PFX
-    const pfxTempPath = xpath.join('/tmp', `cert-${randomUUID()}.pfx`);
+    const pfxTempPath = path.join('/tmp', `cert-${randomUUID()}.pfx`);
 
     // 📌 Escribir buffer del certificado a archivo temporal
     await fs.writeFile(pfxTempPath, certificadoBuffer);
@@ -181,7 +179,7 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
 
   // Parsear respuesta SOAP para extraer <applicationResponse>
   const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
-  const select = path.useNamespaces({
+  const select = xpath.useNamespaces({
     'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
     'br': 'http://service.sunat.gob.pe'
   });
@@ -221,50 +219,6 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
   return xmlLimpio;
 }*/
 /////////////////////////////////////////////////////////////////////////////
-/*function obtenerDocumentoRaizSinFirma(xmlFirmado) {
-  const doc = new DOMParser().parseFromString(xmlFirmado, 'text/xml');
-  const select = xpath.useNamespaces({
-    ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
-  });
-
-  const ublExtensions = select('//ext:UBLExtensions', doc)[0];
-  if (ublExtensions) {
-    while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
-  }
-
-  const xmlCanon = new XMLSerializer().serializeToString(doc.documentElement)
-    .replace(/(\r\n|\n|\r)/g, '')
-    .replace(/\t/g, '')
-    .replace(/>\s+</g, '><')
-    .trim();
-
-  return xmlCanon;
-}
-
-function calcularDigest(xmlCanonizado) {
-  const md = forge.md.sha1.create();
-  md.update(xmlCanonizado, 'utf8');
-  return forge.util.encode64(md.digest().bytes());
-}
-
-function verificarDigest(digestValueOriginal, xmlFirmado) {
-  const xmlCanonizado = obtenerDocumentoRaizSinFirma(xmlFirmado);
-  const digestCalculado = calcularDigest(xmlCanonizado);
-
-  console.log('📄 Digest original generado: ', digestValueOriginal);
-  console.log('📄 Digest recalculado ahora: ', digestCalculado);
-
-  const coincide = digestValueOriginal === digestCalculado;
-
-  if (coincide) {
-    console.log('✅ DigestValue OK ✅');
-  } else {
-    console.error('❌ DigestValue distinto ❌');
-  }
-
-  return coincide;
-}
-*/
 module.exports = {
     obtenerTodosPermisosContabilidadesVista,
     registrarCPESunat

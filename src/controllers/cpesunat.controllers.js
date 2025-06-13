@@ -184,9 +184,10 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
     'br': 'http://service.sunat.gob.pe'
   });
 
-  const appRespNode = select('//br:applicationResponse', doc)[0];
+// Buscar applicationResponse sin prefijo
+  const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
   if (!appRespNode) throw new Error('No se encontró applicationResponse en SOAP.');
-
+  
   const base64Zip = appRespNode.textContent;
 
   // Decodificar base64 y leer ZIP

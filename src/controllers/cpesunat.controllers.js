@@ -9,7 +9,7 @@ const xpath = require('xpath');*/
 
 const { XmlSignature } = require('@supernova-team/xml-sunat');
 const fs = require('fs/promises');
-const path = require('path');
+const xpath = require('xpath');
 const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');
@@ -93,7 +93,7 @@ function canonicalizarManual(xmlStr) {
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   try {
     // 📌 Generar ruta temporal única para el PFX
-    const pfxTempPath = path.join('/tmp', `cert-${randomUUID()}.pfx`);
+    const pfxTempPath = xpath.join('/tmp', `cert-${randomUUID()}.pfx`);
 
     // 📌 Escribir buffer del certificado a archivo temporal
     await fs.writeFile(pfxTempPath, certificadoBuffer);

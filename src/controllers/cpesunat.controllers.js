@@ -57,7 +57,7 @@ const registrarCPESunat = async (req,res,next)=> {
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante = await cpegeneraxml(dataVenta);
         xmlComprobante = canonicalizarManual(xmlComprobante);
-        
+
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
         let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
         //verificarDigest(digestOriginal, xmlComprobanteFirmado);
@@ -74,6 +74,7 @@ const registrarCPESunat = async (req,res,next)=> {
         console.log(respuestaSoap);
 
         //06. Almacenar Certificado en tabla temporal ticket
+        await procesarRespuestaSunat(respuestaSoap, dataVenta);
 
         res.status(200).send('Archivo subido correctamente');
         
@@ -111,108 +112,6 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
     throw err;
   }
 }
-
-/*async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
-  // 1️⃣ Leer PFX desde buffer y obtener privateKey y certificado
-  const p12Asn1 = forge.asn1.fromDer(forge.util.createBuffer(certificadoBuffer));
-  const p12 = forge.pkcs12.pkcs12FromAsn1(p12Asn1, false, password);
-
-  const privateKey = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag })[forge.pki.oids.pkcs8ShroudedKeyBag][0].key;
-  const certForge = p12.getBags({ bagType: forge.pki.oids.certBag })[forge.pki.oids.certBag][0].cert;
-  const certPEM = forge.pki.certificateToPem(certForge);
-  const rawCert = Buffer.from(certPEM.replace(/(-----(BEGIN|END) CERTIFICATE-----|\n)/g, ''), 'base64');
-
-  // 2️⃣ Parsear XML
-  const doc = new DOMParser().parseFromString(unsignedXML, 'text/xml');
-
-  // 3️⃣ Vaciar UBLExtensions
-  const select = xpath.useNamespaces({
-    ext: 'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2'
-  });
-  const ublExtensions = select('//ext:UBLExtensions', doc)[0];
-  if (!ublExtensions) throw new Error('No se encontró el nodo UBLExtensions');
-  while (ublExtensions.firstChild) ublExtensions.removeChild(ublExtensions.firstChild);
-
-  // 4️⃣ Canonicalizar documento raíz para DigestValue
-  const canonXml = canonicalizarManual(new XMLSerializer().serializeToString(doc.documentElement));
-
-  // 5️⃣ Digest SHA-1 (SUNAT usa SHA-1 aún)
-  const mdCanon = forge.md.sha1.create();
-  mdCanon.update(canonXml, 'utf8');
-  const digest = forge.util.encode64(mdCanon.digest().bytes());
-  digestOriginal = digest; //prueba
-
-  // 6️⃣ Construir Signature XML con DigestValue calculado
-  const signatureXml = `
-    <ds:Signature xmlns:ds="http://www.w3.org/2000/09/xmldsig#">
-      <ds:SignedInfo>
-        <ds:CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-        <ds:SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
-        <ds:Reference URI="">
-          <ds:Transforms>
-            <ds:Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
-            <ds:Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-          </ds:Transforms>
-          <ds:DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
-          <ds:DigestValue>${digest}</ds:DigestValue>
-        </ds:Reference>
-      </ds:SignedInfo>
-      <ds:SignatureValue></ds:SignatureValue>
-      <ds:KeyInfo>
-        <ds:X509Data>
-          <ds:X509Certificate>${rawCert.toString('base64')}</ds:X509Certificate>
-        </ds:X509Data>
-      </ds:KeyInfo>
-    </ds:Signature>
-  `;
-
-  const signatureDoc = new DOMParser().parseFromString(signatureXml, 'text/xml');
-
-  // 7️⃣ Canonicalizar SignedInfo para firmar
-  const signedInfoNode = signatureDoc.getElementsByTagName('ds:SignedInfo')[0];
-  const canonSignedInfo = canonicalizarManual(new XMLSerializer().serializeToString(signedInfoNode));
-
-  const mdSignedInfo = forge.md.sha1.create();
-  mdSignedInfo.update(canonSignedInfo, 'utf8');
-  const signatureValue = forge.util.encode64(privateKey.sign(mdSignedInfo));
-
-  // 8️⃣ Colocar SignatureValue
-  signatureDoc.getElementsByTagName('ds:SignatureValue')[0].textContent = signatureValue;
-
-  // 9️⃣ Crear UBLExtension con firma
-  const ublExtension = doc.createElementNS(
-    'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2',
-    'ext:UBLExtension'
-  );
-  const extensionContent = doc.createElementNS(
-    'urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2',
-    'ext:ExtensionContent'
-  );
-
-  const importedSignature = doc.importNode(signatureDoc.documentElement, true);
-  extensionContent.appendChild(importedSignature);
-  ublExtension.appendChild(extensionContent);
-  ublExtensions.appendChild(ublExtension);
-
-  // 🔟 Retornar XML firmado
-  return new XMLSerializer().serializeToString(doc);
-}
-
-// 📦 Canonicalización manual compatible SUNAT (sin comentarios)
-function canonicalizarManual(xmlStr) {
-  return xmlStr
-    .replace(/(\r\n|\n|\r)/g, '')
-    .replace(/\t/g, '')
-    .replace(/>\s+</g, '><')
-    .trim();
-}
-
-function canonicalizarXML(xmlString) {
-  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
-  return canonicalizarNodo(doc.documentElement);
-}
-*/
-
 
 function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, secundario_user,secundario_passwd) {
   const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;
@@ -269,6 +168,45 @@ async function enviarSOAPSunat(soapXml) {
     throw error;
   }
 }
+
+// Función para procesar y guardar el CDR
+async function procesarRespuestaSunat(soapResponse, dataVenta) {
+  const { ruc, codigo, serie, numero } = {
+    ruc: dataVenta.empresa.ruc,
+    codigo: dataVenta.venta.codigo,
+    serie: dataVenta.venta.serie,
+    numero: dataVenta.venta.numero
+  };
+
+  // Parsear respuesta SOAP para extraer <applicationResponse>
+  const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
+  const select = xpath.useNamespaces({
+    'soap': 'http://schemas.xmlsoap.org/soap/envelope/',
+    'br': 'http://service.sunat.gob.pe'
+  });
+
+  const appRespNode = select('//br:applicationResponse', doc)[0];
+  if (!appRespNode) throw new Error('No se encontró applicationResponse en SOAP.');
+
+  const base64Zip = appRespNode.textContent;
+
+  // Decodificar base64 y leer ZIP
+  const zipBuffer = Buffer.from(base64Zip, 'base64');
+  const zip = new AdmZip(zipBuffer);
+  const entries = zip.getEntries();
+
+  if (entries.length === 0) throw new Error('ZIP devuelto está vacío.');
+
+  // Normalmente hay una sola entrada, la respuesta SUNAT CDR XML
+  const entry = entries[0];
+  const contenidoCDR = entry.getData().toString('utf8');
+
+  // Guardar con tu función subirArchivoDesdeMemoria
+  await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR);
+
+  console.log(`✅ CDR de SUNAT guardado exitosamente como ${ruc}-${codigo}-${serie}-${numero}.xml`);
+}
+
 //////////////////////////////////////////////////////////////////////////////
 /*function limpiarXML(xmlString) {
   const doc = new DOMParser().parseFromString(xmlString, 'text/xml');

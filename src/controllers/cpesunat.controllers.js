@@ -204,7 +204,7 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
   // Guardar con tu función subirArchivoDesdeMemoria
   await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR,'R');
 
-  console.log(`✅ CDR de SUNAT guardado exitosamente como 'R'-${ruc}-${codigo}-${serie}-${numero}.xml`);
+  console.log(`✅ CDR de SUNAT guardado exitosamente como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
 }
 
 //////////////////////////////////////////////////////////////////////////////

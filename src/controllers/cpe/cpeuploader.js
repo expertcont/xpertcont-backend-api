@@ -20,7 +20,7 @@ const config = {
 
 async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, respuesta) {
   const rutaFactura = `/descargas/${ruc}/`;
-  let rutaArchivo = (respuesta=='R') ?  `R-${rutaFactura}-${ruc}-${codigo}-${serie}-${numero}.xml`
+  let rutaArchivo = (respuesta=='R') ?  `${rutaFactura}-R-${ruc}-${codigo}-${serie}-${numero}.xml`
                                           : 
                                         `${rutaFactura}-${ruc}-${codigo}-${serie}-${numero}.xml`;
 

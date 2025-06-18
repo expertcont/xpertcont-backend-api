@@ -115,6 +115,7 @@ const registrarCPESunat = async (req,res,next)=> {
         }
         
     }catch(error){
+        console.log(error);
         //res.json({error:error.message});
         next(error)
     }

@@ -155,7 +155,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   registrosdet.forEach(producto => {
     //calcular precio unitario con igv 
     //calcular precio neto (importe) con igv
-    precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
+    precio_unitario = (producto.precio_base*(1+(porc_igv / 100))).toFixed(2);
     precio_neto = (precio_unitario*producto.cantidad).toFixed(2);
 
     const textY = y - lineHeight;

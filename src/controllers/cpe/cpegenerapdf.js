@@ -24,7 +24,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
 
   const pngImage = await pdfDoc.embedPng(logo);
   const pngDims = pngImage.scale(0.6);
-  const margin = 15;
+  const margin = 25;
 
   page.drawImage(pngImage, {
     //x: margin + 50 - (marginLeftSize / 2),

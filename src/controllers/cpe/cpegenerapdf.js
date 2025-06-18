@@ -36,8 +36,8 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   let x = margin;
   let y = 720;
   
-  console.log('probando venta.codigo');
-  console.log(empresa);
+  //console.log('probando venta.codigo');
+  //console.log(empresa);
 
   const COD = venta.codigo;
   const documentos = {
@@ -80,7 +80,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   page.drawText("FECHA: " + venta.fecha_emision, { x, y, size: fontSize });
   y -= 15;
 
-  console.log('antes de datos cliente');
+  //console.log('antes de datos cliente');
   page.drawRectangle({
     x: margin,
     y: y - 2,
@@ -149,21 +149,28 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   x = (ticketWidth - textWidth - margin - marginLeftSize);
   page.drawText("IMPORTE", { x, y, size: fontSize - 1 });
 
-  console.log('antes forEach producto');
+  let precio_unitario;
+  let precio_neto;
+  //console.log('antes forEach producto');
   registrosdet.forEach(producto => {
+    //calcular precio unitario con igv 
+    //calcular precio neto (importe) con igv
+    precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
+    precio_neto = (precio_unitario*producto.cantidad).toFixed(2);
+
     const textY = y - lineHeight;
 
     page.drawText(`${producto.descripcion}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
     espaciadoDet += 10;
     page.drawText('Cant: ' + producto.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(producto.precio_unitario).format('0,0.00'), fontSize);
+    textWidth = fontNegrita.widthOfTextAtSize(numeral(precio_unitario).format('0,0.00'), fontSize);
     x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);
-    page.drawText(numeral(producto.precio_unitario).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
+    page.drawText(numeral(precio_unitario).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
     textWidth = fontNegrita.widthOfTextAtSize(numeral(producto.precio_neto).format('0,0.00'), fontSize);
     x = (ticketWidth - textWidth - margin - marginLeftSize);
-    page.drawText(numeral(producto.precio_neto).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
+    page.drawText(numeral(precio_neto).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
     page.drawLine({
       start: { x: margin, y: y + 2 - espaciadoDet },

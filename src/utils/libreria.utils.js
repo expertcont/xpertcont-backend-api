@@ -131,81 +131,81 @@ const devuelveCadenaNull = (value) => {
     return sValor;
   }
   
-  function numeroALetras(num) {
-  const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
-  const especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
-  const decenas = ["", "", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
-  const centenas = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+  function numeroALetras(num,sMoneda) {
+    const unidades = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+    const especiales = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
+    const decenas = ["", "", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+    const centenas = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
 
-  function convertirNumero(n) {
-    let resultado = "";
+    function convertirNumero(n) {
+      let resultado = "";
 
-    if (n === 0) return "cero";
-    if (n === 100) return "cien";
+      if (n === 0) return "cero";
+      if (n === 100) return "cien";
 
-    if (n > 100) {
-      resultado += centenas[Math.floor(n / 100)] + " ";
-      n = n % 100;
+      if (n > 100) {
+        resultado += centenas[Math.floor(n / 100)] + " ";
+        n = n % 100;
+      }
+
+      if (n >= 20) {
+        resultado += decenas[Math.floor(n / 10)];
+        if (n % 10 !== 0) resultado += " y " + unidades[n % 10];
+      } else if (n >= 10) {
+        resultado += especiales[n - 10];
+      } else if (n > 0) {
+        resultado += unidades[n];
+      }
+
+      return resultado.trim();
     }
 
-    if (n >= 20) {
-      resultado += decenas[Math.floor(n / 10)];
-      if (n % 10 !== 0) resultado += " y " + unidades[n % 10];
-    } else if (n >= 10) {
-      resultado += especiales[n - 10];
-    } else if (n > 0) {
-      resultado += unidades[n];
+    function seccionNumero(valor, divisor, singular, plural) {
+      const cantidad = Math.floor(valor / divisor);
+      const resto = valor % divisor;
+      let texto = "";
+
+      if (cantidad > 0) {
+        if (cantidad === 1) texto = singular;
+        else texto = convertirNumero(cantidad) + " " + plural;
+      }
+
+      return { texto, resto };
     }
 
-    return resultado.trim();
-  }
+    // Separar parte entera y decimal
+    const partes = num.toFixed(2).split(".");
+    let entero = parseInt(partes[0]);
+    const decimales = partes[1];
 
-  function seccionNumero(valor, divisor, singular, plural) {
-    const cantidad = Math.floor(valor / divisor);
-    const resto = valor % divisor;
-    let texto = "";
+    if (entero === 0) return `Cero con ${decimales}/100 ${sMoneda}`;
 
-    if (cantidad > 0) {
-      if (cantidad === 1) texto = singular;
-      else texto = convertirNumero(cantidad) + " " + plural;
+    let letras = "";
+
+    // Millones
+    let millones = seccionNumero(entero, 1000000, "un millón", "millones");
+    if (millones.texto !== "") letras += millones.texto;
+    entero = millones.resto;
+
+    // Miles
+    let miles = seccionNumero(entero, 1000, "mil", "mil");
+    if (miles.texto !== "") {
+      if (letras !== "") letras += " ";
+      letras += miles.texto;
+    }
+    entero = miles.resto;
+
+    // Centenas
+    if (entero > 0) {
+      if (letras !== "") letras += " ";
+      letras += convertirNumero(entero);
     }
 
-    return { texto, resto };
-  }
+    // Capitalizar primera letra y añadir decimales
+    letras = letras.charAt(0).toUpperCase() + letras.slice(1);
+    letras += ` con ${decimales}/100 ${sMoneda}`;
 
-  // Separar parte entera y decimal
-  const partes = num.toFixed(2).split(".");
-  let entero = parseInt(partes[0]);
-  const decimales = partes[1];
-
-  if (entero === 0) return `Cero con ${decimales}/100 soles`;
-
-  let letras = "";
-
-  // Millones
-  let millones = seccionNumero(entero, 1000000, "un millón", "millones");
-  if (millones.texto !== "") letras += millones.texto;
-  entero = millones.resto;
-
-  // Miles
-  let miles = seccionNumero(entero, 1000, "mil", "mil");
-  if (miles.texto !== "") {
-    if (letras !== "") letras += " ";
-    letras += miles.texto;
-  }
-  entero = miles.resto;
-
-  // Centenas
-  if (entero > 0) {
-    if (letras !== "") letras += " ";
-    letras += convertirNumero(entero);
-  }
-
-  // Capitalizar primera letra y añadir decimales
-  letras = letras.charAt(0).toUpperCase() + letras.slice(1);
-  letras += ` con ${decimales}/100 soles`;
-
-  return letras;
+    return letras;
 }
 
 

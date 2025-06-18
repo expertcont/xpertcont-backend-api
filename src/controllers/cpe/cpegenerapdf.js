@@ -1,6 +1,7 @@
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const numeral = require('numeral');
+const numeroALetras = require('../../utils/libreria.utils');
 
 const cpegenerapdf = async (size, logo, jsonVenta) => {
   const pdfDoc = await PDFDocument.create();
@@ -37,7 +38,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   
   console.log('probando venta.codigo');
   console.log(empresa);
-  
+
   const COD = venta.codigo;
   const documentos = {
     '01': 'FACTURA ELECTRONICA',
@@ -184,14 +185,15 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
                         (Number(venta.base_exonerada) || 0) +
                         (Number(venta.base_inafecta) || 0) +
                         (Number(venta.total_igv) || 0);
+    const monedaDesc = {
+        'PEN': 'Soles',
+        'USD': 'Dolares Americanos',
+        'EUR': 'Euros'
+    };
+    const sMonedaDesc = monedaDesc[venta.moneda_id] || ''; // Manejo de caso por defecto
+    let MontoEnLetras = numeroALetras(monto_total,sMonedaDesc);
 
-    let MontoEnLetras = NumerosALetras(monto_total, {
-        plural: 'SOLES', //pinches opciones no funcionan, tengo q arreglarlas en la siguiente linea
-        singular: 'SOL', //todos mis movimientos estan friamente calculados
-        centPlural: 'CÉNTIMOS', //siganme los buenos ...  :)
-        centSingular: 'CÉNTIMO',
-    });
-    MontoEnLetras = 'SON: ' + MontoEnLetras.toUpperCase().replace('PESOS', 'SOLES CON').replace('PESO', 'SOL CON').replace('M.N.','');
+    MontoEnLetras = 'SON: ' + MontoEnLetras.toUpperCase();
     page.drawText(MontoEnLetras, { x:margin, y:y-espaciadoDet+30, size: 8 }); //Actualizar urgente
 
     const moneda = {

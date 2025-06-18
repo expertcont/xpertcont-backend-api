@@ -34,7 +34,10 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
 
   let x = margin;
   let y = 720;
-
+  
+  console.log('probando venta.codigo');
+  console.log(empresa);
+  
   const COD = venta.codigo;
   const documentos = {
     '01': 'FACTURA ELECTRONICA',
@@ -76,6 +79,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   page.drawText("FECHA: " + venta.fecha_emision, { x, y, size: fontSize });
   y -= 15;
 
+  console.log('antes de datos cliente');
   page.drawRectangle({
     x: margin,
     y: y - 2,
@@ -144,6 +148,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   x = (ticketWidth - textWidth - margin - marginLeftSize);
   page.drawText("IMPORTE", { x, y, size: fontSize - 1 });
 
+  console.log('antes forEach producto');
   registrosdet.forEach(producto => {
     const textY = y - lineHeight;
 

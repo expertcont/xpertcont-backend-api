@@ -29,7 +29,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   page.drawImage(pngImage, {
     //x: margin + 50 - (marginLeftSize / 2),
     x: margin + (marginLeftSize / 2),
-    y: 740,
+    y: 720,
     width: pngDims.width,
     height: pngDims.height,
   });

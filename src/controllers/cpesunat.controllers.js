@@ -1,4 +1,5 @@
 const cpegeneraxml = require('./cpe/cpegeneraxml');
+const cpegenerapdf = require('./cpe/cpegenerapdf');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
@@ -13,7 +14,8 @@ const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
-//let digestOriginal;
+
+require('dotenv').config();
 
 const obtenerTodosPermisosContabilidadesVista = async (req,res,next)=> {
     try {
@@ -47,11 +49,11 @@ const registrarCPESunat = async (req,res,next)=> {
 
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
-          SELECT certificado, password, secundario_user,secundario_passwd, url_envio
+          SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
           FROM mad_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
-        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio} = rows[0];
+        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer} = rows[0];
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante = await cpegeneraxml(dataVenta);
@@ -68,14 +70,49 @@ const registrarCPESunat = async (req,res,next)=> {
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
         
         //05. Enviar SOAP
-        const respuestaSoap = await enviarSOAPSunat(contenidoSOAP);
+        const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio);
         console.log('📩 Respuesta recibida de SUNAT:');
         console.log(respuestaSoap);
+        
+        // 06. Procesar respuesta SUNAT
+        const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
 
-        //06. Almacenar Certificado en tabla temporal ticket
-        await procesarRespuestaSunat(respuestaSoap, dataVenta);
+        // 07. Generar PDF
+        const resultadoPdf = await cpegenerapdf('80mm',logoBuffer,dataVenta);
+        if (resultadoPdf.estado) {
+            console.log('PDF EXITOSO');
+            await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, resultadoPdf.buffer_pdf,'PDF');
+        } else {
+            console.log('REVISAR PROCESO PDF ERRORRR');
+        }
+        
+        // Si quieres guardar en BD o loguear resultadoSunat.estado y resultadoSunat.descripcion aquí
+            /*respuesta_sunat_descripcion,
+            ruta_xml,
+            ruta_cdr,
+            ruta_pdf,
+            codigo_hash,*/
+        
+        const server_sftp = process.env.CPE_HOST;
+        const ruta_xml = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
+        const ruta_cdr = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
+        const ruta_pdf = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf';
 
-        res.status(200).send('Archivo subido correctamente');
+        // Enviar respuesta HTTP según resultado
+        if (resultadoSunat.estado) {
+          res.status(200).json({
+            mensaje: 'CDR recibido',
+            respuesta_sunat_descripcion: resultadoSunat.descripcion,
+            ruta_xml: ruta_xml,
+            ruta_cdr: ruta_cdr,
+            ruta_pdf: ruta_pdf
+          });
+        } else {
+          res.status(400).json({
+            mensaje: 'CDR No recibido',
+            respuesta_sunat_descripcion: resultadoSunat.descripcion
+          });
+        }
         
     }catch(error){
         //res.json({error:error.message});
@@ -148,9 +185,17 @@ function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, se
   return soapXml;
 }
 
-async function enviarSOAPSunat(soapXml) {
+async function enviarSOAPSunat(soapXml,urlEnvio) {
+  //Facturas,Boletas,NotasCred,NotasDeb
+  //https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService
+  //https://ose.nubefact.com/ol-ti-itcpe/billService?wsdl
+  //https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService
+
+  //Guias Remision
+  //https://e-guiaremision.sunat.gob.pe/ol-ti-itemision-guia-gem/billService
+  //https://e-beta.sunat.gob.pe/ol-ti-itemision-guia-gem-beta/billService
   try {
-    const response = await fetch('https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService', {
+    const response = await fetch(urlEnvio, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',
@@ -158,7 +203,6 @@ async function enviarSOAPSunat(soapXml) {
       },
       body: soapXml
     });
-
     const respuestaTexto = await response.text();
     return respuestaTexto;
 
@@ -170,53 +214,68 @@ async function enviarSOAPSunat(soapXml) {
 
 // Función para procesar y guardar el CDR
 async function procesarRespuestaSunat(soapResponse, dataVenta) {
-  const { ruc, codigo, serie, numero } = {
-    ruc: dataVenta.empresa.ruc,
-    codigo: dataVenta.venta.codigo,
-    serie: dataVenta.venta.serie,
-    numero: dataVenta.venta.numero
-  };
+  try {
+      const { ruc, codigo, serie, numero } = {
+        ruc: dataVenta.empresa.ruc,
+        codigo: dataVenta.venta.codigo,
+        serie: dataVenta.venta.serie,
+        numero: dataVenta.venta.numero
+      };
 
-  // Parsear SOAP XML
-  const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
-  const select = xpath.useNamespaces({
-    'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
-  });
+      // Parsear SOAP XML
+      const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
+      const select = xpath.useNamespaces({
+        'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
+      });
 
-  // Localizar applicationResponse
-  const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
-  if (!appRespNode) {
-    throw new Error('❌ No se encontró applicationResponse en SOAP.');
+      // Localizar applicationResponse
+      const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
+      if (!appRespNode) {
+        throw new Error('❌ No se encontró applicationResponse en SOAP.');
+      }
+
+      // Decodificar base64 a buffer ZIP
+      const base64Zip = appRespNode.textContent.trim();
+      const zipBuffer = Buffer.from(base64Zip, 'base64');
+
+      // Leer ZIP
+      const zip = new AdmZip(zipBuffer);
+      const entries = zip.getEntries();
+      if (entries.length === 0) {
+        throw new Error('❌ ZIP devuelto está vacío.');
+      }
+
+      // Obtener primer archivo XML CDR dentro del ZIP
+      const entry = entries.find(e => e.entryName.endsWith('.xml'));
+      if (!entry) {
+        throw new Error('❌ No se encontró archivo XML dentro del ZIP.');
+      }
+
+      const rawBuffer = entry.getData();
+      const contenidoCDR = rawBuffer.toString('utf8');
+
+      // Subir CDR con prefijo R-
+      await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR, 'R');
+      //console.log(`📦 CDR descomprimido (${rawBuffer.length} bytes)`);
+      //console.log(`📝 Nombre CDR: ${entry.entryName}`);
+      //console.log('📑 Primeros bytes:', rawBuffer.slice(0, 80));
+      //console.log(`✅ CDR SUNAT guardado como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
+      
+      // Extraer cbc:Description
+      const descDoc = new DOMParser().parseFromString(contenidoCDR, 'text/xml');
+      const descSelect = xpath.useNamespaces({
+        cbc: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2'
+      });
+
+      const descNode = descSelect('//*[local-name()="Description"]', descDoc)[0];
+      const descripcion = descNode ? descNode.textContent.trim() : 'Sin descripción SUNAT';
+
+      return { estado: true, descripcion };
+
+  } catch (error) {
+    console.error('❌ Error procesando respuesta SUNAT:', error.message);
+    return { estado: false, descripcion: error.message };
   }
-
-  // Decodificar base64 a buffer ZIP
-  const base64Zip = appRespNode.textContent.trim();
-  const zipBuffer = Buffer.from(base64Zip, 'base64');
-
-  // Leer ZIP
-  const zip = new AdmZip(zipBuffer);
-  const entries = zip.getEntries();
-  if (entries.length === 0) {
-    throw new Error('❌ ZIP devuelto está vacío.');
-  }
-
-  // Obtener primer archivo XML CDR dentro del ZIP
-  const entry = entries.find(e => e.entryName.endsWith('.xml'));
-  if (!entry) {
-    throw new Error('❌ No se encontró archivo XML dentro del ZIP.');
-  }
-
-  const rawBuffer = entry.getData();
-  const contenidoCDR = rawBuffer.toString('utf8');
-
-  console.log(`📦 CDR descomprimido (${rawBuffer.length} bytes)`);
-  console.log(`📝 Nombre CDR: ${entry.entryName}`);
-  console.log('📑 Primeros bytes:', rawBuffer.slice(0, 80));
-
-  // Subir CDR con prefijo R-
-  await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR, 'R');
-
-  console.log(`✅ CDR SUNAT guardado como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
 }
 
 //////////////////////////////////////////////////////////////////////////////

@@ -35,7 +35,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   });
 
   let x = margin;
-  let y = 720;
+  let y = 710;
   
   //console.log('probando venta.codigo');
   //console.log(empresa);

@@ -155,20 +155,20 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   let precio_unitario;
   let precio_neto;
   //console.log('antes forEach producto');
-  registrosdet.forEach(producto => {
+  registrosdet.forEach(detalle => {
     //calcular precio unitario con igv 
     //calcular precio neto (importe) con igv
-    cantidad = Number(producto.cantidad);
-    precio_base = Number(producto.precio_base);
-    porc_igv = Number(producto.porc_igv);
+    cantidad = Number(detalle.cantidad);
+    precio_base = Number(detalle.precio_base);
+    porc_igv = Number(detalle.porc_igv);
     precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
     precio_neto = (precio_unitario*cantidad).toFixed(2);
 
     const textY = y - lineHeight;
 
-    page.drawText(`${producto.descripcion}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
+    page.drawText(`${detalle.producto}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
     espaciadoDet += 10;
-    page.drawText('Cant: ' + producto.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
+    page.drawText('Cant: ' + detalle.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
     textWidth = fontNegrita.widthOfTextAtSize(numeral(precio_unitario).format('0,0.00'), fontSize);
     x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);

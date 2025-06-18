@@ -149,14 +149,20 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   x = (ticketWidth - textWidth - margin - marginLeftSize);
   page.drawText("IMPORTE", { x, y, size: fontSize - 1 });
 
+  let cantidad;
+  let precio_base;
+  let porc_igv;
   let precio_unitario;
   let precio_neto;
   //console.log('antes forEach producto');
   registrosdet.forEach(producto => {
     //calcular precio unitario con igv 
     //calcular precio neto (importe) con igv
-    precio_unitario = (producto.precio_base*(1+(porc_igv / 100))).toFixed(2);
-    precio_neto = (precio_unitario*producto.cantidad).toFixed(2);
+    cantidad = Number(producto.cantidad);
+    precio_base = Number(producto.precio_base);
+    porc_igv = Number(producto.porc_igv);
+    precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
+    precio_neto = (precio_unitario*cantidad).toFixed(2);
 
     const textY = y - lineHeight;
 
@@ -168,7 +174,7 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
     x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);
     page.drawText(numeral(precio_unitario).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(producto.precio_neto).format('0,0.00'), fontSize);
+    textWidth = fontNegrita.widthOfTextAtSize(numeral(precio_neto).format('0,0.00'), fontSize);
     x = (ticketWidth - textWidth - margin - marginLeftSize);
     page.drawText(numeral(precio_neto).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 

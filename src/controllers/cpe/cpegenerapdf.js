@@ -24,12 +24,12 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
 
   const pngImage = await pdfDoc.embedPng(logo);
   const pngDims = pngImage.scale(0.6);
-  const margin = 25;
+  const margin = 5;
 
   page.drawImage(pngImage, {
     //x: margin + 50 - (marginLeftSize / 2),
     x: margin + (marginLeftSize / 2),
-    y: 730,
+    y: 740,
     width: pngDims.width,
     height: pngDims.height,
   });

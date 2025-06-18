@@ -235,7 +235,6 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
     const qrImage = await QRCode.toDataURL(empresa.ruc + '|' + comprobanteConvertido + '|' + venta.r_igv002 + '|' + venta.r_monto_total + '|' + venta.r_fecemi + '|' + venta.r_id_doc + '|' + venta.r_documento_id + '|');
     // Convertir la imagen base64 a formato compatible con pdf-lib
     const qrImageBytes = qrImage.split(',')[1]; // Eliminar el encabezado base64
-    //const qrImageBuffer = Uint8Array.from(atob(qrImageBytes), (c) => c.charCodeAt(0));
     const qrImageBuffer = base64ToUint8Array(qrImageBytes);
 
     const qrImageEmbed = await pdfDoc.embedPng(qrImageBuffer);
@@ -263,14 +262,12 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
   
 }
 
-  function base64ToUint8Array(base64) {
-    const binaryString = window.atob(base64); // Decodificar Base64 a binario
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes;
-  }
+function base64ToUint8Array(base64) {
+  // Decodificar Base64 a un Buffer
+  const buffer = Buffer.from(base64, 'base64');
+  // Convertir el Buffer a Uint8Array
+  const bytes = new Uint8Array(buffer);
+  return bytes;
+}
 
 module.exports = cpegenerapdf;

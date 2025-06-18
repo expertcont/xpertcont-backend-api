@@ -70,7 +70,7 @@ const registrarCPESunat = async (req,res,next)=> {
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
         
         //05. Enviar SOAP
-        const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio);
+        const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
         console.log('📩 Respuesta recibida de SUNAT:');
         console.log(respuestaSoap);
         
@@ -185,7 +185,9 @@ function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, se
   return soapXml;
 }
 
-async function enviarSOAPSunat(soapXml,urlEnvio) {
+async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
+  //Modo 1 = produccion(sunat,ose), caso contrario Beta generico
+  const urlEnvioEfectivo = (modo == "1") ?  urlEnvio : 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService';
   //Facturas,Boletas,NotasCred,NotasDeb
   //https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService
   //https://ose.nubefact.com/ol-ti-itcpe/billService?wsdl
@@ -195,7 +197,7 @@ async function enviarSOAPSunat(soapXml,urlEnvio) {
   //https://e-guiaremision.sunat.gob.pe/ol-ti-itemision-guia-gem/billService
   //https://e-beta.sunat.gob.pe/ol-ti-itemision-guia-gem-beta/billService
   try {
-    const response = await fetch(urlEnvio, {
+    const response = await fetch(urlEnvioEfectivo, {
       method: 'POST',
       headers: {
         'Content-Type': 'text/xml; charset=utf-8',

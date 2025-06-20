@@ -94,9 +94,9 @@ const registrarCPESunat = async (req,res,next)=> {
             codigo_hash,*/
         
         const server_sftp = process.env.CPE_HOST;
-        const ruta_xml = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
-        const ruta_cdr = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
-        const ruta_pdf = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf';
+        const ruta_xml = 'http://' + server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
+        const ruta_cdr = 'http://' + server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
+        const ruta_pdf = 'http://' + server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf';
 
         const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
         // Enviar respuesta HTTP según resultado

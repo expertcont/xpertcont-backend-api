@@ -1,6 +1,5 @@
 require('dotenv').config();
 const Client = require('ssh2-sftp-client');
-const sftp = new Client();
 
 const config = {
   host: process.env.CPE_HOST,
@@ -19,6 +18,7 @@ const config = {
  */
 
 async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, respuesta) {
+  const sftp = new Client();
   const rutaFactura = `/descargas/${ruc}/`;
   let rutaArchivo = (respuesta=='R') ?  `${rutaFactura}R-${ruc}-${codigo}-${serie}-${numero}.xml`
                                           :

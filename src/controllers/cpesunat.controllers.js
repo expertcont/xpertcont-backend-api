@@ -61,7 +61,7 @@ const registrarCPESunat = async (req,res,next)=> {
 
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
         let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        //verificarDigest(digestOriginal, xmlComprobanteFirmado);
+        const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
         await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado,'-');
@@ -98,14 +98,16 @@ const registrarCPESunat = async (req,res,next)=> {
         const ruta_cdr = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';
         const ruta_pdf = server_sftp + '/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf';
 
+        const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
         // Enviar respuesta HTTP según resultado
         if (resultadoSunat.estado) {
           res.status(200).json({
-            mensaje: 'CDR recibido',
+            mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion': 'CDR Recibido Beta',
             respuesta_sunat_descripcion: resultadoSunat.descripcion,
             ruta_xml: ruta_xml,
             ruta_cdr: ruta_cdr,
-            ruta_pdf: ruta_pdf
+            ruta_pdf: ruta_pdf,
+            digestvalue: sDigestInicial
           });
         } else {
           res.status(400).json({
@@ -136,6 +138,7 @@ async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
     await fs.writeFile(pfxTempPath, certificadoBuffer);
 
     // 📌 Instanciar firmador y firmar XML
+    // La libreria super-nova se encarga de calcular los valores digestvalue, firma y certificado publico ... junto con la bloque de firma (formato de sunat)
     const signer = new XmlSignature(pfxTempPath, password, unsignedXML);
     const signedXml = await signer.getSignedXML();
 
@@ -281,6 +284,24 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
   }
 }
 
+function obtenerDigestValue(xmlFirmado) {
+  // Parsear XML firmado
+  const doc = new DOMParser().parseFromString(xmlFirmado, 'text/xml');
+
+  // Buscar nodo DigestValue dentro de la firma
+  const select = xpath.useNamespaces({
+    ds: 'http://www.w3.org/2000/09/xmldsig#'
+  });
+
+  const digestNode = select('//*[local-name()="DigestValue"]', doc)[0];
+
+  if (!digestNode) {
+    throw new Error('❌ No se encontró el DigestValue en el XML firmado.');
+  }
+
+  // Retornar su contenido
+  return digestNode.textContent.trim();
+}
 //////////////////////////////////////////////////////////////////////////////
 /*function limpiarXML(xmlString) {
   const doc = new DOMParser().parseFromString(xmlString, 'text/xml');

@@ -64,15 +64,30 @@ const registrarCPESunat = async (req,res,next)=> {
         const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
-        await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado,'-');
+        //await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado,'-');
+        //03. Guardar xml firmado en Server Ubuntu, version asyncrono(desconectado)
+        (async () => {
+          try {
+            await subirArchivoDesdeMemoria(
+              dataVenta.empresa.ruc,
+              dataVenta.venta.codigo,
+              dataVenta.venta.serie,
+              dataVenta.venta.numero,
+              xmlComprobanteFirmado,
+              '-'
+            );
+            console.log('Archivo XML almacenado en copia correctamente.');
+          } catch (error) {
+            console.error('Error al almacenar XML:', error);
+          }
+        })();
         
         //04. Construir SOAP
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
         
-        //05. Enviar SOAP
+        //05. Enviar SOAP y recepcionar respuesta SUNAT
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
-        console.log('📩 Respuesta recibida de SUNAT:');
-        console.log(respuestaSoap);
+        //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
         
         // 06. Procesar respuesta SUNAT
         const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
@@ -86,8 +101,7 @@ const registrarCPESunat = async (req,res,next)=> {
             console.log('REVISAR PROCESO PDF ERRORRR');
         }*/
         
-
-        //PDF version asyncrono
+        //PDF version asyncrono (desconectado)
         (async () => {
           try {
             const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);

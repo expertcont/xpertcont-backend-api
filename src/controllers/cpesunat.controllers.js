@@ -78,7 +78,7 @@ const registrarCPESunat = async (req,res,next)=> {
         const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
 
         // 07. Generar PDF
-        const resultadoPdf = await cpegenerapdf('80mm',logoBuffer,dataVenta);
+        const resultadoPdf = await cpegenerapdf('80mm',logoBuffer,dataVenta, sDigestInicial);
         if (resultadoPdf.estado) {
             console.log('PDF EXITOSO');
             await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, resultadoPdf.buffer_pdf,'PDF');

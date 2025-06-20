@@ -3,7 +3,7 @@ const QRCode = require('qrcode');
 const numeral = require('numeral');
 const {numeroALetras} = require('../../utils/libreria.utils');
 
-const cpegenerapdf = async (size, logo, jsonVenta) => {
+const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   const pdfDoc = await PDFDocument.create();
 
   const width = (size === '80mm') ? 226.77 : 164.41;
@@ -266,6 +266,12 @@ const cpegenerapdf = async (size, logo, jsonVenta) => {
         height: qrHeight,
     });
 
+
+  x = margin;
+  textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize+2);
+  // Calcular el punto x para alinear a la derecha
+  x = (ticketWidth - textWidth - margin - marginLeftSize);
+  page.drawText(digestvalue, { x, y:y+4-espaciadoDet-70, size: fontSize+2, font:fontNegrita }); //Actualizar urgente
 
   const pdfBytes = await pdfDoc.save();
   // Retorna el buffer en un objeto junto a estado y nombre sugerido

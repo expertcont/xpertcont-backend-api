@@ -86,12 +86,29 @@ const registrarCPESunat = async (req,res,next)=> {
             console.log('REVISAR PROCESO PDF ERRORRR');
         }*/
         
-        // Si quieres guardar en BD o loguear resultadoSunat.estado y resultadoSunat.descripcion aquí
-            /*respuesta_sunat_descripcion,
-            ruta_xml,
-            ruta_cdr,
-            ruta_pdf,
-            codigo_hash,*/
+
+        //PDF version asyncrono
+        (async () => {
+          try {
+            const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
+            if (resultadoPdf.estado) {
+              console.log('PDF EXITOSO');
+              await subirArchivoDesdeMemoria(
+                dataVenta.empresa.ruc,
+                dataVenta.venta.codigo,
+                dataVenta.venta.serie,
+                dataVenta.venta.numero,
+                resultadoPdf.buffer_pdf,
+                'PDF'
+              );
+            } else {
+              console.log('REVISAR PROCESO PDF ERRORRR');
+            }
+          } catch (error) {
+            console.error('Error al generar PDF:', error);
+          }
+        })();
+            
         
         const server_sftp = process.env.CPE_HOST;
         const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml';

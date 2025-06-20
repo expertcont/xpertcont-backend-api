@@ -268,10 +268,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
 
   x = margin;
-  textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize-2);
   // Calcular el punto x para alinear a la derecha
-  x = (ticketWidth - textWidth - margin - marginLeftSize);
-  page.drawText(digestvalue, { x, y:y-espaciadoDet-80, size: fontSize }); //Actualizar urgente
+  page.drawText(digestvalue, { x, y:y-espaciadoDet-80, size: fontSize-2 }); //Actualizar urgente
 
   const pdfBytes = await pdfDoc.save();
   // Retorna el buffer en un objeto junto a estado y nombre sugerido

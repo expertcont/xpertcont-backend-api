@@ -6,6 +6,8 @@ function cpegeneradet(items,moneda_id) {
     //Nota: precio_base = precio unitario sin igv
     //precio_base = precio_base.toFixed(2);
     // Calcular momtos subtotal,igv 
+    const precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
+
     const subtotal_item = (precio_base*cantidad).toFixed(2);
     const igv_item = (subtotal_item*(porc_igv / 100)).toFixed(2);
 
@@ -17,7 +19,7 @@ function cpegeneradet(items,moneda_id) {
       <cbc:LineExtensionAmount currencyID="${moneda_id}">${subtotal_item}</cbc:LineExtensionAmount>
       <cac:PricingReference>
         <cac:AlternativeConditionPrice>
-          <cbc:PriceAmount currencyID="${moneda_id}">${precio_base}</cbc:PriceAmount>
+          <cbc:PriceAmount currencyID="${moneda_id}">${precio_unitario}</cbc:PriceAmount>
           <cbc:PriceTypeCode>01</cbc:PriceTypeCode>
         </cac:AlternativeConditionPrice>
       </cac:PricingReference>

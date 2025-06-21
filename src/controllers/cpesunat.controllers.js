@@ -143,7 +143,11 @@ const registrarCPESunat = async (req,res,next)=> {
         } else {
           res.status(400).json({
             mensaje: 'CDR No recibido',
-            respuesta_sunat_descripcion: resultadoSunat.descripcion
+            respuesta_sunat_descripcion: 'error',
+            ruta_xml: 'error',
+            ruta_cdr: 'error',
+            ruta_pdf: 'error',
+            codigo_hash: null
           });
         }
         

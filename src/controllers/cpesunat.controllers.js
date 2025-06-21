@@ -131,6 +131,7 @@ const registrarCPESunat = async (req,res,next)=> {
 
         const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
         // Enviar respuesta HTTP según resultado
+        console.log('resultadoSunat', resultadoSunat);
         if (resultadoSunat.estado) {
           res.status(200).json({
             respuesta_sunat_descripcion: resultadoSunat.descripcion,

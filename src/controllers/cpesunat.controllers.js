@@ -76,7 +76,7 @@ const registrarCPESunat = async (req,res,next)=> {
               xmlComprobanteFirmado,
               '-'
             );
-            console.log('Archivo XML almacenado en copia correctamente.');
+            //console.log('Archivo XML almacenado en copia correctamente.');
           } catch (error) {
             console.error('Error al almacenar XML:', error);
           }
@@ -138,7 +138,7 @@ const registrarCPESunat = async (req,res,next)=> {
             ruta_xml: ruta_xml,
             ruta_cdr: ruta_cdr,
             ruta_pdf: ruta_pdf,
-            digestvalue: sDigestInicial
+            codigo_hash: sDigestInicial
           });
         } else {
           res.status(400).json({

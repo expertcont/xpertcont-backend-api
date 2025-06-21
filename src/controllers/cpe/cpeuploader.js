@@ -31,7 +31,7 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, r
 
   try {
     await sftp.connect(config);
-    console.log('despues de await sftp.connect(config)');
+    //console.log('despues de await sftp.connect(config)');
 
     // Crear carpetas si no existen
     try { 

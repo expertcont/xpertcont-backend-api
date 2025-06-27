@@ -1,5 +1,5 @@
-const cpegeneraxml = require('./cpe/cpegeneraxml');
-const cpegenerapdf = require('./cpe/cpegenerapdf');
+const gregeneraxml = require('./gre/gregeneraxml');
+const gregenerapdf = require('./gre/gregenerapdf');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
@@ -17,22 +17,22 @@ const fetch = require('node-fetch');
 
 require('dotenv').config();
 
-const registrarCPESunat = async (req,res,next)=> {
+const registrarGRESunat = async (req,res,next)=> {
     try {
-        const dataVenta = req.body;
-        //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
+        const dataGuia = req.body;
+        //console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
 
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
-          SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
+          SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo, gre_credencial, gre_password
           FROM mad_usuariocertificado 
           WHERE documento_id = $1
-        `, [dataVenta.empresa.ruc]);
+        `, [dataGuia.empresa.ruc]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer} = rows[0];
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
-        let xmlComprobante = await cpegeneraxml(dataVenta);
+        let xmlComprobante = await gregeneraxml(dataGuia);
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
@@ -40,15 +40,15 @@ const registrarCPESunat = async (req,res,next)=> {
         const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
-        //await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado,'-');
+        //await subirArchivoDesdeMemoria(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero, xmlComprobanteFirmado,'-');
         //03. Guardar xml firmado en Server Ubuntu, version asyncrono(desconectado)
         (async () => {
           try {
             await subirArchivoDesdeMemoria(
-              dataVenta.empresa.ruc,
-              dataVenta.venta.codigo,
-              dataVenta.venta.serie,
-              dataVenta.venta.numero,
+              dataGuia.empresa.ruc,
+              dataGuia.venta.codigo,
+              dataGuia.venta.serie,
+              dataGuia.venta.numero,
               xmlComprobanteFirmado,
               '-'
             );
@@ -58,36 +58,28 @@ const registrarCPESunat = async (req,res,next)=> {
           }
         })();
         
+        //Aqui se enviara por POST XML + token, ya no se usa SOAP
+
         //04. Construir SOAP
-        let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
-        
+        //let contenidoSOAP = await empaquetarYGenerarSOAP(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
         //05. Enviar SOAP y recepcionar respuesta SUNAT
-        const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
+        //const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataGuia.empresa.modo);
         //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
-        
         // 06. Procesar respuesta SUNAT
-        const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
+        //const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataGuia);
 
         // 07. Generar PDF
-        /*const resultadoPdf = await cpegenerapdf('80mm',logoBuffer,dataVenta, sDigestInicial);
-        if (resultadoPdf.estado) {
-            console.log('PDF EXITOSO');
-            await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, resultadoPdf.buffer_pdf,'PDF');
-        } else {
-            console.log('REVISAR PROCESO PDF ERRORRR');
-        }*/
-        
         //PDF version asyncrono (desconectado)
-        (async () => {
+        /*(async () => {
           try {
-            const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
+            const resultadoPdf = await gregenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
             if (resultadoPdf.estado) {
               console.log('PDF EXITOSO');
               await subirArchivoDesdeMemoria(
-                dataVenta.empresa.ruc,
-                dataVenta.venta.codigo,
-                dataVenta.venta.serie,
-                dataVenta.venta.numero,
+                dataGuia.empresa.ruc,
+                dataGuia.venta.codigo,
+                dataGuia.venta.serie,
+                dataGuia.venta.numero,
                 resultadoPdf.buffer_pdf,
                 'PDF'
               );
@@ -97,17 +89,17 @@ const registrarCPESunat = async (req,res,next)=> {
           } catch (error) {
             console.error('Error al generar PDF:', error);
           }
-        })();
+        })();*/
             
         
         const server_sftp = process.env.CPE_HOST;
-        const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
-        const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
-        const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf'
+        const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
+        const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/R-' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
+        const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.pdf'
 
-        const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
+        const sModoEnvio = dataGuia?.empresa?.modo === "1" ? "1" : "0";
         // Enviar respuesta HTTP según resultado
-        console.log('resultadoSunat', resultadoSunat);
+        //console.log('resultadoSunat', resultadoSunat);
         if (resultadoSunat.estado) {
           res.status(200).json({
             respuesta_sunat_descripcion: resultadoSunat.descripcion,
@@ -231,13 +223,13 @@ async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
 }
 
 // Función para procesar y guardar el CDR
-async function procesarRespuestaSunat(soapResponse, dataVenta) {
+async function procesarRespuestaSunat(soapResponse, dataGuia) {
   try {
       const { ruc, codigo, serie, numero } = {
-        ruc: dataVenta.empresa.ruc,
-        codigo: dataVenta.venta.codigo,
-        serie: dataVenta.venta.serie,
-        numero: dataVenta.venta.numero
+        ruc: dataGuia.empresa.ruc,
+        codigo: dataGuia.venta.codigo,
+        serie: dataGuia.venta.serie,
+        numero: dataGuia.venta.numero
       };
 
       // Parsear SOAP XML
@@ -314,19 +306,7 @@ function obtenerDigestValue(xmlFirmado) {
   // Retornar su contenido
   return digestNode.textContent.trim();
 }
-//////////////////////////////////////////////////////////////////////////////
-/*function limpiarXML(xmlString) {
-  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
 
-  let serializer = new XMLSerializer();
-  let xmlLimpio = serializer.serializeToString(doc.documentElement)
-    .replace(/(\r\n|\n|\r)/gm, "")
-    .replace(/\t/g, "")
-    .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
-
-  return xmlLimpio;
-}*/
-/////////////////////////////////////////////////////////////////////////////
 module.exports = {
-    registrarCPESunat
+    registrarGRESunat
  }; 

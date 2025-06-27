@@ -5,6 +5,7 @@ const cors = require('cors');
 
 //microservicio admin
 
+const gresunatRoutes = require('./src/routes/gresunat.routes');
 const cpesunatRoutes = require('./src/routes/cpesunat.routes');
 const usuarioRoutes = require('./src/routes/usuario.routes');
 const seguridadRoutes = require('./src/routes/seguridad.routes');
@@ -18,6 +19,7 @@ app.use(morgan('dev'));
 app.use(express.json()); //para reconocer json en express, parametros POST
 app.use(express.text()); //new para text ;)
 
+app.use(gresunatRoutes);
 app.use(cpesunatRoutes);
 app.use(usuarioRoutes);
 app.use(seguridadRoutes);

@@ -18,6 +18,7 @@ function cpegeneracab(data) {
       name="Tipo de Operacion" listSchemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo51">${data.codigo}</cbc:InvoiceTypeCode>
     <cbc:Note languageLocaleID="1000">${sMontoLetras}</cbc:Note>
     <cbc:DocumentCurrencyCode>${data.moneda_id}</cbc:DocumentCurrencyCode>`;
+    
   //Campos comprobante: codigo,serie,numero,fecha,hora,moneda_id(PEN,USD,EUR)
   return sXml;
 }

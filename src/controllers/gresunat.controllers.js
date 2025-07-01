@@ -96,11 +96,21 @@ const registrarGRESunat = async (req,res,next)=> {
         const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
         const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/R-' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
         const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.pdf'
-
+        
         const sModoEnvio = dataGuia?.empresa?.modo === "1" ? "1" : "0";
+
+        //respuesta temporal
+        res.status(200).json({
+          respuesta_sunat_descripcion: 'vamos si se puede',
+          ruta_xml: ruta_xml,
+          ruta_cdr: ruta_cdr,
+          ruta_pdf: ruta_pdf,
+        });
+        
         // Enviar respuesta HTTP según resultado
         //console.log('resultadoSunat', resultadoSunat);
-        if (resultadoSunat.estado) {
+        
+        /*if (resultadoSunat.estado) {
           res.status(200).json({
             respuesta_sunat_descripcion: resultadoSunat.descripcion,
             ruta_xml: ruta_xml,
@@ -118,8 +128,7 @@ const registrarGRESunat = async (req,res,next)=> {
             codigo_hash: null,
             mensaje: 'CDR No recibido'
           });
-        }
-        
+        }*/
     }catch(error){
         console.log(error);
         //res.json({error:error.message});

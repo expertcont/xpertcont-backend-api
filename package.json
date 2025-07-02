@@ -32,8 +32,9 @@
     "ssh2-sftp-client": "^12.0.0",
     "xadesjs": "^2.4.4",
     "xlsx": "^0.18.5",
+    "xml-crypto": "^6.1.2",
     "xml2js": "^0.6.2",
-    "xmldom": "^0.1.27",
+    "xmldom": "^0.1.31",
     "xpath": "^0.0.34"
   },
   "devDependencies": {

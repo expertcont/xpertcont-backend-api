@@ -2,6 +2,8 @@ const gregeneraxml = require('./gre/gregeneraxml');
 const gregenerapdf = require('./gre/gregenerapdf');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
+/////////////////////////////////////////////////////////
+const { XmlSignatureMod } = require('../utils/XmlSignatureMod');
 
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
@@ -35,9 +37,15 @@ const registrarGRESunat = async (req,res,next)=> {
         let xmlComprobante = await gregeneraxml(dataGuia);
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
+        //Nueva firma implementadad
+        const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
+        signerManual.setSignNodeName('DespatchAdvice');
+        const xmlComprobanteFirmado = await signerManual.getSignedXML();
+        //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
-        let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+        //let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
+        //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
         //await subirArchivoDesdeMemoria(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero, xmlComprobanteFirmado,'-');
@@ -96,7 +104,7 @@ const registrarGRESunat = async (req,res,next)=> {
         const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
         const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/R-' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
         const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.pdf'
-        
+
         const sModoEnvio = dataGuia?.empresa?.modo === "1" ? "1" : "0";
 
         //respuesta temporal

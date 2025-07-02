@@ -15,12 +15,12 @@ function gregeneratransporte(data) {
     
     xmlTransporte +=
        `<cac:ShipmentStage>
-            <cbc:TransportModeCode>${data.modalidad_id}</cbc:TransportModeCode>
+            <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
             </cac:TransitPeriod>`;
     //<!--  Datos del Envío - Embarque - Transporte publico -->
-    if (data.modalidad_id == "1"){
+    if (data.guia_modalidad_id == "1"){
         xmlTransporte +=
            `<cac:CarrierParty>
                 <cac:PartyIdentification>

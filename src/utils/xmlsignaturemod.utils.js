@@ -55,7 +55,13 @@ class XmlSignatureMod {
         }
         
         console.log('this.signXpath: ', this.signXpath);
-        const signNodeName = this.signXpath.replace(/[/*\[\]@=']/g, '').split('local-name()=')[1].replace(/[()]/g, '');
+        //const signNodeName = this.signXpath.replace(/[/*\[\]@=']/g, '').split('local-name()=')[1].replace(/[()]/g, '');
+        const match = this.signXpath.match(/local-name\(\)='([^']+)'/);
+        if (!match) {
+        throw new Error(`Error: no se pudo extraer el nombre del nodo raíz desde XPath: ${this.signXpath}`);
+        }
+        const signNodeName = match[1];
+
         const signNode = domXML.getElementsByTagName(signNodeName);
         if (signNode.length === 0) {
             throw new Error(`Error: el XML no contiene el nodo raíz ${signNodeName}`);

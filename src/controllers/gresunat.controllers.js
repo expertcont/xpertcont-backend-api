@@ -54,9 +54,9 @@ const registrarGRESunat = async (req,res,next)=> {
           try {
             await subirArchivoDesdeMemoria(
               dataGuia.empresa.ruc,
-              dataGuia.venta.codigo,
-              dataGuia.venta.serie,
-              dataGuia.venta.numero,
+              dataGuia.guia.codigo,
+              dataGuia.guia.serie,
+              dataGuia.guia.numero,
               xmlComprobanteFirmado,
               '-'
             );
@@ -101,9 +101,9 @@ const registrarGRESunat = async (req,res,next)=> {
             
         
         const server_sftp = process.env.CPE_HOST;
-        const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
-        const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/R-' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.xml'
-        const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.venta.codigo + '-' + dataGuia.venta.serie + '-' + dataGuia.venta.numero + '.pdf'
+        const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.guia.codigo + '-' + dataGuia.guia.serie + '-' + dataGuia.guia.numero + '.xml'
+        const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/R-' + dataGuia.empresa.ruc+ '-' + dataGuia.guia.codigo + '-' + dataGuia.guia.serie + '-' + dataGuia.guia.numero + '.xml'
+        const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.guia.codigo + '-' + dataGuia.guia.serie + '-' + dataGuia.guia.numero + '.pdf'
 
         const sModoEnvio = dataGuia?.empresa?.modo === "1" ? "1" : "0";
 

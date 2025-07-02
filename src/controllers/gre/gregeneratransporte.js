@@ -7,8 +7,8 @@ function gregeneratransporte(data) {
         <cbc:HandlingInstructions>VENTA</cbc:HandlingInstructions>
         <cbc:GrossWeightMeasure unitCode="KGM">${data.peso_total}</cbc:GrossWeightMeasure>`;
         //<!--  Datos del Envío - Numero de bultos o pallets - Enteros -->
-    //caso importaciones,se requiere numero_bultos
-        if (data.guia_modalidad_id == "7"){    
+    //caso recojo bienes transformados,se requiere numero_bultos
+        if (data.guia_motivo_id == "07"){    
     xmlTransporte +=
         `<cbc:TotalTransportHandlingUnitQuantity>${data.numero_bultos}</cbc:TotalTransportHandlingUnitQuantity>`;
     };
@@ -20,7 +20,7 @@ function gregeneratransporte(data) {
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
             </cac:TransitPeriod>`;
     //<!--  Datos del Envío - Embarque - Transporte publico -->
-    if (data.guia_modalidad_id == "1"){
+    if (data.guia_modalidad_id == "01"){
         xmlTransporte +=
            `<cac:CarrierParty>
                 <cac:PartyIdentification>
@@ -32,7 +32,7 @@ function gregeneratransporte(data) {
             </cac:CarrierParty>`;
     };
     //<!--  Datos del Envío - Embarque - Transporte privado -->
-    if (data.modalidad_id == "2"){
+    if (data.guia_modalidad_id == "02"){
         xmlTransporte += 
            `<cac:DriverPerson>
                 <cbc:ID schemeID="1" schemeName="Documento de Identidad" schemeAgencyName="PE:SUNAT" schemeURI="urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo06">${data.conductor_dni}</cbc:ID>

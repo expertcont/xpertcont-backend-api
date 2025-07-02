@@ -33,19 +33,18 @@ const registrarGRESunat = async (req,res,next)=> {
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer} = rows[0];
 
+        //00. Obtener token
+        const sToken = obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
+        
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante = await gregeneraxml(dataGuia);
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
-        //Nueva firma implementadad
+        //02. Nueva firma implementado propio
         const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
         signerManual.setSignNodeName('DespatchAdvice');
         const xmlComprobanteFirmado = await signerManual.getSignedXML();
-        //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
-
-        //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
-        //let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+        const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
         //await subirArchivoDesdeMemoria(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero, xmlComprobanteFirmado,'-');
@@ -113,6 +112,8 @@ const registrarGRESunat = async (req,res,next)=> {
           ruta_xml: ruta_xml,
           ruta_cdr: ruta_cdr,
           ruta_pdf: ruta_pdf,
+          toke: sToken,
+          digest_value: sDigestInicial
         });
         
         // Enviar respuesta HTTP según resultado
@@ -324,6 +325,47 @@ function obtenerDigestValue(xmlFirmado) {
   return digestNode.textContent.trim();
 }
 
+
+async function obtenerTokenSunat({
+  clientId,
+  clientSecret,
+  ruc,
+  usuarioSol,
+  passwordSol
+}) {
+  try {
+    const url = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${clientId}/oauth2/token/`;
+
+    // Cuerpo tipo x-www-form-urlencoded
+    const params = new URLSearchParams();
+    params.append('grant_type', 'password');
+    params.append('scope', 'https://api-cpe.sunat.gob.pe');
+    params.append('client_id', clientId);
+    params.append('client_secret', clientSecret);
+    params.append('username', `${ruc}${usuarioSol}`);
+    params.append('password', passwordSol);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: params
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Error obteniendo token SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    return data;
+
+  } catch (error) {
+    console.error(error.message);
+    throw error;
+  }
+}
 module.exports = {
     registrarGRESunat
  }; 

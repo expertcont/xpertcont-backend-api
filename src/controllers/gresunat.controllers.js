@@ -3,7 +3,7 @@ const gregenerapdf = require('./gre/gregenerapdf');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 /////////////////////////////////////////////////////////
-const { XmlSignatureMod } = require('../utils/XmlSignatureMod');
+const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
 
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');

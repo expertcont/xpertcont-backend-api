@@ -53,7 +53,8 @@ class XmlSignatureMod {
         if (signatureNode.length === 0) {
             throw new Error('Error: el XML no contiene el nodo "ext:ExtensionContent" donde insertar la firma');
         }
-
+        
+        console.log('this.signXpath: ', this.signXpath);
         const signNodeName = this.signXpath.replace(/[/*\[\]@=']/g, '').split('local-name()=')[1].replace(/[()]/g, '');
         const signNode = domXML.getElementsByTagName(signNodeName);
         if (signNode.length === 0) {

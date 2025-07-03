@@ -344,7 +344,8 @@ async function obtenerTokenSunat({
     params.append('client_secret', clientSecret);
     params.append('username', `${ruc}${usuarioSol}`);
     params.append('password', passwordSol);
-
+    
+    console.log(params);
     const response = await fetch(url, {
       method: 'POST',
       headers: {

@@ -30,6 +30,8 @@ const registrarGRESunat = async (req,res,next)=> {
           FROM mad_usuariocertificado 
           WHERE documento_id = $1
         `, [dataGuia.empresa.ruc]);
+        
+        console.log('rows[0]: ',rows[0]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, gre_credencial, gre_password} = rows[0];
 

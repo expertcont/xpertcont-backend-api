@@ -31,10 +31,11 @@ const registrarGRESunat = async (req,res,next)=> {
           WHERE documento_id = $1
         `, [dataGuia.empresa.ruc]);
         
-        console.log('rows[0]: ',rows[0]);
+        //console.log('rows[0]: ',rows[0]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, gre_credencial, gre_password} = rows[0];
 
+        console.log(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
         //00. Obtener token
         const sToken = obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
         

@@ -330,7 +330,7 @@ function obtenerDigestValue(xmlFirmado) {
 }
 
 
-async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
+function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
   try {
     const url = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${clientId}/oauth2/token/`;
 
@@ -344,7 +344,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
     params.append('password', passwordSol);
     
     //console.log(params);
-    const response = await fetch(url, {
+    const response = fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -353,7 +353,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
+      const errorBody = response.text();
       throw new Error(`Error obteniendo token SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
     }
 

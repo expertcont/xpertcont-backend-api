@@ -35,10 +35,11 @@ const registrarGRESunat = async (req,res,next)=> {
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, gre_credencial, gre_password} = rows[0];
 
-        console.log(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
+        
         //00. Obtener token
         const sToken = obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
-        
+        console.log(sToken);
+
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante = await gregeneraxml(dataGuia);
         xmlComprobante = canonicalizarManual(xmlComprobante);
@@ -342,7 +343,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
     params.append('username', `${ruc}${usuarioSol}`);
     params.append('password', passwordSol);
     
-    console.log(params);
+    //console.log(params);
     const response = await fetch(url, {
       method: 'POST',
       headers: {
@@ -356,7 +357,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
       throw new Error(`Error obteniendo token SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
     }
 
-    const data = await response.json();
+    const data = response.json();
     return data;
 
   } catch (error) {

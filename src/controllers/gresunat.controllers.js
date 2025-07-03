@@ -37,7 +37,7 @@ const registrarGRESunat = async (req,res,next)=> {
 
         
         //00. Obtener token
-        const sToken = obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
+        const sToken = await obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
         console.log(sToken);
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
@@ -330,7 +330,7 @@ function obtenerDigestValue(xmlFirmado) {
 }
 
 
-function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
+async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
   try {
     const url = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${clientId}/oauth2/token/`;
 
@@ -344,7 +344,7 @@ function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
     params.append('password', passwordSol);
     
     //console.log(params);
-    const response = fetch(url, {
+    const response = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded'
@@ -353,11 +353,11 @@ function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
     });
 
     if (!response.ok) {
-      const errorBody = response.text();
+      const errorBody = await response.text();
       throw new Error(`Error obteniendo token SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
     }
 
-    const data = response.json();
+    const data = await response.json();
     return data;
 
   } catch (error) {

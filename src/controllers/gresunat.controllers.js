@@ -329,13 +329,7 @@ function obtenerDigestValue(xmlFirmado) {
 }
 
 
-async function obtenerTokenSunat({
-  clientId,
-  clientSecret,
-  ruc,
-  usuarioSol,
-  passwordSol
-}) {
+async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
   try {
     const url = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${clientId}/oauth2/token/`;
 

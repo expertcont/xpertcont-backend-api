@@ -71,7 +71,7 @@ const registrarGRESunat = async (req,res,next)=> {
         //Aqui se enviara por POST XML + token, ya no se usa SOAP
         const resultadoTicket = await enviarGreSunat(sToken,'09',dataGuia.empresa.ruc,dataGuia.guia.serie,dataGuia.guia.numero, xmlComprobanteFirmado)
         console.log('resultadoTicket: ', resultadoTicket)
-        
+
         // 06. Procesar respuesta SUNAT
         //const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataGuia);
 
@@ -359,7 +359,7 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
     const body = {
       archivo: {
-        nomArchivo: nomArchivo,
+        nomArchivo: nombreArchivoZip,
         arcGreZip: arcGreZip64,
         hashZip: hashZip
       }

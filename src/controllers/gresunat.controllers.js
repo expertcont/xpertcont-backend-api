@@ -4,15 +4,14 @@ const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 /////////////////////////////////////////////////////////
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
+const crypto = require('crypto');
 
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
-const { XmlSignature } = require('@supernova-team/xml-sunat');
 const fs = require('fs/promises');
 const xpath = require('xpath');
 const path = require('path');
-const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
@@ -70,12 +69,9 @@ const registrarGRESunat = async (req,res,next)=> {
         })();
         
         //Aqui se enviara por POST XML + token, ya no se usa SOAP
-
-        //04. Construir SOAP
-        //let contenidoSOAP = await empaquetarYGenerarSOAP(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
-        //05. Enviar SOAP y recepcionar respuesta SUNAT
-        //const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataGuia.empresa.modo);
-        //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
+        const resultadoTicket = await enviarGreSunat(sToken,'09',dataGuia.empresa.ruc,dataGuia.guia.serie,dataGuia.guia.numero, xmlComprobanteFirmado)
+        console.log('resultadoTicket: ', resultadoTicket)
+        
         // 06. Procesar respuesta SUNAT
         //const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataGuia);
 
@@ -154,29 +150,6 @@ function canonicalizarManual(xmlStr) {
     .replace(/\t/g, '')
     .replace(/>\s+</g, '><')
     .trim();
-}
-async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
-  try {
-    // 📌 Generar ruta temporal única para el PFX
-    const pfxTempPath = path.join('/tmp', `cert-${randomUUID()}.pfx`);
-
-    // 📌 Escribir buffer del certificado a archivo temporal
-    await fs.writeFile(pfxTempPath, certificadoBuffer);
-
-    // 📌 Instanciar firmador y firmar XML
-    // La libreria super-nova se encarga de calcular los valores digestvalue, firma y certificado publico ... junto con la bloque de firma (formato de sunat)
-    const signer = new XmlSignature(pfxTempPath, password, unsignedXML);
-    const signedXml = await signer.getSignedXML();
-
-    // 📌 Eliminar el archivo temporal una vez firmado
-    await fs.unlink(pfxTempPath);
-
-    // 📌 Retornar XML firmado como string
-    return signedXml;
-  } catch (err) {
-    console.error('❌ Error firmando XML:', err);
-    throw err;
-  }
 }
 
 function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, secundario_user,secundario_passwd) {
@@ -365,6 +338,57 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
     throw error;
   }
 }
+
+async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
+  try {
+    const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
+
+    // Crear ZIP en memoria
+    const zip = new AdmZip();
+    zip.addFile(nombreArchivoZip, Buffer.from(xmlFirmadoString));
+
+    // Obtener contenido ZIP en buffer
+    const zipBuffer = zip.toBuffer();
+
+    // Convertir buffer a Base64
+    const arcGreZip64 = zipBuffer.toString('base64');
+
+    // Calcular hash SHA-256 en Base64 (igual que espera SUNAT)
+    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+    
+    const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
+    const body = {
+      archivo: {
+        nomArchivo: nomArchivo,
+        arcGreZip: arcGreZip64,
+        hashZip: hashZip
+      }
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Error enviando comprobante SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    console.log('Respuesta SUNAT:', data);
+    return data;
+
+  } catch (error) {
+    console.error('Error en enviarComprobanteSunat:', error.message);
+    throw error;
+  }
+}
+
 module.exports = {
     registrarGRESunat
  }; 

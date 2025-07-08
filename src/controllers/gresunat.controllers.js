@@ -189,35 +189,6 @@ function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, se
   return soapXml;
 }
 
-async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
-  //Modo 1 = produccion(sunat,ose), caso contrario Beta generico
-  const urlEnvioEfectivo = (modo == "1") ?  urlEnvio : 'https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService';
-  //Facturas,Boletas,NotasCred,NotasDeb
-  //https://e-factura.sunat.gob.pe/ol-ti-itcpfegem/billService
-  //https://ose.nubefact.com/ol-ti-itcpe/billService?wsdl
-  //https://e-beta.sunat.gob.pe/ol-ti-itcpfegem-beta/billService
-
-  //Guias Remision
-  //https://e-guiaremision.sunat.gob.pe/ol-ti-itemision-guia-gem/billService
-  //https://e-beta.sunat.gob.pe/ol-ti-itemision-guia-gem-beta/billService
-  try {
-    const response = await fetch(urlEnvioEfectivo, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'text/xml; charset=utf-8',
-        'SOAPAction': ''  // obligatorio pero vacío
-      },
-      body: soapXml
-    });
-    const respuestaTexto = await response.text();
-    return respuestaTexto;
-
-  } catch (error) {
-    console.error('❌ Error al enviar SOAP:', error);
-    throw error;
-  }
-}
-
 // Función para procesar y guardar el CDR
 async function procesarRespuestaSunat(soapResponse, dataGuia) {
   try {
@@ -340,7 +311,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
   }
 }
 
-async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
+/*async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   try {
     const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
 
@@ -392,7 +363,59 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     console.error('Error en enviarComprobanteSunat:', error.message);
     throw error;
   }
+}*/
+
+async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
+  try {
+    const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;  // <-- corregido
+    const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
+
+    // Crear ZIP en memoria
+    const zip = new AdmZip();
+    zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
+
+    // Obtener contenido ZIP en buffer
+    const zipBuffer = zip.toBuffer();
+
+    // Convertir buffer a Base64
+    const arcGreZip64 = zipBuffer.toString('base64');
+
+    // Calcular hash SHA-256 en Base64
+    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+
+    const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
+    const body = {
+      archivo: {
+        nomArchivo: nombreArchivoZip,
+        arcGreZip: arcGreZip64,
+        hashZip: hashZip
+      }
+    };
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Error enviando comprobante SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    console.log('Respuesta SUNAT:', data);
+    return data;
+
+  } catch (error) {
+    console.error('Error en enviarComprobanteSunat:', error.message);
+    throw error;
+  }
 }
+
 
 module.exports = {
     registrarGRESunat

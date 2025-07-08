@@ -37,7 +37,7 @@ const registrarGRESunat = async (req,res,next)=> {
         
         //00. Obtener token
         const sToken = await obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
-        console.log(sToken);
+        //console.log(sToken);
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante = await gregeneraxml(dataGuia);
@@ -364,6 +364,9 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
         hashZip: hashZip
       }
     };
+    console.log('token: ',token);
+    console.log('url: ',url);
+    console.log('body: ',body);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -373,8 +376,7 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
       },
       body: JSON.stringify(body)
     });
-
-    console.log(response);
+    console.log('response: ',response);
     
     if (!response.ok) {
       const errorBody = await response.text();

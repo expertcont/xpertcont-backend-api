@@ -36,7 +36,8 @@ const registrarGRESunat = async (req,res,next)=> {
 
         
         //00. Obtener token
-        const sToken = await obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
+        const data = await obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);
+        const sToken = data.access_token;
         //console.log(sToken);
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
@@ -69,7 +70,7 @@ const registrarGRESunat = async (req,res,next)=> {
         })();
         
         //Aqui se enviara por POST XML + token, ya no se usa SOAP
-        const resultadoTicket = await enviarGreSunat(sToken,'09',dataGuia.empresa.ruc,dataGuia.guia.serie,dataGuia.guia.numero, xmlComprobanteFirmado)
+        const resultadoTicket = await enviarGreSunat(sToken,dataGuia.empresa.ruc,'09',dataGuia.guia.serie,dataGuia.guia.numero, xmlComprobanteFirmado)
         console.log('resultadoTicket: ', resultadoTicket)
 
         // 06. Procesar respuesta SUNAT

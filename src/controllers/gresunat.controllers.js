@@ -374,6 +374,8 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
       body: JSON.stringify(body)
     });
 
+    console.log(response);
+    
     if (!response.ok) {
       const errorBody = await response.text();
       throw new Error(`Error enviando comprobante SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);

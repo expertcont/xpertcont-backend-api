@@ -5,7 +5,7 @@ const pool = require('../db');
 /////////////////////////////////////////////////////////
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
 const crypto = require('crypto');
-
+const os = require('os');
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 

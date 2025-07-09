@@ -378,9 +378,7 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     // Crear ZIP en memoria
     const zip = new AdmZip();
     //zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
-    const xmlFirmadoStringSinCRLF = xmlFirmadoString.replace(/\r\n/g, '\n');
-    const xmlBuffer = Buffer.from(xmlFirmadoStringSinCRLF, 'utf8');
-    zip.addFile(nombreArchivoXml, xmlBuffer);
+    zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString), null, 0);  // sin compresión
 
     // Crear archivo ZIP físico temporal
     const tempZipPath = path.join(os.tmpdir(), nombreArchivoZip);

@@ -47,7 +47,6 @@ function gregeneratransporte(data) {
 
     xmlTransporte +=
        `</cac:ShipmentStage>
-
         <cac:Delivery>
             <cac:DeliveryAddress>
                 <cbc:ID>${data.llegada_ubigeo}</cbc:ID>

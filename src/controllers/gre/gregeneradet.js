@@ -10,13 +10,10 @@ function gregeneradet(items) {
     return `
         <cac:DespatchLine>
             <cbc:ID>${index + 1}</cbc:ID>
-            
             <cbc:DeliveredQuantity unitCode="NIU">${cantidad}</cbc:DeliveredQuantity>
-
             <cac:OrderLineReference>
                 <cbc:LineID>1</cbc:LineID>
             </cac:OrderLineReference>
-            
             <cac:Item>
                     <cbc:Description><![CDATA[${producto}]]></cbc:Description>
                     <cac:SellersItemIdentification>

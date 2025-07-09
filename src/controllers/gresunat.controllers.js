@@ -377,11 +377,12 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     // Obtener contenido ZIP en buffer
     const zipBuffer = zip.toBuffer();
 
+    // Calcular hash SHA-256 en Base64
+    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+
     // Convertir buffer a Base64
     const arcGreZip64 = zipBuffer.toString('base64');
 
-    // Calcular hash SHA-256 en Base64
-    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
 
     const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
     const body = {
@@ -391,6 +392,11 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
         hashZip: hashZip
       }
     };
+    ////////////////////////////////////////////////////////////////////
+    console.log('Hash SHA-256 Enviado:', hashZip);
+    const hashGenerado = calcularHashZipSunatDesdeBuffer(arcGreZip64);
+    console.log('Hash SHA-256 Base64 ZIP:', hashGenerado);
+    ////////////////////////////////////////////////////////////////////
 
     const response = await fetch(url, {
       method: 'POST',
@@ -416,6 +422,14 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
   }
 }
 
+function calcularHashZipSunatDesdeBuffer(zipBuffer) {
+  //asi calcula el hash para enviar
+  //const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+
+  //asi calcula sunat, extrae de la misma manera
+  const hashBase64 = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+  return hashBase64;
+}
 
 module.exports = {
     registrarGRESunat

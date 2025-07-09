@@ -3,10 +3,12 @@ const cpegenerapdf = require('./cpe/cpegenerapdf');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
+const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
+
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
-const { XmlSignature } = require('@supernova-team/xml-sunat');
+//const { XmlSignature } = require('@supernova-team/xml-sunat');
 const fs = require('fs/promises');
 const xpath = require('xpath');
 const path = require('path');
@@ -36,7 +38,11 @@ const registrarCPESunat = async (req,res,next)=> {
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
-        let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
+        //let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
+        //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+        const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
+        signerManual.setSignNodeName('Invoice');
+        const xmlComprobanteFirmado = await signerManual.getSignedXML();
         const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu

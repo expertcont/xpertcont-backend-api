@@ -7,6 +7,7 @@ const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
 const crypto = require('crypto');
 const os = require('os');
 const fsX = require('fs');
+const yazl = require("yazl");
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
@@ -374,18 +375,21 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
   try {
     const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
     const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
-
-    // Crear ZIP en memoria
-    const zip = new AdmZip();
-    //zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
-    zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString), null, 0);  // sin compresión
-
-    // Crear archivo ZIP físico temporal
     const tempZipPath = path.join(os.tmpdir(), nombreArchivoZip);
-    zip.writeZip(tempZipPath);  // 👈 importante, esto usa el método de escritura real
+
+    // Crear archivo ZIP con yazl (sin timestamps ni metadatos extra)
+    const zipfile = new yazl.ZipFile();
+    zipfile.addBuffer(Buffer.from(xmlFirmadoString, 'utf8'), nombreArchivoXml);
+    zipfile.end();
+
+    // Escribir ZIP a archivo físico
+    const writeStream = fs.createWriteStream(tempZipPath);
+    zipfile.outputStream.pipe(writeStream);
+
+    await new Promise((resolve) => writeStream.on("close", resolve));
 
     // Leer archivo ZIP desde disco
-    const zipBuffer = fsX.readFileSync(tempZipPath);
+    const zipBuffer = fs.readFileSync(tempZipPath);
 
     // Calcular hash SHA-256 desde archivo ZIP
     const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
@@ -393,7 +397,6 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     // Convertir a Base64 para envío
     const arcGreZip64 = zipBuffer.toString('base64');
 
-    // Preparar request
     const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
     const body = {
       archivo: {
@@ -403,7 +406,6 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
       }
     };
     
-    inspeccionarZip(zipBuffer);
     console.log('HASH:', hashZip);
     console.log('Enviando ZIP:', tempZipPath);
 
@@ -425,7 +427,7 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     console.log('Respuesta SUNAT:', data);
 
     // Elimina archivo temporal
-    fsX.unlinkSync(tempZipPath);
+    fs.unlinkSync(tempZipPath);
 
     return data;
 

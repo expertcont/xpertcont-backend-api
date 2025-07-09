@@ -6,6 +6,7 @@ const pool = require('../db');
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
 const crypto = require('crypto');
 const os = require('os');
+const fsX = require('fs');
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
@@ -383,7 +384,7 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     zip.writeZip(tempZipPath);  // 👈 importante, esto usa el método de escritura real
 
     // Leer archivo ZIP desde disco
-    const zipBuffer = fs.readFileSync(tempZipPath);
+    const zipBuffer = fsX.readFileSync(tempZipPath);
 
     // Calcular hash SHA-256 desde archivo ZIP
     const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
@@ -422,7 +423,7 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     console.log('Respuesta SUNAT:', data);
 
     // Elimina archivo temporal
-    fs.unlinkSync(tempZipPath);
+    fsX.unlinkSync(tempZipPath);
 
     return data;
 

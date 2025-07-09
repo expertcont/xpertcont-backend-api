@@ -6,12 +6,11 @@ const pool = require('../db');
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
 const crypto = require('crypto');
 const os = require('os');
-const fsX = require('fs');
+const fs = require('fs');
 const yazl = require("yazl");
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
-const fs = require('fs/promises');
 const xpath = require('xpath');
 const path = require('path');
 

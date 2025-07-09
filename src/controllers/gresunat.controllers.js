@@ -311,61 +311,8 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
   }
 }
 
+
 /*async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
-  try {
-    const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
-
-    // Crear ZIP en memoria
-    const zip = new AdmZip();
-    zip.addFile(nombreArchivoZip, Buffer.from(xmlFirmadoString));
-
-    // Obtener contenido ZIP en buffer
-    const zipBuffer = zip.toBuffer();
-
-    // Convertir buffer a Base64
-    const arcGreZip64 = zipBuffer.toString('base64');
-
-    // Calcular hash SHA-256 en Base64 (igual que espera SUNAT)
-    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
-    
-    const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
-    const body = {
-      archivo: {
-        nomArchivo: nombreArchivoZip,
-        arcGreZip: arcGreZip64,
-        hashZip: hashZip
-      }
-    };
-    console.log('token: ',token);
-    console.log('url: ',url);
-    console.log('body: ',body);
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(body)
-    });
-    console.log('response: ',response);
-    
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Error enviando comprobante SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    console.log('Respuesta SUNAT:', data);
-    return data;
-
-  } catch (error) {
-    console.error('Error en enviarComprobanteSunat:', error.message);
-    throw error;
-  }
-}*/
-
-async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   try {
     const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;  // <-- corregido
     const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
@@ -418,6 +365,69 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
 
   } catch (error) {
     console.error('Error en enviarComprobanteSunat:', error.message);
+    throw error;
+  }
+}*/
+
+async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
+  try {
+    const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
+    const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
+
+    // Crear ZIP en memoria
+    const zip = new AdmZip();
+    zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
+
+    // Crear archivo ZIP físico temporal
+    const tempZipPath = path.join(os.tmpdir(), nombreArchivoZip);
+    zip.writeZip(tempZipPath);  // 👈 importante, esto usa el método de escritura real
+
+    // Leer archivo ZIP desde disco
+    const zipBuffer = fs.readFileSync(tempZipPath);
+
+    // Calcular hash SHA-256 desde archivo ZIP
+    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+
+    // Convertir a Base64 para envío
+    const arcGreZip64 = zipBuffer.toString('base64');
+
+    // Preparar request
+    const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
+    const body = {
+      archivo: {
+        nomArchivo: nombreArchivoZip,
+        arcGreZip: arcGreZip64,
+        hashZip: hashZip
+      }
+    };
+
+    console.log('HASH:', hashZip);
+    console.log('Enviando ZIP:', tempZipPath);
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      throw new Error(`Error enviando comprobante SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
+    }
+
+    const data = await response.json();
+    console.log('Respuesta SUNAT:', data);
+
+    // Elimina archivo temporal
+    fs.unlinkSync(tempZipPath);
+
+    return data;
+
+  } catch (error) {
+    console.error('Error en enviarGreSunat:', error.message);
     throw error;
   }
 }

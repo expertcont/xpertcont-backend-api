@@ -377,7 +377,10 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
 
     // Crear ZIP en memoria
     const zip = new AdmZip();
-    zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
+    //zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
+    const xmlFirmadoStringSinCRLF = xmlFirmadoString.replace(/\r\n/g, '\n');
+    const xmlBuffer = Buffer.from(xmlFirmadoStringSinCRLF, 'utf8');
+    zip.addFile(nombreArchivoXml, xmlBuffer);
 
     // Crear archivo ZIP físico temporal
     const tempZipPath = path.join(os.tmpdir(), nombreArchivoZip);
@@ -401,7 +404,8 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
         hashZip: hashZip
       }
     };
-
+    
+    inspeccionarZip(zipBuffer);
     console.log('HASH:', hashZip);
     console.log('Enviando ZIP:', tempZipPath);
 
@@ -433,15 +437,15 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
   }
 }
 
-function calcularHashZipSunatDesdeBuffer(zipBuffer) {
-  //asi calcula el hash para enviar
-  //const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+function inspeccionarZip(bufferZip) {
+  const zip = new AdmZip(bufferZip);
+  const entries = zip.getEntries();
 
-  //asi calcula sunat, extrae de la misma manera
-  const hashBase64 = crypto.createHash('sha256').update(zipBuffer).digest('base64');
-  return hashBase64;
+  console.log('Contenido del ZIP:');
+  entries.forEach((entry) => {
+    console.log(`Nombre: ${entry.entryName}, tamaño: ${entry.header.size}, CRC: ${entry.header.crc}`);
+  });
 }
-
 module.exports = {
     registrarGRESunat
  }; 

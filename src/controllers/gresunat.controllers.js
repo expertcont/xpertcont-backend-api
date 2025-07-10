@@ -8,6 +8,7 @@ const crypto = require('crypto');
 const os = require('os');
 const fs = require('fs');
 const yazl = require("yazl");
+const archiver = require('archiver');
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
@@ -415,20 +416,11 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
   }
 }
 
-function inspeccionarZip(bufferZip) {
-  const zip = new AdmZip(bufferZip);
-  const entries = zip.getEntries();
-
-  console.log('Contenido del ZIP:');
-  entries.forEach((entry) => {
-    console.log(`Nombre: ${entry.entryName}, tamaño: ${entry.header.size}, CRC: ${entry.header.crc}`);
-  });
-}
-
 async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
   const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
   const tempZipPath = path.join(os.tmpdir(), nombreArchivoZip);
+  const tempXmlPath = path.join(os.tmpdir(), nombreArchivoXml);
 
   // 🧹 Limpiar XML
   let cleanXml = xmlFirmadoString;
@@ -447,19 +439,26 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   // Asegurarse que termina limpio
   cleanXml = cleanXml.trim();
 
-  // Convertir a buffer UTF-8
-  const xmlBuffer = Buffer.from(cleanXml, 'utf8');
+  // Guardar XML temporalmente
+  fs.writeFileSync(tempXmlPath, cleanXml, { encoding: 'utf8' });
 
-  // 🗜️ Crear ZIP con yazl sin compresión
-  const zipfile = new yazl.ZipFile();
-  zipfile.addBuffer(xmlBuffer, nombreArchivoXml, { compress: false });
-  zipfile.end();
+  // 🗜️ Crear ZIP sin compresión ni timestamps
+  const output = fs.createWriteStream(tempZipPath);
+  const archive = archiver('zip', {
+    zlib: { level: 0 }
+  });
 
-  // Escribir ZIP a archivo temporal
-  const writeStream = fs.createWriteStream(tempZipPath);
-  zipfile.outputStream.pipe(writeStream);
+  await new Promise((resolve, reject) => {
+    output.on('close', resolve);
+    archive.on('error', reject);
 
-  await new Promise((resolve) => writeStream.on("close", resolve));
+    archive.pipe(output);
+
+    // Fecha fija para evitar variación en los bytes del header
+    archive.file(tempXmlPath, { name: nombreArchivoXml, date: new Date('2000-01-01T00:00:00Z') });
+
+    archive.finalize();
+  });
 
   // Leer ZIP desde disco
   const zipBuffer = fs.readFileSync(tempZipPath);
@@ -470,7 +469,8 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   // Obtener contenido base64 del ZIP
   const arcGreZip64 = zipBuffer.toString('base64');
 
-  // Eliminar archivo temporal
+  // Eliminar archivos temporales
+  fs.unlinkSync(tempXmlPath);
   fs.unlinkSync(tempZipPath);
 
   return {
@@ -480,6 +480,7 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
     hashZip
   };
 }
+
 
 module.exports = {
     registrarGRESunat

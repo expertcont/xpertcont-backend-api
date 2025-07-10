@@ -384,8 +384,8 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
       }
     };
     
+    console.log('arcGreZip64:', arcGreZip64);
     console.log('HASH:', hashZip);
-    console.log('Enviando ZIP:', tempZipPath);
 
     const response = await fetch(url, {
       method: 'POST',

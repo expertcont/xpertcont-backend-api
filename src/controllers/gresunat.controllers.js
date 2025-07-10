@@ -258,27 +258,18 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
   const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
 
-  // 🧹 Limpiar XML
+  // Limpiar XML
   let cleanXml = xmlFirmadoString;
 
-  if (cleanXml.charCodeAt(0) === 0xFEFF) {
-    cleanXml = cleanXml.slice(1);
-  }
-  
-  // Eliminar líneas vacías, CRLF → LF
+  if (cleanXml.charCodeAt(0) === 0xFEFF) cleanXml = cleanXml.slice(1);
   cleanXml = cleanXml.replace(/\r\n/g, '\n').replace(/\s+$/gm, '').trim();
-  // Asegúrate de NO tener espacio final al final del string
   if (cleanXml.endsWith('\n')) cleanXml = cleanXml.slice(0, -1);
 
   const xmlBuffer = Buffer.from(cleanXml, 'utf8');
 
-  // 🗜️ Crear ZIP con yazl usando DEFLATED y mtime fijo
   const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
 
-  // Calcular SHA-256 en base64
   const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
-
-  // Convertir a base64 para enviar
   const arcGreZip64 = zipBuffer.toString('base64');
 
   return {
@@ -293,7 +284,7 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
   return new Promise((resolve) => {
     const zipfile = new yazl.ZipFile();
 
-    const crc = crc32.buf(xmlBuffer) >>> 0; // unsigned
+    const crc = crc32.buf(xmlBuffer) >>> 0;
     const uncompressedSize = xmlBuffer.length;
 
     zipfile.addBuffer(xmlBuffer, nombreArchivoXml, {
@@ -313,7 +304,6 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
     zipfile.end();
   });
 }
-
 
 module.exports = {
     registrarGRESunat

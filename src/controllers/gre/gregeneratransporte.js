@@ -89,7 +89,7 @@ function xmlTag(tag, content) {
 }
 
 function xmlCdataTag(tag, value) {
-  return `<${tag}><![CDATA[${sanitizeCdata(value)}]]></${tag}>`;
+  return `<${tag}><![CDATA[${value}]]></${tag}>`;
 }
 
 module.exports = gregeneratransporte;

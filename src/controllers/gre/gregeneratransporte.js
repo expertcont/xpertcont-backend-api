@@ -64,7 +64,7 @@ function gregeneratransporte(data) {
                 </cac:Despatch>
             </cac:Delivery>
         </cac:Shipment>`;*/
-        
+
         xmlTransporte += 
         `</cac:ShipmentStage>` +
         `<cac:Delivery>` +
@@ -84,8 +84,12 @@ function gregeneratransporte(data) {
     return xmlTransporte;
 }
 
-function sanitizeCdata(value) {
-  return value.replace(/\r\n/g, '\n').trim();
+function xmlTag(tag, content) {
+  return `<${tag}>${content}</${tag}>`;
+}
+
+function xmlCdataTag(tag, value) {
+  return `<${tag}><![CDATA[${sanitizeCdata(value)}]]></${tag}>`;
 }
 
 module.exports = gregeneratransporte;

@@ -45,25 +45,41 @@ function gregeneratransporte(data) {
             </cac:DriverPerson>`;
     };
 
-    xmlTransporte +=
-       `</cac:ShipmentStage>
-        <cac:Delivery>
-            <cac:DeliveryAddress>
-                <cbc:ID>${data.llegada_ubigeo}</cbc:ID>
-                <cac:AddressLine>
-                    <cbc:Line><![CDATA[${sanitizeCdata(data.llegada_direccion)}]]></cbc:Line>
-                </cac:AddressLine>
-            </cac:DeliveryAddress>
-            <cac:Despatch>
-                <cac:DespatchAddress>
-                    <cbc:ID>${data.partida_ubigeo}</cbc:ID>
+        /*xmlTransporte +=
+        `</cac:ShipmentStage>
+            <cac:Delivery>
+                <cac:DeliveryAddress>
+                    <cbc:ID>${data.llegada_ubigeo}</cbc:ID>
                     <cac:AddressLine>
-                        <cbc:Line><![CDATA[${sanitizeCdata(data.partida_direccion)}]]></cbc:Line>
+                        <cbc:Line><![CDATA[${sanitizeCdata(data.llegada_direccion)}]]></cbc:Line>
                     </cac:AddressLine>
-                </cac:DespatchAddress>
-            </cac:Despatch>
-        </cac:Delivery>
-    </cac:Shipment>`;
+                </cac:DeliveryAddress>
+                <cac:Despatch>
+                    <cac:DespatchAddress>
+                        <cbc:ID>${data.partida_ubigeo}</cbc:ID>
+                        <cac:AddressLine>
+                            <cbc:Line><![CDATA[${sanitizeCdata(data.partida_direccion)}]]></cbc:Line>
+                        </cac:AddressLine>
+                    </cac:DespatchAddress>
+                </cac:Despatch>
+            </cac:Delivery>
+        </cac:Shipment>`;*/
+        
+        xmlTransporte += 
+        `</cac:ShipmentStage>` +
+        `<cac:Delivery>` +
+            `<cac:DeliveryAddress>` +
+            xmlTag('cbc:ID', data.llegada_ubigeo) +
+            xmlTag('cac:AddressLine', xmlCdataTag('cbc:Line', data.llegada_direccion)) +
+            `</cac:DeliveryAddress>` +
+            `<cac:Despatch>` +
+            `<cac:DespatchAddress>` +
+                xmlTag('cbc:ID', data.partida_ubigeo) +
+                xmlTag('cac:AddressLine', xmlCdataTag('cbc:Line', data.partida_direccion)) +
+            `</cac:DespatchAddress>` +
+            `</cac:Despatch>` +
+        `</cac:Delivery>` +
+        `</cac:Shipment>`;
     
     return xmlTransporte;
 }

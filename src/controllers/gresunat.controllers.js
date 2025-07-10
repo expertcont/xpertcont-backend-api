@@ -50,8 +50,10 @@ const registrarGRESunat = async (req,res,next)=> {
         //02. Nueva firma implementado propio
         const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
         signerManual.setSignNodeName('DespatchAdvice');
-        const xmlComprobanteFirmado = await signerManual.getSignedXML();
+        let xmlComprobanteFirmado = await signerManual.getSignedXML();
         const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+        
+        xmlComprobanteFirmado = sanitizeCdata(xmlComprobanteFirmado);
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
         //await subirArchivoDesdeMemoria(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero, xmlComprobanteFirmado,'-');
@@ -305,6 +307,9 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
   });
 }
 
+function sanitizeCdata(value) {
+  return value.replace(/\r\n/g, '\n').trim();
+}
 module.exports = {
     registrarGRESunat
  }; 

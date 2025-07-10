@@ -293,12 +293,14 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
   return new Promise((resolve) => {
     const zipfile = new yazl.ZipFile();
 
-    const crc = crc32.buf(xmlBuffer) >>> 0; // Forzar a unsigned
+    const crc = crc32.buf(xmlBuffer) >>> 0; // unsigned
+    const uncompressedSize = xmlBuffer.length;
 
     zipfile.addBuffer(xmlBuffer, nombreArchivoXml, {
       compress: true,
       mtime: new Date('2000-01-01T00:00:00Z'),
-      crc32: crc
+      crc32: crc,
+      uncompressedSize: uncompressedSize
     });
 
     const buffers = [];
@@ -311,6 +313,8 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
     zipfile.end();
   });
 }
+
+
 module.exports = {
     registrarGRESunat
  }; 

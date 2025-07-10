@@ -445,7 +445,7 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   // 🗜️ Crear ZIP sin compresión ni timestamps
   const output = fs.createWriteStream(tempZipPath);
   const archive = archiver('zip', {
-    zlib: { level: 0 }
+    zlib: { level: 1 } // compresión mínima, pero DEFLATED
   });
 
   await new Promise((resolve, reject) => {
@@ -455,7 +455,8 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
     archive.pipe(output);
 
     // Fecha fija para evitar variación en los bytes del header
-    archive.file(tempXmlPath, { name: nombreArchivoXml, date: new Date('2000-01-01T00:00:00Z') });
+    //archive.file(tempXmlPath, { name: nombreArchivoXml, date: new Date('2000-01-01T00:00:00Z') });
+    archive.file(tempXmlPath, { name: nombreArchivoXml, date: new Date('2000-01-01T00:00:00Z'), store: false });  // <-- usa DEFLATED
 
     archive.finalize();
   });

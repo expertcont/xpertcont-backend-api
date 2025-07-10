@@ -53,8 +53,6 @@ const registrarGRESunat = async (req,res,next)=> {
         let xmlComprobanteFirmado = await signerManual.getSignedXML();
         const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
         
-        xmlComprobanteFirmado = sanitizeCdata(xmlComprobanteFirmado);
-
         //me guardo una copia del xmlFirmado en servidor ubuntu
         //await subirArchivoDesdeMemoria(dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero, xmlComprobanteFirmado,'-');
         //03. Guardar xml firmado en Server Ubuntu, version asyncrono(desconectado)
@@ -78,32 +76,6 @@ const registrarGRESunat = async (req,res,next)=> {
         const resultadoTicket = await enviarGreSunat(sToken,dataGuia.empresa.ruc,'09',dataGuia.guia.serie,dataGuia.guia.numero, xmlComprobanteFirmado)
         console.log('resultadoTicket: ', resultadoTicket)
 
-        // 06. Procesar respuesta SUNAT
-        //const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataGuia);
-
-        // 07. Generar PDF
-        //PDF version asyncrono (desconectado)
-        /*(async () => {
-          try {
-            const resultadoPdf = await gregenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
-            if (resultadoPdf.estado) {
-              console.log('PDF EXITOSO');
-              await subirArchivoDesdeMemoria(
-                dataGuia.empresa.ruc,
-                dataGuia.venta.codigo,
-                dataGuia.venta.serie,
-                dataGuia.venta.numero,
-                resultadoPdf.buffer_pdf,
-                'PDF'
-              );
-            } else {
-              console.log('REVISAR PROCESO PDF ERRORRR');
-            }
-          } catch (error) {
-            console.error('Error al generar PDF:', error);
-          }
-        })();*/
-            
         
         const server_sftp = process.env.CPE_HOST;
         const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.guia.codigo + '-' + dataGuia.guia.serie + '-' + dataGuia.guia.numero + '.xml'
@@ -260,14 +232,7 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
   const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
 
-  // Limpiar XML
-  let cleanXml = xmlFirmadoString;
-
-  if (cleanXml.charCodeAt(0) === 0xFEFF) cleanXml = cleanXml.slice(1);
-  cleanXml = cleanXml.replace(/\r\n/g, '\n').replace(/\s+$/gm, '').trim();
-  if (cleanXml.endsWith('\n')) cleanXml = cleanXml.slice(0, -1);
-
-  const xmlBuffer = Buffer.from(cleanXml, 'utf8');
+  const xmlBuffer = Buffer.from(xmlFirmadoString, 'utf8');
 
   const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
 
@@ -307,9 +272,6 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
   });
 }
 
-function sanitizeCdata(value) {
-  return value.replace(/\r\n/g, '\n').trim();
-}
 module.exports = {
     registrarGRESunat
  }; 

@@ -51,14 +51,14 @@ function gregeneratransporte(data) {
                 <cac:DeliveryAddress>
                     <cbc:ID>${data.llegada_ubigeo}</cbc:ID>
                     <cac:AddressLine>
-                        <cbc:Line><![CDATA[${sanitizeCdata(data.llegada_direccion)}]]></cbc:Line>
+                        <cbc:Line><![CDATA[${data.llegada_direccion}]]></cbc:Line>
                     </cac:AddressLine>
                 </cac:DeliveryAddress>
                 <cac:Despatch>
                     <cac:DespatchAddress>
                         <cbc:ID>${data.partida_ubigeo}</cbc:ID>
                         <cac:AddressLine>
-                            <cbc:Line><![CDATA[${sanitizeCdata(data.partida_direccion)}]]></cbc:Line>
+                            <cbc:Line><![CDATA[${data.partida_direccion}]]></cbc:Line>
                         </cac:AddressLine>
                     </cac:DespatchAddress>
                 </cac:Despatch>

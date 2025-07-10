@@ -9,6 +9,7 @@ const os = require('os');
 const fs = require('fs');
 const yazl = require("yazl");
 const archiver = require('archiver');
+const crc32 = require('crc-32');
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
@@ -155,108 +156,6 @@ function canonicalizarManual(xmlStr) {
     .trim();
 }
 
-function empaquetarYGenerarSOAP(ruc, codigo, serie, numero, xmlFirmadoString, secundario_user,secundario_passwd) {
-  const nombreArchivoXml = `${ruc}-${codigo}-${serie}-${numero}.xml`;
-  const nombreArchivoZip = `${ruc}-${codigo}-${serie}-${numero}.zip`;
-
-  // Crear ZIP en memoria
-  const zip = new AdmZip();
-  zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
-
-  // Obtener contenido ZIP en buffer
-  const zipBuffer = zip.toBuffer();
-
-  // Convertir buffer a Base64
-  const zipBase64 = zipBuffer.toString('base64');
-
-  // Armar SOAP manualmente
-  const soapXml = `<?xml version="1.0" encoding="UTF-8"?>
-  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.sunat.gob.pe" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
-  <soapenv:Header>
-      <wsse:Security>
-          <wsse:UsernameToken>
-              <wsse:Username>${ruc}${secundario_user}</wsse:Username>
-              <wsse:Password>${secundario_passwd}</wsse:Password>
-          </wsse:UsernameToken>
-      </wsse:Security>
-  </soapenv:Header>
-  <soapenv:Body>
-        <ser:sendBill>
-          <fileName>${nombreArchivoZip}</fileName>
-          <contentFile>${zipBase64}</contentFile>
-        </ser:sendBill>
-  </soapenv:Body>
-  </soapenv:Envelope>`;
-
-  return soapXml;
-}
-
-// Función para procesar y guardar el CDR
-async function procesarRespuestaSunat(soapResponse, dataGuia) {
-  try {
-      const { ruc, codigo, serie, numero } = {
-        ruc: dataGuia.empresa.ruc,
-        codigo: dataGuia.venta.codigo,
-        serie: dataGuia.venta.serie,
-        numero: dataGuia.venta.numero
-      };
-
-      // Parsear SOAP XML
-      const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
-      const select = xpath.useNamespaces({
-        'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
-      });
-
-      // Localizar applicationResponse
-      const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
-      if (!appRespNode) {
-        throw new Error('❌ No se encontró applicationResponse en SOAP.');
-      }
-
-      // Decodificar base64 a buffer ZIP
-      const base64Zip = appRespNode.textContent.trim();
-      const zipBuffer = Buffer.from(base64Zip, 'base64');
-
-      // Leer ZIP
-      const zip = new AdmZip(zipBuffer);
-      const entries = zip.getEntries();
-      if (entries.length === 0) {
-        throw new Error('❌ ZIP devuelto está vacío.');
-      }
-
-      // Obtener primer archivo XML CDR dentro del ZIP
-      const entry = entries.find(e => e.entryName.endsWith('.xml'));
-      if (!entry) {
-        throw new Error('❌ No se encontró archivo XML dentro del ZIP.');
-      }
-
-      const rawBuffer = entry.getData();
-      const contenidoCDR = rawBuffer.toString('utf8');
-
-      // Subir CDR con prefijo R-
-      await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR, 'R');
-      //console.log(`📦 CDR descomprimido (${rawBuffer.length} bytes)`);
-      //console.log(`📝 Nombre CDR: ${entry.entryName}`);
-      //console.log('📑 Primeros bytes:', rawBuffer.slice(0, 80));
-      //console.log(`✅ CDR SUNAT guardado como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
-      
-      // Extraer cbc:Description
-      const descDoc = new DOMParser().parseFromString(contenidoCDR, 'text/xml');
-      const descSelect = xpath.useNamespaces({
-        cbc: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2'
-      });
-
-      const descNode = descSelect('//*[local-name()="Description"]', descDoc)[0];
-      const descripcion = descNode ? descNode.textContent.trim() : 'Sin descripción SUNAT';
-
-      return { estado: true, descripcion };
-
-  } catch (error) {
-    console.error('❌ Error procesando respuesta SUNAT:', error.message);
-    return { estado: false, descripcion: error.message };
-  }
-}
-
 function obtenerDigestValue(xmlFirmado) {
   // Parsear XML firmado
   const doc = new DOMParser().parseFromString(xmlFirmado, 'text/xml');
@@ -314,62 +213,6 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
 }
 
 
-/*async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
-  try {
-    const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;  // <-- corregido
-    const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
-
-    // Crear ZIP en memoria
-    const zip = new AdmZip();
-    zip.addFile(nombreArchivoXml, Buffer.from(xmlFirmadoString));
-
-    // Obtener contenido ZIP en buffer
-    const zipBuffer = zip.toBuffer();
-
-    // Calcular hash SHA-256 en Base64
-    const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
-
-    // Convertir buffer a Base64
-    const arcGreZip64 = zipBuffer.toString('base64');
-
-
-    const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
-    const body = {
-      archivo: {
-        nomArchivo: nombreArchivoZip,
-        arcGreZip: arcGreZip64,
-        hashZip: hashZip
-      }
-    };
-    ////////////////////////////////////////////////////////////////////
-    console.log('Hash SHA-256 Enviado:', hashZip);
-    const hashGenerado = calcularHashZipSunatDesdeBuffer(arcGreZip64);
-    console.log('Hash SHA-256 Base64 ZIP:', hashGenerado);
-    ////////////////////////////////////////////////////////////////////
-
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Error enviando comprobante SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    console.log('Respuesta SUNAT:', data);
-    return data;
-
-  } catch (error) {
-    console.error('Error en enviarComprobanteSunat:', error.message);
-    throw error;
-  }
-}*/
 
 async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   try {
@@ -421,8 +264,11 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   if (cleanXml.charCodeAt(0) === 0xFEFF) {
     cleanXml = cleanXml.slice(1);
   }
-
+  
+  // Eliminar líneas vacías, CRLF → LF
   cleanXml = cleanXml.replace(/\r\n/g, '\n').replace(/\s+$/gm, '').trim();
+  // Asegúrate de NO tener espacio final al final del string
+  if (cleanXml.endsWith('\n')) cleanXml = cleanXml.slice(0, -1);
 
   const xmlBuffer = Buffer.from(cleanXml, 'utf8');
 
@@ -447,9 +293,12 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
   return new Promise((resolve) => {
     const zipfile = new yazl.ZipFile();
 
+    const crc = crc32.buf(xmlBuffer) >>> 0; // Forzar a unsigned
+
     zipfile.addBuffer(xmlBuffer, nombreArchivoXml, {
       compress: true,
-      mtime: new Date('2000-01-01T00:00:00Z')
+      mtime: new Date('2000-01-01T00:00:00Z'),
+      crc32: crc
     });
 
     const buffers = [];
@@ -462,7 +311,6 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
     zipfile.end();
   });
 }
-
 module.exports = {
     registrarGRESunat
  }; 

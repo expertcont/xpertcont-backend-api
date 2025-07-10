@@ -373,7 +373,6 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
 
 async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   try {
-    //Preparar elementos de envio
     const { nombreArchivoZip, arcGreZip64, hashZip } = await prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString);
 
     const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}`;
@@ -384,9 +383,8 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
         hashZip: hashZip
       }
     };
-    
-    console.log('arcGreZip64:', arcGreZip64);
-    console.log('HASH:', hashZip);
+
+    console.log('HASH calculado:', hashZip);
 
     const response = await fetch(url, {
       method: 'POST',
@@ -405,9 +403,6 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
     const data = await response.json();
     console.log('Respuesta SUNAT:', data);
 
-    // Elimina archivo temporal
-    fs.unlinkSync(tempZipPath);
-
     return data;
 
   } catch (error) {
@@ -419,60 +414,26 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
 async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
   const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
-  const tempZipPath = path.join(os.tmpdir(), nombreArchivoZip);
-  const tempXmlPath = path.join(os.tmpdir(), nombreArchivoXml);
 
   // 🧹 Limpiar XML
   let cleanXml = xmlFirmadoString;
 
-  // Eliminar BOM si existe
   if (cleanXml.charCodeAt(0) === 0xFEFF) {
     cleanXml = cleanXml.slice(1);
   }
 
-  // Reemplazar CRLF por LF
-  cleanXml = cleanXml.replace(/\r\n/g, '\n');
+  cleanXml = cleanXml.replace(/\r\n/g, '\n').replace(/\s+$/gm, '').trim();
 
-  // Quitar espacios al final de línea
-  cleanXml = cleanXml.replace(/\s+$/gm, '');
+  const xmlBuffer = Buffer.from(cleanXml, 'utf8');
 
-  // Asegurarse que termina limpio
-  cleanXml = cleanXml.trim();
-
-  // Guardar XML temporalmente
-  fs.writeFileSync(tempXmlPath, cleanXml, { encoding: 'utf8' });
-
-  // 🗜️ Crear ZIP sin compresión ni timestamps
-  const output = fs.createWriteStream(tempZipPath);
-  const archive = archiver('zip', {
-    zlib: { level: 1 } // compresión mínima, pero DEFLATED
-  });
-
-  await new Promise((resolve, reject) => {
-    output.on('close', resolve);
-    archive.on('error', reject);
-
-    archive.pipe(output);
-
-    // Fecha fija para evitar variación en los bytes del header
-    //archive.file(tempXmlPath, { name: nombreArchivoXml, date: new Date('2000-01-01T00:00:00Z') });
-    archive.file(tempXmlPath, { name: nombreArchivoXml, date: new Date('2000-01-01T00:00:00Z'), store: false });  // <-- usa DEFLATED
-
-    archive.finalize();
-  });
-
-  // Leer ZIP desde disco
-  const zipBuffer = fs.readFileSync(tempZipPath);
+  // 🗜️ Crear ZIP con yazl usando DEFLATED y mtime fijo
+  const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
 
   // Calcular SHA-256 en base64
   const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
 
-  // Obtener contenido base64 del ZIP
+  // Convertir a base64 para enviar
   const arcGreZip64 = zipBuffer.toString('base64');
-
-  // Eliminar archivos temporales
-  fs.unlinkSync(tempXmlPath);
-  fs.unlinkSync(tempZipPath);
 
   return {
     nombreArchivoXml,
@@ -482,6 +443,25 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   };
 }
 
+function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
+  return new Promise((resolve) => {
+    const zipfile = new yazl.ZipFile();
+
+    zipfile.addBuffer(xmlBuffer, nombreArchivoXml, {
+      compress: true,
+      mtime: new Date('2000-01-01T00:00:00Z')
+    });
+
+    const buffers = [];
+    zipfile.outputStream.on("data", (data) => buffers.push(data));
+    zipfile.outputStream.on("end", () => {
+      const zipBuffer = Buffer.concat(buffers);
+      resolve(zipBuffer);
+    });
+
+    zipfile.end();
+  });
+}
 
 module.exports = {
     registrarGRESunat

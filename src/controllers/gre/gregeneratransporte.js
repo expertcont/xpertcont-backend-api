@@ -70,12 +70,12 @@ function gregeneratransporte(data) {
         `<cac:Delivery>` +
             `<cac:DeliveryAddress>` +
             xmlTag('cbc:ID', data.llegada_ubigeo) +
-            xmlTag('cac:AddressLine', xmlTag('cbc:Line', data.llegada_direccion)) +
+            xmlTag('cac:AddressLine', xmlCdataTag('cbc:Line', data.llegada_direccion)) +
             `</cac:DeliveryAddress>` +
             `<cac:Despatch>` +
             `<cac:DespatchAddress>` +
                 xmlTag('cbc:ID', data.partida_ubigeo) +
-                xmlTag('cac:AddressLine', xmlTag('cbc:Line', data.partida_direccion)) +
+                xmlTag('cac:AddressLine', xmlCdataTag('cbc:Line', data.partida_direccion)) +
             `</cac:DespatchAddress>` +
             `</cac:Despatch>` +
         `</cac:Delivery>` +
@@ -89,7 +89,7 @@ function xmlTag(tag, content) {
 }
 
 function xmlCdataTag(tag, value) {
-  return `<${tag}><![CDATA[${value}]]></${tag}>`;
+  return '<' + tag + '><![CDATA[' + value + ']]></' + tag + '>';
 }
 
 module.exports = gregeneratransporte;

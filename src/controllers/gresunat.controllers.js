@@ -234,7 +234,8 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
 
   const xmlBuffer = Buffer.from(xmlFirmadoString, 'utf8');
 
-  const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
+  //const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
+  const zipBuffer = await crearZipConArchiver(nombreArchivoXml, xmlBuffer);
 
   const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
   const arcGreZip64 = zipBuffer.toString('base64');
@@ -269,6 +270,20 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
     });
 
     zipfile.end();
+  });
+}
+
+async function crearZipConArchiver(nombreArchivo, xmlBuffer) {
+  return new Promise((resolve, reject) => {
+    const archive = archiver('zip', { zlib: { level: 9 } });
+    const buffers = [];
+    
+    archive.on('data', chunk => buffers.push(chunk));
+    archive.on('end', () => resolve(Buffer.concat(buffers)));
+    archive.on('error', reject);
+    
+    archive.append(xmlBuffer, { name: nombreArchivo });
+    archive.finalize();
   });
 }
 

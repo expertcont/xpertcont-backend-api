@@ -234,8 +234,8 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
 
   const xmlBuffer = Buffer.from(xmlFirmadoString, 'utf8');
 
-  //const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
-  const zipBuffer = await crearZipConArchiver(nombreArchivoXml, xmlBuffer);
+  const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
+  //const zipBuffer = await crearZipConArchiver(nombreArchivoXml, xmlBuffer);
 
   const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
   const arcGreZip64 = zipBuffer.toString('base64');

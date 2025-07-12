@@ -248,29 +248,28 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   };
 }
 
-function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
-  return new Promise((resolve) => {
-    const zipfile = new yazl.ZipFile();
+async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
+  const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
+  const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
+  const rutaZipTemporal = path.join('/tmp', nombreArchivoZip); // lo puedes cambiar a donde prefieras
 
-    const crc = crc32.buf(xmlBuffer) >>> 0;
-    const uncompressedSize = xmlBuffer.length;
+  const xmlBuffer = Buffer.from(xmlFirmadoString, 'utf8');
 
-    zipfile.addBuffer(xmlBuffer, nombreArchivoXml, {
-      compress: true,
-      mtime: new Date('2000-01-01T00:00:00Z'),
-      crc32: crc,
-      uncompressedSize: uncompressedSize
-    });
+  const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
 
-    const buffers = [];
-    zipfile.outputStream.on("data", (data) => buffers.push(data));
-    zipfile.outputStream.on("end", () => {
-      const zipBuffer = Buffer.concat(buffers);
-      resolve(zipBuffer);
-    });
+  // ✅ Guardar el ZIP generado en disco para inspección
+  fs.writeFileSync(rutaZipTemporal, zipBuffer);
+  console.log(`ZIP guardado en: ${rutaZipTemporal}`);
 
-    zipfile.end();
-  });
+  const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+  const arcGreZip64 = zipBuffer.toString('base64');
+
+  return {
+    nombreArchivoXml,
+    nombreArchivoZip,
+    arcGreZip64,
+    hashZip
+  };
 }
 
 async function crearZipConArchiver(nombreArchivo, xmlBuffer) {

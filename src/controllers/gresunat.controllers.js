@@ -238,10 +238,11 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
   const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
 
   // ✅ Guardar el ZIP generado en disco para inspección
-  fs.writeFileSync(rutaZipTemporal, zipBuffer);
-  console.log(`ZIP guardado en: ${rutaZipTemporal}`);
+  //fs.writeFileSync(rutaZipTemporal, zipBuffer);
+  //console.log(`ZIP guardado en: ${rutaZipTemporal}`);
 
-  const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+  //const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
+  const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('hex');  
   const arcGreZip64 = zipBuffer.toString('base64');
 
   return {

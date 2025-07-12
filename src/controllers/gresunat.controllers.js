@@ -231,26 +231,6 @@ async function enviarGreSunat(token, numRucEmisor, codCpe, numSerie, numCpe, xml
 async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
   const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
   const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
-
-  const xmlBuffer = Buffer.from(xmlFirmadoString, 'utf8');
-
-  const zipBuffer = await crearZipBuffer(nombreArchivoXml, xmlBuffer);
-  //const zipBuffer = await crearZipConArchiver(nombreArchivoXml, xmlBuffer);
-
-  const hashZip = crypto.createHash('sha256').update(zipBuffer).digest('base64');
-  const arcGreZip64 = zipBuffer.toString('base64');
-
-  return {
-    nombreArchivoXml,
-    nombreArchivoZip,
-    arcGreZip64,
-    hashZip
-  };
-}
-
-async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirmadoString) {
-  const nombreArchivoXml = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.xml`;
-  const nombreArchivoZip = `${numRucEmisor}-${codCpe}-${numSerie}-${numCpe}.zip`;
   const rutaZipTemporal = path.join('/tmp', nombreArchivoZip); // lo puedes cambiar a donde prefieras
 
   const xmlBuffer = Buffer.from(xmlFirmadoString, 'utf8');
@@ -270,6 +250,31 @@ async function prepararZipYHash(numRucEmisor, codCpe, numSerie, numCpe, xmlFirma
     arcGreZip64,
     hashZip
   };
+}
+
+function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
+  return new Promise((resolve) => {
+    const zipfile = new yazl.ZipFile();
+
+    const crc = crc32.buf(xmlBuffer) >>> 0;
+    const uncompressedSize = xmlBuffer.length;
+
+    zipfile.addBuffer(xmlBuffer, nombreArchivoXml, {
+      compress: true,
+      mtime: new Date('2000-01-01T00:00:00Z'),
+      crc32: crc,
+      uncompressedSize: uncompressedSize
+    });
+
+    const buffers = [];
+    zipfile.outputStream.on("data", (data) => buffers.push(data));
+    zipfile.outputStream.on("end", () => {
+      const zipBuffer = Buffer.concat(buffers);
+      resolve(zipBuffer);
+    });
+
+    zipfile.end();
+  });
 }
 
 async function crearZipConArchiver(nombreArchivo, xmlBuffer) {

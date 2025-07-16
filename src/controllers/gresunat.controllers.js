@@ -34,7 +34,7 @@ const registrarGRESunat = async (req,res,next)=> {
         const sModoEnvio = dataGuia?.empresa?.modo === "1" ? "1" : "0";
         //Frontend solicita y APi retornara, un ticket con su estado ...en primera (en espera)
         //Frontend sigue solicitando y API retorna (en espera o disponible)
-        const resultadoTicket = await generarTicketGreAdmin();
+        const resultadoTicket = await generarTicketGreAdmin(dataGuia);
         if (resultadoTicket.ticket !== '') {
             //Procesar descarga CDR
             const resultadoSunat = await descargarGreSunatCDR();

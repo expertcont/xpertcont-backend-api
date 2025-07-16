@@ -166,6 +166,7 @@ async function obtenerTokenSunatGre(ruc) {
       WHERE documento_id = $1
     `, [ruc]);
     
+    console.log('rows: ',rows);
     //Aqui lo estamos cargando datos sensibles  ... fijos en API
     const {secundario_user:usuarioSol, secundario_passwd:passwordSol, gre_credencial:clientId, gre_password:clientSecret} = rows[0];
 

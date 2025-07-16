@@ -291,6 +291,7 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
 
 const generarTicketGreAdmin = async (sJson) => {
   try {
+      console.log('sJson generarTicketGreAdmin:',sJson);
       const documento_id = sJson.empresa.ruc
       const cod = sJson.guia.codigo
       const serie = sJson.guia.serie

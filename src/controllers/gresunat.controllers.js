@@ -345,6 +345,7 @@ const registrarTicketDB = async (documento_id, codigo, serie, numero, sTicketGre
             VALUES ($1, $2, $3, $4, $5, $6)
             RETURNING *
         `;
+        console.log([documento_id, codigo, serie, numero, sTicketGre, sDigestValue]);
         const result = await pool.query(strSQL, [documento_id, codigo, serie, numero, sTicketGre, sDigestValue]);
 
         // Validar si se insertó al menos una fila

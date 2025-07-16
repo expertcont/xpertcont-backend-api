@@ -37,6 +37,7 @@ const registrarGRESunat = async (req,res,next)=> {
         const resultadoTicket = await generarTicketGreAdmin(dataGuia);
         if (resultadoTicket.ticket !== '') {
             //Procesar descarga CDR
+            console.log('enviando datos para descargar Gre: ',dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
             const resultadoSunat = await descargarGreSunatCDR(dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
             console.log('estado de descarga cdr Gre: ',resultadoSunat);
             if (resultadoSunat === 'OK'){
@@ -292,7 +293,7 @@ function crearZipBuffer(nombreArchivoXml, xmlBuffer) {
 
 const generarTicketGreAdmin = async (sJson) => {
   try {
-      console.log('sJson generarTicketGreAdmin:',sJson);
+      //console.log('sJson generarTicketGreAdmin:',sJson);
       const documento_id = sJson.empresa.ruc
       const cod = sJson.guia.codigo
       const serie = sJson.guia.serie
@@ -303,7 +304,7 @@ const generarTicketGreAdmin = async (sJson) => {
       
       let ticket,digestvalue;
       //2: Si no existe Ticket BD, generar Ticket Nuevo
-      console.log('rowTicket: ', rowTicket);
+      //console.log('rowTicket: ', rowTicket);
 
       if (rowTicket.length > 0) {
           // Acceder al primer resultado y al campo sire_ticket
@@ -445,6 +446,8 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero) {
     }
 
     const data = await response.json();
+    console.log('data despues GET cdr: ',data);
+
     const codRespuesta = String(data.codRespuesta || '');  // Asegurar lectura como string
     const indCdrGenerado = String(data.indCdrGenerado || '0');
 

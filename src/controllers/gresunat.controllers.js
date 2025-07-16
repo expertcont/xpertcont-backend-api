@@ -358,7 +358,8 @@ const registrarTicketDB = async (documento_id, codigo, serie, numero, sTicketGre
 const generarTicketGreSunat = async (sJson) => {
     try {
         const dataGuia = sJson;
-        //console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
+        console.log(sJson);
+        console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
 
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         /*const { rows } = await pool.query(`

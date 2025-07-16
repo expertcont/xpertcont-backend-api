@@ -63,6 +63,11 @@ function gregeneratransporte(data) {
                     </cac:DespatchAddress>
                 </cac:Despatch>
             </cac:Delivery>
+            <cac:TransportHandlingUnit>
+                <cac:TransportEquipment>
+                    <cbc:ID>${data.vehiculo_placa}</cbc:ID>
+                </cac:TransportEquipment>
+            </cac:TransportHandlingUnit>
         </cac:Shipment>`;
 
    

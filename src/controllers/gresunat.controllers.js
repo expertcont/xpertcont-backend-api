@@ -365,17 +365,6 @@ const generarTicketGreSunat = async (sJson) => {
         //console.log(sJson);
         //console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
 
-        //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
-        /*const { rows } = await pool.query(`
-          SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo, gre_credencial, gre_password
-          FROM mad_usuariocertificado 
-          WHERE documento_id = $1
-        `, [dataGuia.empresa.ruc]);
-        //Aqui lo estamos cargando datos sensibles  ... fijos en API
-        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, gre_credencial, gre_password} = rows[0];
-        //00. Obtener token
-        const data = await obtenerTokenSunat(gre_credencial, gre_password,dataGuia.empresa.ruc, secundario_user,secundario_passwd);*/
-
         const data = await obtenerTokenSunatGre(dataGuia.empresa.ruc);
         const sToken = data.access_token;
 
@@ -384,6 +373,10 @@ const generarTicketGreSunat = async (sJson) => {
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Nueva firma implementado propio
+        //Consulta previa datos necesarios
+        const { rows } = await pool.query(`SELECT certificado, password FROM mad_usuariocertificado WHERE documento_id = $1`, [dataGuia.empresa.ruc]);
+        const {certificado: certificadoBuffer, password} = rows[0];
+
         const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
         signerManual.setSignNodeName('DespatchAdvice');
         let xmlComprobanteFirmado = await signerManual.getSignedXML();

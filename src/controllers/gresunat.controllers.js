@@ -302,6 +302,8 @@ const generarTicketGreAdmin = async (sJson) => {
       
       let ticket,digestvalue;
       //2: Si no existe Ticket BD, generar Ticket Nuevo
+      console.log('rowTicket: ', rowTicket);
+      
       if (rowTicket.length > 0) {
           // Acceder al primer resultado y al campo sire_ticket
           ticket = (rowTicket[0].gre_ticket);

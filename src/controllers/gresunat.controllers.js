@@ -37,7 +37,7 @@ const registrarGRESunat = async (req,res,next)=> {
         const resultadoTicket = await generarTicketGreAdmin(dataGuia);
         if (resultadoTicket.ticket !== '') {
             //Procesar descarga CDR
-            const resultadoSunat = await descargarGreSunatCDR();
+            const resultadoSunat = await descargarGreSunatCDR(dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
             console.log('estado de descarga cdr Gre: ',resultadoSunat);
             if (resultadoSunat === 'OK'){
                 console.log('cdr generado y almacenado en servidor');
@@ -159,6 +159,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
 
 async function obtenerTokenSunatGre(ruc) {
   try {
+    console.log('ruc: ',ruc);
     //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
     const { rows } = await pool.query(`
       SELECT secundario_user,secundario_passwd, gre_credencial, gre_password

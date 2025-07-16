@@ -159,7 +159,7 @@ async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSo
 
 async function obtenerTokenSunatGre(ruc) {
   try {
-    console.log('ruc: ',ruc);
+    //console.log('ruc: ',ruc);
     //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
     const { rows } = await pool.query(`
       SELECT secundario_user,secundario_passwd, gre_credencial, gre_password
@@ -167,7 +167,7 @@ async function obtenerTokenSunatGre(ruc) {
       WHERE documento_id = $1
     `, [ruc]);
     
-    console.log('rows: ',rows);
+    //console.log('rows: ',rows);
     //Aqui lo estamos cargando datos sensibles  ... fijos en API
     const {secundario_user:usuarioSol, secundario_passwd:passwordSol, gre_credencial:clientId, gre_password:clientSecret} = rows[0];
 
@@ -362,8 +362,8 @@ const registrarTicketDB = async (documento_id, codigo, serie, numero, sTicketGre
 const generarTicketGreSunat = async (sJson) => {
     try {
         const dataGuia = sJson;
-        console.log(sJson);
-        console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
+        //console.log(sJson);
+        //console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
 
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         /*const { rows } = await pool.query(`
@@ -437,7 +437,7 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero) {
   const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/envios/${numTicket}`;
   const tokenData = await obtenerTokenSunatGre(ruc);
   const sToken = tokenData.access_token;
-  console.log('sToken ',sToken);
+  //console.log('sToken ',sToken);
   try {
     const response = await fetch(url, {
       method: 'GET',
@@ -467,6 +467,7 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero) {
       case '99':
         estado = 'ERROR';
         console.error(`SUNAT Error ${data.error?.numError}: ${data.error?.desError}`);
+        console.log(`SUNAT Error ${data.error?.numError}: ${data.error?.desError}`);
         break;
       default:
         console.warn(`Código de respuesta no esperado: ${codRespuesta}`);

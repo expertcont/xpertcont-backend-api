@@ -406,8 +406,8 @@ const generarTicketGreSunat = async (sJson) => {
         //Guardar en BD numTicket con el rico: "name arguments pattern" parametros nombrados ;)
         registrarTicketDB({
           documento_id: dataGuia.empresa.ruc,
-          codigo: dataGuia.guia.serie,
-          serie: dataGuia.guia.numero,
+          codigo: dataGuia.guia.codigo,
+          serie: dataGuia.guia.serie,
           numero: dataGuia.guia.numero,
           sTicketGre: resultadoTicket.numTicket,
           sDigestValue: digestvalue,

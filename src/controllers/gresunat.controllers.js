@@ -323,7 +323,7 @@ const generarTicketGreAdmin = async (sJson) => {
 
 const generarTicketGreConsultaDB = async (documento_id,cod,serie,numero) => {
   const strSQL = `
-      SELECT gre_ticket, gre_digestvalue FROM api_usuarioticketgre
+      SELECT gre_ticket, gre_digestvalue FROM api_usuarioticket
       WHERE documento_id = $1
       AND codigo = $2
       AND serie = $3

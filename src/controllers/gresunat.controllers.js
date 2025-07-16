@@ -410,7 +410,7 @@ const generarTicketGreSunat = async (sJson) => {
           serie: dataGuia.guia.numero,
           numero: dataGuia.guia.numero,
           sTicketGre: resultadoTicket.numTicket,
-          sDigestValue: sDigestInicial,
+          sDigestValue: digestvalue,
         }).catch(error => {
           console.error('Error al insertar ticket', error);
         });

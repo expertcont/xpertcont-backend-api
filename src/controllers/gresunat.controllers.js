@@ -446,7 +446,7 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero) {
     }
 
     const data = await response.json();
-    console.log('data despues GET cdr: ',data);
+    console.log('cdr: ',data);
 
     const codRespuesta = String(data.codRespuesta || '');  // Asegurar lectura como string
     const indCdrGenerado = String(data.indCdrGenerado || '0');

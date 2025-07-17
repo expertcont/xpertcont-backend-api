@@ -62,13 +62,18 @@ function gregeneratransporte(data) {
                         </cac:AddressLine>
                     </cac:DespatchAddress>
                 </cac:Despatch>
-            </cac:Delivery>
-            <cac:TransportHandlingUnit>
+            </cac:Delivery>`;
+        
+        if (data.guia_modalidad_id == "02"){
+            xmlTransporte +=
+            `<cac:TransportHandlingUnit>
                 <cac:TransportEquipment>
                     <cbc:ID>${data.vehiculo_placa}</cbc:ID>
                 </cac:TransportEquipment>
-            </cac:TransportHandlingUnit>
-        </cac:Shipment>`;
+            </cac:TransportHandlingUnit>`;
+        }
+    xmlTransporte +=
+    `</cac:Shipment>`;
 
    
     return xmlTransporte;

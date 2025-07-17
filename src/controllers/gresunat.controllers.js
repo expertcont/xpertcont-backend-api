@@ -315,7 +315,7 @@ const generarTicketGreAdmin = async (sJson) => {
           return {ticket, digestvalue};
       } else {
           //Genera ticket desde sunat, y almacena en servidor xml firmado(modo asincrono)
-          const resultado = generarTicketGreSunat(sJson);
+          const resultado = await generarTicketGreSunat(sJson);
           ticket = resultado.ticket;
           digestvalue = resultado.digestvalue;
           return {ticket,digestvalue}; // Aquí se detiene la ejecución si ocurre un error

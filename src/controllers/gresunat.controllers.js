@@ -36,6 +36,8 @@ const registrarGRESunat = async (req,res,next)=> {
         //Frontend sigue solicitando y API retorna (en espera o disponible)
         const resultadoTicket = await generarTicketGreAdmin(dataGuia);
         if (resultadoTicket.ticket !== '') {
+            
+            console.log(resultadoTicket);
             //Procesar descarga CDR
             console.log('enviando datos para descargar Gre: ',dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
             const resultadoSunat = await descargarGreSunatCDR(dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);

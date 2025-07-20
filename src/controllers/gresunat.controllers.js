@@ -166,7 +166,7 @@ async function obtenerTokenSunatGre(ruc) {
     //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
     const { rows } = await pool.query(`
       SELECT secundario_user,secundario_passwd, gre_credencial, gre_password
-      FROM mad_usuariocertificado 
+      FROM api_usuariocertificado 
       WHERE documento_id = $1
     `, [ruc]);
     
@@ -378,7 +378,7 @@ const generarTicketGreSunat = async (sJson) => {
 
         //02. Nueva firma implementado propio
         //Consulta previa datos necesarios
-        const { rows } = await pool.query(`SELECT certificado, password FROM mad_usuariocertificado WHERE documento_id = $1`, [dataGuia.empresa.ruc]);
+        const { rows } = await pool.query(`SELECT certificado, password FROM api_usuariocertificado WHERE documento_id = $1`, [dataGuia.empresa.ruc]);
         const {certificado: certificadoBuffer, password} = rows[0];
 
         const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);

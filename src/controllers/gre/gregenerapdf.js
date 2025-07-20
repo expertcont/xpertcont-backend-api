@@ -1,19 +1,17 @@
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const numeral = require('numeral');
-const {numeroALetras} = require('../../utils/libreria.utils');
 
-const gregenerapdf = async (size, logo, jsonVenta, digestvalue) => {
+const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   const pdfDoc = await PDFDocument.create();
 
   const width = (size === '80mm') ? 226.77 : 164.41;
   const fontSize = (size === '80mm') ? 10 : 8;
   const marginLeftSize = (size === '80mm') ? 0 : 62.36;
 
-  const empresa = jsonVenta.empresa;
-  const cliente = jsonVenta.cliente;
-  const venta = jsonVenta.venta;
-  const registrosdet = jsonVenta.items;
+  const empresa = sJson.empresa;
+  const guia = sJson.guia;
+  const registrosdet = sJson.items;
 
   const lineHeight = fontSize * 1.2;
   let height = 800;
@@ -37,17 +35,39 @@ const gregenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   let x = margin;
   let y = 710;
   
-  //console.log('probando venta.codigo');
-  //console.log(empresa);
 
-  const COD = venta.codigo;
+  const COD = guia.codigo;
   const documentos = {
-    '01': 'FACTURA ELECTRONICA',
-    '03': 'BOLETA ELECTRONICA',
-    '07': 'NOTA CRED. ELECTRONICA',
-    '08': 'NOTA DEB. ELECTRONICA'
+    '09': 'GUIA REMISION REMITENTE',
+    '31': 'GUIA REMISION TRANSPORTISTA'
   };
   const sDocumento = documentos[COD] || 'DOCUMENTO';
+
+  const IDMOTIVO = guia.guia_motivo_id;
+  const motivos = {
+    '01': 'VENTA',
+    '02': 'COMPRA',
+    '03': 'VENTA CON ENTREGA A TERCEROS',
+    '04': 'TRASLADO ENTRE ESTABLECIMIENTOS MISMA EMPRESA',
+    '05': 'CONSIGNACION',
+    '06': 'DEVOLUCION',
+    '07': 'RECOJO DE BIENES TRANSFORMADOS',
+    '08': 'IMPORTACION',
+    '09': 'EXPORTACION',
+    '13': 'OTROS',
+    '14': 'VENTA SUJETA A CONFIRMACION DEL COMPRADOR',
+    '15': 'TRASLADO DE BIENES PARA SU TRANSFORMACION',
+    '18': 'TRASLADO EMISOR ITINERANTE CP',
+  };
+  const sMotivo = motivos[IDMOTIVO] || 'OTROS';
+
+  const IDMODOTRASLADO = guia.guia_modalidad_id;
+  const modalidad = {
+    '01': 'TRANSPORTE PUBLICO',
+    '02': 'TRANSPORTE PRIVADO',
+  };
+  const sModalidad = modalidad[IDMODOTRASLADO] || 'OTROS';
+
 
   const ticketWidth = 227;
 
@@ -71,14 +91,14 @@ const gregenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize(venta.serie+'-'+venta.numero, 12);
+  textWidth = fontNegrita.widthOfTextAtSize(guia.serie+'-'+guia.numero, 12);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText(venta.serie+'-'+venta.numero, { x, y, size: 12, font: fontNegrita });
+  page.drawText(guia.serie+'-'+guia.numero, { x, y, size: 12, font: fontNegrita });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("FECHA: " + venta.fecha_emision, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("FECHA: " + guia.fecha_emision, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("FECHA: " + venta.fecha_emision, { x, y, size: fontSize });
+  page.drawText("FECHA: " + guia.fecha_emision, { x, y, size: fontSize });
   y -= 15;
 
   //console.log('antes de datos cliente');
@@ -92,41 +112,148 @@ const gregenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     borderColor: rgb(0.8, 0.8, 0.8)
   });
 
-  textWidth = fontNegrita.widthOfTextAtSize("DATOS DEL CLIENTE: ", fontSize - 1);
+  textWidth = fontNegrita.widthOfTextAtSize("DATOS DEL DESTINATARIO: ", fontSize - 1);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("DATOS DEL CLIENTE: ", { x, y, size: fontSize - 1 });
+  page.drawText("DATOS DEL DESTINATARIO: ", { x, y, size: fontSize - 1 });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize(cliente.razon_social_nombres, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize(guia.destinatario_razon_social, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText(cliente.razon_social_nombres?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText(guia.razon_social_nombres?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("RUC/DNI: " + cliente.documento_identidad, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("RUC/DNI: " + guia.destinatario_ruc_dni, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("RUC/DNI: " + cliente.documento_identidad?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText("RUC/DNI: " + guia.destinatario_ruc_dni?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize(cliente.cliente_direccion, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize(guia.llegada_direccion, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText(cliente.cliente_direccion?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText(guia.llegada_direccion?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  //Opcional: datos del vendedor o correo q registro la venta al cliente (tamaño max 14 largo)
-  const vendedor = venta.vendedor?.trim();
-  if (vendedor) {
-    textWidth = fontNegrita.widthOfTextAtSize("VENTA: " + venta.vendedor, fontSize);
+
+  page.drawRectangle({
+    x: margin,
+    y: y - 2,
+    width: (page.getWidth() - margin - 5),
+    height: (lineHeight + 2),
+    borderWidth: 1,
+    color: rgb(0.778, 0.778, 0.778),
+    borderColor: rgb(0.8, 0.8, 0.8)
+  });
+
+  textWidth = fontNegrita.widthOfTextAtSize("DATOS DEL ENVIO: ", fontSize - 1);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("DATOS DEL ENVIO: ", { x, y, size: fontSize - 1 });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("FECHA EMISION: " + guia.fecha_emision, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("RUC/DNI: " + guia.fecha_emision?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("FECHA TRASLADO: " + guia.fecha_traslado, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("FECHA TRASLADO: " + guia.fecha_traslado?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("MOTIVO TRASLADO: " + sMotivo, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("MOTIVO TRASLADO: " + sMotivo?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("MODALIDAD TRASLADO: " + sModalidad, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("MODALIDAD TRASLADO: " + sModalidad?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("PARTIDA UBIGEO: " + guia.partida_ubigeo, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("PARTIDA UBIGEO: " + guia.partida_ubigeo?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize(guia.partida_direccion, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText(guia.partida_direccion?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("LLEGADA UBIGEO: " + guia.llegada_ubigeo, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("LLEGADA UBIGEO: " + guia.llegada_ubigeo?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize(guia.llegada_direccion, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText(guia.llegada_direccion?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("PESO TOTAL KG: " + guia.peso_total, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("PESO TOTAL KG: " + guia.peso_total?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize("NUMERO BULTOS: " + guia.numero_bultos, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("NUMERO BULTOS: " + guia.numero_bultos?.toString() ?? "", { x, y, size: fontSize });
+  y -= 12;
+
+  page.drawRectangle({
+    x: margin,
+    y: y - 2,
+    width: (page.getWidth() - margin - 5),
+    height: (lineHeight + 2),
+    borderWidth: 1,
+    color: rgb(0.778, 0.778, 0.778),
+    borderColor: rgb(0.8, 0.8, 0.8)
+  });
+
+  textWidth = fontNegrita.widthOfTextAtSize("DATOS DEL TRANSPORTE: ", fontSize - 1);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText("DATOS DEL TRANSPORTE: ", { x, y, size: fontSize - 1 });
+  y -= 12;
+
+  //CASO TRANSPORTE: PUBLICO
+  if (sModalidad === '01') {
+    textWidth = fontNegrita.widthOfTextAtSize(guia.transp_razon_social, fontSize);
     x = (ticketWidth - textWidth - marginLeftSize) / 2;
-    page.drawText("VENTA: " + venta.vendedor, { x, y, size: fontSize });
+    page.drawText(guia.transp_razon_social?.toString() ?? "", { x, y, size: fontSize });
+    y -= 12;
+
+    textWidth = fontNegrita.widthOfTextAtSize("RUC: " + guia.transp_ruc, fontSize);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText("RUC/DNI: " + guia.transp_ruc?.toString() ?? "", { x, y, size: fontSize });
     y -= 12;
   }
 
-  //Harcode temporal: modificar urgente
-  textWidth = fontNegrita.widthOfTextAtSize("PAGO: CONTADO", fontSize);
-  x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("PAGO: CONTADO", { x, y, size: fontSize });
-  y -= 15;
+  //CASO TRANSPORTE: PRIVADO
+  if (sModalidad === '02') {
+    textWidth = fontNegrita.widthOfTextAtSize(guia.conductor_nombres, fontSize);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText(guia.conductor_nombres?.toString() ?? "", { x, y, size: fontSize });
+    y -= 12;
 
+    textWidth = fontNegrita.widthOfTextAtSize(guia.conductor_apellidos, fontSize);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText(guia.conductor_apellidos?.toString() ?? "", { x, y, size: fontSize });
+    y -= 12;
+
+    textWidth = fontNegrita.widthOfTextAtSize("DNI: " + guia.conductor_dni, fontSize);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText("DNI: " + guia.conductor_dni?.toString() ?? "", { x, y, size: fontSize });
+    y -= 12;
+
+    textWidth = fontNegrita.widthOfTextAtSize("LICENCIA: " + guia.conductor_licencia, fontSize);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText("LICENCIA: " + guia.conductor_licencia?.toString() ?? "", { x, y, size: fontSize });
+    y -= 12;
+
+    textWidth = fontNegrita.widthOfTextAtSize("PLACA: " + guia.vehiculo_placa, fontSize);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText("PLACA: " + guia.vehiculo_placa?.toString() ?? "", { x, y, size: fontSize });
+    y -= 12;
+  }
+  /////////////////////////////////////////////////////////////////////
   let row = 1;
   let espaciadoDet = 0;
 
@@ -151,33 +278,19 @@ const gregenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   page.drawText("IMPORTE", { x, y, size: fontSize - 1 });
 
   let cantidad;
-  let precio_base;
-  let porc_igv;
-  let precio_unitario;
-  let precio_neto;
   //console.log('antes forEach producto');
   registrosdet.forEach(detalle => {
     //calcular precio unitario con igv 
     //calcular precio neto (importe) con igv
     cantidad = Number(detalle.cantidad);
-    precio_base = Number(detalle.precio_base);
-    porc_igv = Number(detalle.porc_igv);
-    precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
-    precio_neto = (precio_unitario*cantidad).toFixed(2);
-
-    const textY = y - lineHeight;
 
     page.drawText(`${detalle.producto}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
     espaciadoDet += 10;
     page.drawText('Cant: ' + detalle.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(precio_unitario).format('0,0.00'), fontSize);
-    x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);
-    page.drawText(numeral(precio_unitario).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
-
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(precio_neto).format('0,0.00'), fontSize);
+    textWidth = fontNegrita.widthOfTextAtSize(detalle.codigo_unidad, fontSize);
     x = (ticketWidth - textWidth - margin - marginLeftSize);
-    page.drawText(numeral(precio_neto).format('0,0.00'), { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
+    page.drawText(detalle.codigo_unidad, { x, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
     page.drawLine({
       start: { x: margin, y: y + 2 - espaciadoDet },
@@ -191,82 +304,36 @@ const gregenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   });
 
   // El resto sigue igual
-    y=y-15; //aumentamos linea nueva
-    y=y-15; //aumentamos linea nueva
+  y=y-15; //aumentamos linea nueva
+  y=y-15; //aumentamos linea nueva
 
-  
-    const monto_total = (Number(venta.base_gravada) || 0) +
-                        (Number(venta.base_exonerada) || 0) +
-                        (Number(venta.base_inafecta) || 0) +
-                        (Number(venta.total_igv) || 0);
-    const monedaDesc = {
-        'PEN': 'Soles',
-        'USD': 'Dolares Americanos',
-        'EUR': 'Euros'
-    };
-    const sMonedaDesc = monedaDesc[venta.moneda_id] || ''; // Manejo de caso por defecto
-    let MontoEnLetras = numeroALetras(monto_total,sMonedaDesc);
+  //////////////////
+  //SeccionQR
+  // Generar el código QR como base64
+  const numeroFormateado = guia.numero.padStart(8, '0');
+  const comprobanteConvertido = `${guia.codigo}|${guia.serie}|${numeroFormateado}`;
 
-    MontoEnLetras = 'SON: ' + MontoEnLetras.toUpperCase();
-    page.drawText(MontoEnLetras, { x:margin, y:y-espaciadoDet+30, size: 8 }); //Actualizar urgente
+  const qrImage = await QRCode.toDataURL(empresa.ruc + '|' + comprobanteConvertido + '|');
+  // Convertir la imagen base64 a formato compatible con pdf-lib
+  const qrImageBytes = qrImage.split(',')[1]; // Eliminar el encabezado base64
+  const qrImageBuffer = base64ToUint8Array(qrImageBytes);
 
-    const moneda = {
-        'PEN': 'S/',
-        'USD': '$ USD'
-    };
-    const sMoneda = moneda[venta.moneda_id] || ''; // Manejo de caso por defecto
+  const qrImageEmbed = await pdfDoc.embedPng(qrImageBuffer);
+  // Obtener dimensiones de la imagen
+  const qrWidth = 45;
+  const qrHeight = 45;
+  // Calcular el punto x para alinear a la derecha
+  x = (ticketWidth - 45 - marginLeftSize)/2;
 
-    //////////////////
-    x = margin;
-    page.drawText("BASE:",{ x, y:y-espaciadoDet+4, size: 9 });
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(venta.base_gravada).format('0,0.00'), fontSize+2);
-    // Calcular el punto x para alinear a la derecha
-    x = (ticketWidth - textWidth - margin - marginLeftSize);
-    page.drawText(numeral(venta.base_gravada).format('0,0.00')?.toString() ?? "", { x, y:y+4-espaciadoDet, size: 10, font }); //Actualizar urgente
+  // Dibujar el código QR en el PDF
+  page.drawImage(qrImageEmbed, {
+      x,
+      y: y-espaciadoDet-26-45,
+      width: qrWidth,
+      height: qrHeight,
+  });
 
-
-    x = margin;
-    page.drawText("IGV.: ",{ x, y:y-espaciadoDet+4-10, size: 9 });
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(venta.total_igv).format('0,0.00'), fontSize+2);
-    // Calcular el punto x para alinear a la derecha
-    x = (ticketWidth - textWidth - margin - marginLeftSize);
-    page.drawText(numeral(venta.total_igv).format('0,0.00')?.toString() ?? "", { x, y:y+4-espaciadoDet-10, size: 10, font }); //Actualizar urgente
-
-
-    x = margin;
-    page.drawText("TOTAL.:" + sMoneda,{ x, y:y-espaciadoDet+4-25, size: fontSize+2, font:fontNegrita });
-    textWidth = fontNegrita.widthOfTextAtSize(numeral(monto_total).format('0,0.00'), fontSize+2);
-    // Calcular el punto x para alinear a la derecha
-    x = (ticketWidth - textWidth - margin - marginLeftSize);
-    page.drawText(numeral(monto_total).format('0,0.00')?.toString() ?? "", { x, y:y+4-espaciadoDet-25, size: fontSize+2, font:fontNegrita }); //Actualizar urgente
-
-
-    //SeccionQR
-    // Generar el código QR como base64
-    const numeroFormateado = venta.numero.padStart(8, '0');
-    const comprobanteConvertido = `${venta.codigo}|${venta.serie}|${numeroFormateado}`;
-
-    const qrImage = await QRCode.toDataURL(empresa.ruc + '|' + comprobanteConvertido + '|' + venta.r_igv002 + '|' + venta.r_monto_total + '|' + venta.r_fecemi + '|' + venta.r_id_doc + '|' + venta.r_documento_id + '|');
-    // Convertir la imagen base64 a formato compatible con pdf-lib
-    const qrImageBytes = qrImage.split(',')[1]; // Eliminar el encabezado base64
-    const qrImageBuffer = base64ToUint8Array(qrImageBytes);
-
-    const qrImageEmbed = await pdfDoc.embedPng(qrImageBuffer);
-    // Obtener dimensiones de la imagen
-    const qrWidth = 45;
-    const qrHeight = 45;
-    // Calcular el punto x para alinear a la derecha
-    x = (ticketWidth - 45 - marginLeftSize)/2;
-
-    // Dibujar el código QR en el PDF
-    page.drawImage(qrImageEmbed, {
-        x,
-        y: y-espaciadoDet-26-45,
-        width: qrWidth,
-        height: qrHeight,
-    });
-
-
+  /////////////////////////////////////////////////////////////
   x = margin;
   textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize-2);
   // Calcular el punto x para alinear a la derecha

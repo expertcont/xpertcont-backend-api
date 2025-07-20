@@ -27,7 +27,7 @@ const registrarCPESunat = async (req,res,next)=> {
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
           SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
-          FROM mad_usuariocertificado 
+          FROM api_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API

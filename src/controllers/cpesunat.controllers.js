@@ -16,6 +16,7 @@ const { randomUUID } = require('crypto');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
+const cpegenerarxmlnota = require('./cpe/cpegeneraxmlnota');
 
 require('dotenv').config();
 
@@ -34,7 +35,12 @@ const registrarCPESunat = async (req,res,next)=> {
         const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer} = rows[0];
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
-        let xmlComprobante = await cpegeneraxml(dataVenta);
+        let xmlComprobante;
+        if (dataVenta.venta.codigo === '07'){
+            xmlComprobante = await cpegenerarxmlnota(dataVenta);  
+        }else{
+            xmlComprobante = await cpegeneraxml(dataVenta);
+        }
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)

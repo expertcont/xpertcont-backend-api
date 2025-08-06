@@ -1,16 +1,19 @@
-function cpegeneradet(items,moneda_id) {
-  return items.map((item, index) => {
-    // Variables previas para cálculos
-    let { producto, cantidad, precio_base, codigo_sunat, codigo_producto, codigo_unidad, tipo_igv_codigo, porc_igv } = item;
+function cpegeneradet(items, moneda_id, codigo) {
+  let xml = items.map((item, index) => {
+    let {
+      producto,
+      cantidad,
+      precio_base,
+      codigo_sunat,
+      codigo_producto,
+      codigo_unidad,
+      tipo_igv_codigo,
+      porc_igv
+    } = item;
 
-    //Nota: precio_base = precio unitario sin igv
-    //precio_base = precio_base.toFixed(2);
-    // Calcular momtos subtotal,igv 
-    const precio_unitario = (precio_base*(1+(porc_igv / 100))).toFixed(2);
-
-    const subtotal_item = (precio_base*cantidad).toFixed(2);
-    const igv_item = (subtotal_item*(porc_igv / 100)).toFixed(2);
-
+    const precio_unitario = (precio_base * (1 + (porc_igv / 100))).toFixed(2);
+    const subtotal_item = (precio_base * cantidad).toFixed(2);
+    const igv_item = (subtotal_item * (porc_igv / 100)).toFixed(2);
 
     return `
     <cac:InvoiceLine>
@@ -47,7 +50,7 @@ function cpegeneradet(items,moneda_id) {
           <cbc:ID>${codigo_producto}</cbc:ID>
         </cac:SellersItemIdentification>
         <cac:CommodityClassification>
-        <cbc:ItemClassificationCode>${codigo_sunat}</cbc:ItemClassificationCode>
+          <cbc:ItemClassificationCode>${codigo_sunat}</cbc:ItemClassificationCode>
         </cac:CommodityClassification>        
       </cac:Item>
 
@@ -57,6 +60,13 @@ function cpegeneradet(items,moneda_id) {
 
     </cac:InvoiceLine>`;
   }).join('');
+
+  // Si el código es 07 (nota de crédito), reemplaza "Invoice" por "CreditNote"
+  if (codigo && String(codigo) === '07') {
+    xml = xml.replace(/Invoice/g, 'CreditNote');
+  }
+
+  return xml;
 }
 
 module.exports = cpegeneradet;

@@ -29,7 +29,7 @@ function cpegenerarxmlnota(data) {
           ${cpegeneraimpuestos(data.venta)}
           ${cpegeneratotales(data.venta)}
           ${cpegeneradet(data.items, data.venta.moneda_id, data.venta.codigo)}
-  </Invoice>`;
+  </CreditNote>`;
 }
 /*
         

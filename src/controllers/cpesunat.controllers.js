@@ -47,7 +47,12 @@ const registrarCPESunat = async (req,res,next)=> {
         //let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
         //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
         const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
-        signerManual.setSignNodeName('Invoice');
+        
+        if (dataVenta.venta.codigo === '07'){
+            signerManual.setSignNodeName('CreditNote');
+        }else{
+            signerManual.setSignNodeName('Invoice');
+        }
         const xmlComprobanteFirmado = await signerManual.getSignedXML();
         const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 

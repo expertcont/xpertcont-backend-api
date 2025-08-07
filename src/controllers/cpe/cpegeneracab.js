@@ -5,7 +5,13 @@ function cpegeneracab(data) {
   const toNumber = (val) => Number(val) || 0;
   let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.base_inafecta);
   let igv = toNumber(data.total_igv);
-  let sMontoLetras = numeroALetras(subtotal + igv);
+  const monedaDesc = {
+      'PEN': 'Soles',
+      'USD': 'Dolares Americanos',
+      'EUR': 'Euros'
+  };
+  const sMonedaDesc = monedaDesc[data.moneda_id] || ''; // Manejo de caso por defecto
+  let sMontoLetras = numeroALetras((subtotal + igv),sMonedaDesc);
 
   let sXml = `
     <cbc:UBLVersionID>2.1</cbc:UBLVersionID>

@@ -242,7 +242,7 @@ async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
     return respuestaTexto;
 
   } catch (error) {
-    console.error('❌ Error al enviar SOAP:', error);
+    console.log('❌ Error al enviar SOAP:', error);
     throw error;
   }
 }

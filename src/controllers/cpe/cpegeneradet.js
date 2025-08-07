@@ -63,7 +63,8 @@ function cpegeneradet(items, moneda_id, codigo) {
 
   // Si el código es 07 (nota de crédito), reemplaza "Invoice" por "CreditNote"
   if (codigo && String(codigo) === '07') {
-    xml = xml.replace(/Invoice/g, 'CreditNote');
+    xml = xml.replace(/InvoiceLine/g, 'CreditNoteLine');
+    xml = xml.replace(/InvoicedQuantity/g, 'CreditedQuantity');
   }
 
   return xml;

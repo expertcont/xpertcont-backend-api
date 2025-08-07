@@ -80,7 +80,7 @@ const registrarCPESunat = async (req,res,next)=> {
         
         //05. Enviar SOAP y recepcionar respuesta SUNAT
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
-        //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
+        console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
         
         // 06. Procesar respuesta SUNAT
         const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);

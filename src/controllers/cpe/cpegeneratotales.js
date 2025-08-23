@@ -1,7 +1,7 @@
 function cpegeneratotales(data) {
 
   const toNumber = (val) => Number(val) || 0;
-  let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.base_inafecta);
+  let subtotal = toNumber(data.base_gravada) + toNumber(data.base_exonerada) + toNumber(data.base_inafecta) + toNumber(data.base_gratuita);
   let igv = toNumber(data.total_igv);
   let nPrecioTotal = (subtotal + igv).toFixed(2);
   

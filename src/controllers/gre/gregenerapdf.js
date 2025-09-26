@@ -272,10 +272,10 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   page.drawText("DESCRIPCION", { x: margin, y, size: fontSize - 1 });
   textWidth = fontNegrita.widthOfTextAtSize('P.UNIT', fontSize - 1);
   x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);
-  page.drawText("P.UNIT", { x, y, size: fontSize - 1 });
+  page.drawText("UNIDAD", { x, y, size: fontSize - 1 });
   textWidth = fontNegrita.widthOfTextAtSize('IMPORTE', fontSize - 1);
   x = (ticketWidth - textWidth - margin - marginLeftSize);
-  page.drawText("IMPORTE", { x, y, size: fontSize - 1 });
+  page.drawText("CANTIDAD", { x, y, size: fontSize - 1 });
 
   let cantidad;
   //console.log('antes forEach producto');

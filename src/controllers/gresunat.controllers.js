@@ -37,16 +37,15 @@ const registrarGRESunat = async (req,res,next)=> {
         const resultadoTicket = await generarTicketGreAdmin(dataGuia);
         if (resultadoTicket.ticket !== '') {
             
-            console.log(resultadoTicket);
+            //console.log(resultadoTicket);
             //Procesar descarga CDR
-            console.log('enviando datos para descargar Gre: ',dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
-            const resultadoSunat = await descargarGreSunatCDR(dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
+            //console.log('enviando datos para descargar Gre: ',dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero);
+            const resultadoSunat = await descargarGreSunatCDR(dataGuia.empresa.ruc,resultadoTicket.ticket,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero, dataGuia);
             console.log('estado de descarga cdr Gre: ',resultadoSunat);
             if (resultadoSunat === 'OK'){
                 console.log('cdr generado y almacenado en servidor');
 
-                //imprimir pdf          ...pendiente
-                //subir pdf a servidor  ...pendiente
+                //////////////////////////////////////////////////////////////////////////////////////
                 res.status(200).json({
                   respuesta_sunat_descripcion: resultadoSunat,
                   ruta_xml: ruta_xml,
@@ -122,43 +121,25 @@ function obtenerDigestValue(xmlFirmado) {
   // Retornar su contenido
   return digestNode.textContent.trim();
 }
+function obtenerDocumentDescription(xmlFirmado) {
+  // Parsear el XML firmado
+  const doc = new DOMParser().parseFromString(xmlFirmado, "text/xml");
 
+  // Definir namespace para CBC
+  const select = xpath.useNamespaces({
+    cbc: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+  });
 
-async function obtenerTokenSunat(clientId,clientSecret,ruc,usuarioSol,passwordSol) {
-  try {
-    const url = `https://api-seguridad.sunat.gob.pe/v1/clientessol/${clientId}/oauth2/token/`;
+  // Buscar el nodo DocumentDescription
+  const node = select("//*[local-name()='DocumentDescription']", doc)[0];
 
-    // Cuerpo tipo x-www-form-urlencoded
-    const params = new URLSearchParams();
-    params.append('grant_type', 'password');
-    params.append('scope', 'https://api-cpe.sunat.gob.pe');
-    params.append('client_id', clientId);
-    params.append('client_secret', clientSecret);
-    params.append('username', `${ruc}${usuarioSol}`);
-    params.append('password', passwordSol);
-    
-    //console.log(params);
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      body: params
-    });
-
-    if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Error obteniendo token SUNAT: ${response.status} ${response.statusText} - ${errorBody}`);
-    }
-
-    const data = await response.json();
-    return data;
-
-  } catch (error) {
-    console.error(error.message);
-    throw error;
+  if (!node) {
+    throw new Error("❌ No se encontró el tag <cbc:DocumentDescription> en el XML firmado.");
   }
+
+  return node.textContent.trim();
 }
+
 
 async function obtenerTokenSunatGre(ruc) {
   try {
@@ -385,7 +366,7 @@ const generarTicketGreSunat = async (sJson) => {
         signerManual.setSignNodeName('DespatchAdvice');
         let xmlComprobanteFirmado = await signerManual.getSignedXML();
         const digestvalue = obtenerDigestValue(xmlComprobanteFirmado);
-        
+
         //03. Guardar xml firmado en Server Ubuntu, version asyncrono(desconectado)
         (async () => {
           try {
@@ -402,6 +383,7 @@ const generarTicketGreSunat = async (sJson) => {
             console.error('Error al almacenar XML:', error);
           }
         })();
+        
         
         //Aqui se enviara por POST XML + token, ya no se usa SOAP
         const resultadoTicket = await enviarGreSunat(sToken,dataGuia.empresa.ruc,dataGuia.guia.codigo,dataGuia.guia.serie,dataGuia.guia.numero, xmlComprobanteFirmado)
@@ -430,7 +412,7 @@ const generarTicketGreSunat = async (sJson) => {
 
 };
 
-async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero) {
+async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) {
   const url = `https://api-cpe.sunat.gob.pe/v1/contribuyente/gem/comprobantes/envios/${numTicket}`;
   const tokenData = await obtenerTokenSunatGre(ruc);
   const sToken = tokenData.access_token;
@@ -491,6 +473,37 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero) {
           //console.log('Archivo XML almacenado en copia correctamente.');
         } catch (error) {
           console.error('Error al almacenar XML:', error);
+        }
+      })();
+      
+      /////////////////////////////////////////////////////////////////////
+      //05. New: Generar PDF  NEWWW
+      const documentDescription = obtenerDocumentDescription(cdrXml);
+      (async () => {
+        try {
+          //Consulta previa datos necesarios(Logo)
+          const { rows } = await pool.query(`SELECT logo FROM api_usuariocertificado WHERE documento_id = $1`, [ruc]);
+          const {logo:logoBuffer} = rows[0];
+          //Procesamos el PDF
+          const resultadoPdf = await gregenerapdf('80mm', logoBuffer, dataGuia, documentDescription);
+          if (resultadoPdf.estado) {
+            console.log('PDF EXITOSO');
+            //Subimos el PDF a la carpeta del servidor
+            await subirArchivoDesdeMemoria(
+              ruc,
+              cod,
+              serie,
+              numero,
+              cdrXml,
+              resultadoPdf.buffer_pdf,
+              'PDF'
+            );
+            //Fin de la subida del PDF
+          } else {
+            console.log('REVISAR PROCESO PDF ERRORRR');
+          }
+        } catch (error) {
+          console.error('Error al generar PDF:', error);
         }
       })();
       /////////////////////////////////////////////////////////////////////

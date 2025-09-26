@@ -112,19 +112,19 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
     borderColor: rgb(0.8, 0.8, 0.8)
   });
 
-  textWidth = fontNegrita.widthOfTextAtSize("DATOS DEL DESTINATARIO: ", fontSize - 1);
+  textWidth = fontNegrita.widthOfTextAtSize("DESTINATARIO: ", fontSize - 1);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("DATOS DEL DESTINATARIO: ", { x, y, size: fontSize - 1 });
+  page.drawText("DESTINATARIO: ", { x, y, size: fontSize - 1 });
   y -= 12;
 
   textWidth = fontNegrita.widthOfTextAtSize(guia.destinatario_razon_social, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText(guia.razon_social_nombres?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText(guia.destinatario_razon_social?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("RUC/DNI: " + guia.destinatario_ruc_dni, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("RUC: " + guia.destinatario_ruc_dni, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("RUC/DNI: " + guia.destinatario_ruc_dni?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText("RUC: " + guia.destinatario_ruc_dni?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
   textWidth = fontNegrita.widthOfTextAtSize(guia.llegada_direccion, fontSize);
@@ -143,29 +143,29 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
     borderColor: rgb(0.8, 0.8, 0.8)
   });
 
-  textWidth = fontNegrita.widthOfTextAtSize("DATOS DEL ENVIO: ", fontSize - 1);
+  textWidth = fontNegrita.widthOfTextAtSize("DATOS DE ENVIO: ", fontSize - 1);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("DATOS DEL ENVIO: ", { x, y, size: fontSize - 1 });
+  page.drawText("DATOS DE ENVIO: ", { x, y, size: fontSize - 1 });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("FECHA EMISION: " + guia.fecha_emision, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("EMISION: " + guia.fecha_emision, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("RUC/DNI: " + guia.fecha_emision?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText("EMISION: " + guia.fecha_emision?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("FECHA TRASLADO: " + guia.fecha_traslado, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("TRASLADO: " + guia.fecha_traslado, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("FECHA TRASLADO: " + guia.fecha_traslado?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText("TRASLADO: " + guia.fecha_traslado?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("MOTIVO TRASLADO: " + sMotivo, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("MOTIVO: " + sMotivo, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("MOTIVO TRASLADO: " + sMotivo?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText("MOTIVO: " + sMotivo?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("MODALIDAD TRASLADO: " + sModalidad, fontSize);
+  textWidth = fontNegrita.widthOfTextAtSize("MODALIDAD: " + sModalidad, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("MODALIDAD TRASLADO: " + sModalidad?.toString() ?? "", { x, y, size: fontSize });
+  page.drawText("MODALIDAD: " + sModalidad?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
 
   textWidth = fontNegrita.widthOfTextAtSize("PARTIDA UBIGEO: " + guia.partida_ubigeo, fontSize);
@@ -212,6 +212,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText("DATOS DEL TRANSPORTE: ", { x, y, size: fontSize - 1 });
   y -= 12;
+  y -= 12;
 
   //CASO TRANSPORTE: PUBLICO
   if (sModalidad === '01') {
@@ -222,7 +223,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
     textWidth = fontNegrita.widthOfTextAtSize("RUC: " + guia.transp_ruc, fontSize);
     x = (ticketWidth - textWidth - marginLeftSize) / 2;
-    page.drawText("RUC/DNI: " + guia.transp_ruc?.toString() ?? "", { x, y, size: fontSize });
+    page.drawText("RUC: " + guia.transp_ruc?.toString() ?? "", { x, y, size: fontSize });
     y -= 12;
   }
 
@@ -270,12 +271,11 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   });
 
   page.drawText("DESCRIPCION", { x: margin, y, size: fontSize - 1 });
-  textWidth = fontNegrita.widthOfTextAtSize('P.UNIT', fontSize - 1);
-  x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);
-  page.drawText("UNIDAD", { x, y, size: fontSize - 1 });
-  textWidth = fontNegrita.widthOfTextAtSize('IMPORTE', fontSize - 1);
+  textWidth = fontNegrita.widthOfTextAtSize('DESCRIPCION', fontSize - 1);
+
+  
   x = (ticketWidth - textWidth - margin - marginLeftSize);
-  page.drawText("CANTIDAD", { x, y, size: fontSize - 1 });
+  page.drawText("UNIDAD", { x, y, size: fontSize - 1 });
 
   let cantidad;
   //console.log('antes forEach producto');

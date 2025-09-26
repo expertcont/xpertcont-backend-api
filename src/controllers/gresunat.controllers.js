@@ -494,7 +494,6 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) 
               cod,
               serie,
               numero,
-              cdrXml,
               resultadoPdf.buffer_pdf,
               'PDF'
             );

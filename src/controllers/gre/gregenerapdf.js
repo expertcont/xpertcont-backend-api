@@ -325,7 +325,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   // Dibujar el código QR en el PDF
   page.drawImage(qrImageEmbed, {
       x,
-      y: y-espaciadoDet-26-25,
+      y: y-espaciadoDet-26,
       width: qrWidth,
       height: qrHeight,
   });
@@ -334,7 +334,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = margin;
   textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize-2);
   // Calcular el punto x para alinear a la derecha
-  page.drawText(digestvalue, { x, y:y-espaciadoDet-60, size: fontSize-2 }); //Actualizar urgente
+  page.drawText(digestvalue, { x, y:y-espaciadoDet-40, size: fontSize-2 }); //Actualizar urgente
 
   const pdfBytes = await pdfDoc.save();
   // Retorna el buffer en un objeto junto a estado y nombre sugerido

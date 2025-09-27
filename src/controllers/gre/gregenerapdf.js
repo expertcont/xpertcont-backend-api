@@ -93,16 +93,15 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
   textWidth = fontNegrita.widthOfTextAtSize(empresa.domicilio_fiscal, fontSize);
   x = ((ticketWidth - textWidth) / 2) > 0 ? ((ticketWidth - textWidth) / 2) : margin;
-  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize, ticketWidth - margin * 2, margin, y, 12);
+  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize-2, ticketWidth - margin * 2, margin, y, 12);
   //page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
   y -= 12;
-
 
   textWidth = fontNegrita.widthOfTextAtSize(guia.serie+'-'+guia.numero, 12);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(guia.serie+'-'+guia.numero, { x, y, size: 12, font: fontNegrita });
   y -= 12;
-
+  y -= 12;
   
   //console.log('antes de datos cliente');
   page.drawRectangle({

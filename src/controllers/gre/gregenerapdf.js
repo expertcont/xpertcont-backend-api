@@ -71,6 +71,22 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
   const ticketWidth = 227;
 
+  textWidth = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText(empresa.razon_social, { x, y, size: fontSize });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize('RUC ' + empresa.ruc, fontSize + 1);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText('RUC ' + empresa.ruc, { x, y, size: fontSize + 1, font: fontNegrita });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize(empresa.domicilio_fiscal, fontSize);
+  x = ((ticketWidth - textWidth) / 2) > 0 ? ((ticketWidth - textWidth) / 2) : margin;
+  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize-2, ticketWidth - margin * 2, margin, y, 12);
+  //page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
+  y -= 12;
+
   let textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(sDocumento, { x, y, size: fontSize+2, font: fontNegrita });
@@ -81,27 +97,11 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   page.drawText('ELECTRONICA', { x, y, size: fontSize + 1, font: fontNegrita });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize('RUC ' + empresa.ruc, fontSize + 1);
-  x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText('RUC ' + empresa.ruc, { x, y, size: fontSize + 1, font: fontNegrita });
-  y -= 12;
-
-  textWidth = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
-  x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText(empresa.razon_social, { x, y, size: fontSize });
-  y -= 12;
-
-  textWidth = fontNegrita.widthOfTextAtSize(empresa.domicilio_fiscal, fontSize);
-  x = ((ticketWidth - textWidth) / 2) > 0 ? ((ticketWidth - textWidth) / 2) : margin;
-  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize-2, ticketWidth - margin * 2, margin, y, 12);
-  //page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
-  y -= 12;
-
   textWidth = fontNegrita.widthOfTextAtSize(guia.serie+'-'+guia.numero, 12);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(guia.serie+'-'+guia.numero, { x, y, size: 12, font: fontNegrita });
   y -= 12;
-  y -= 12;
+  y -= 6;
   
   //console.log('antes de datos cliente');
   page.drawRectangle({

@@ -71,9 +71,14 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
   const ticketWidth = 227;
 
-  let textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize);
+  let textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText(sDocumento, { x, y, size: fontSize, font: fontNegrita });
+  page.drawText(sDocumento, { x, y, size: fontSize+2, font: fontNegrita });
+  y -= 12;
+
+  textWidth = fontNegrita.widthOfTextAtSize('ELECTRONICA', fontSize + 1);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  page.drawText('ELECTRONICA', { x, y, size: fontSize + 1, font: fontNegrita });
   y -= 12;
 
   textWidth = fontNegrita.widthOfTextAtSize('RUC ' + empresa.ruc, fontSize + 1);
@@ -88,19 +93,17 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
   textWidth = fontNegrita.widthOfTextAtSize(empresa.domicilio_fiscal, fontSize);
   x = ((ticketWidth - textWidth) / 2) > 0 ? ((ticketWidth - textWidth) / 2) : margin;
-  page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
+  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize, ticketWidth - margin * 2, margin, y, 12);
+  //page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
   y -= 12;
+
 
   textWidth = fontNegrita.widthOfTextAtSize(guia.serie+'-'+guia.numero, 12);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(guia.serie+'-'+guia.numero, { x, y, size: 12, font: fontNegrita });
   y -= 12;
 
-  textWidth = fontNegrita.widthOfTextAtSize("FECHA: " + guia.fecha_emision, fontSize);
-  x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("FECHA: " + guia.fecha_emision, { x, y, size: fontSize });
-  y -= 15;
-
+  
   //console.log('antes de datos cliente');
   page.drawRectangle({
     x: margin,
@@ -209,7 +212,6 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText("DATOS DEL TRANSPORTE: ", { x, y, size: fontSize - 1 });
   y -= 12;
-  y -= 12;
 
   //CASO TRANSPORTE: PUBLICO
   if (IDMODOTRASLADO === '01') {
@@ -251,6 +253,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
     page.drawText("PLACA: " + guia.vehiculo_placa?.toString() ?? "", { x, y, size: fontSize });
     y -= 12;
   }
+  y -= 12;
   /////////////////////////////////////////////////////////////////////
   let row = 1;
   let espaciadoDet = 0;
@@ -349,6 +352,39 @@ function base64ToUint8Array(base64) {
   // Convertir el Buffer a Uint8Array
   const bytes = new Uint8Array(buffer);
   return bytes;
+}
+
+function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, lineHeight = 12) {
+  const palabras = text.split(/\s+/); // separa por espacios
+  let linea = "";
+  const lineas = [];
+
+  // construir líneas que no excedan el ancho
+  for (let palabra of palabras) {
+    const testLine = linea.length > 0 ? linea + " " + palabra : palabra;
+    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+    if (testWidth > maxWidth && linea.length > 0) {
+      lineas.push(linea);   // guarda la línea completa
+      linea = palabra;      // empieza una nueva
+    } else {
+      linea = testLine;
+    }
+  }
+  if (linea.length > 0) lineas.push(linea);
+
+  // aquí se hace el verdadero "multilínea":
+  for (let i = 0; i < lineas.length; i++) {
+    page.drawText(lineas[i], {
+      x,
+      y: y - i * lineHeight,
+      size: fontSize,
+      font,
+    });
+  }
+
+  // devuelve la nueva Y
+  return y - lineas.length * lineHeight;
 }
 
 module.exports = gregenerapdf;

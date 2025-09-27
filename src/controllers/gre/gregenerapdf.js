@@ -70,8 +70,8 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
 
   const ticketWidth = 227;
-  let textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
-  
+  let textWidth;
+
   textWidth = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(empresa.razon_social, { x, y, size: fontSize });
@@ -84,11 +84,12 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
   textWidth = fontNegrita.widthOfTextAtSize(empresa.domicilio_fiscal, fontSize);
   x = ((ticketWidth - textWidth) / 2) > 0 ? ((ticketWidth - textWidth) / 2) : margin;
-  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize-2, ticketWidth - margin * 2, margin, y, 12);
+  y = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize-2, ticketWidth - margin * 2, margin, y, 'center' ,12);
   //page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
   y -= 12;
 
-    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+  textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
+  x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(sDocumento, { x, y, size: fontSize+2, font: fontNegrita });
   y -= 12;
 
@@ -353,7 +354,7 @@ function base64ToUint8Array(base64) {
   return bytes;
 }
 
-function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, lineHeight = 12) {
+/*function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, lineHeight = 12) {
   const palabras = text.split(/\s+/); // separa por espacios
   let linea = "";
   const lineas = [];
@@ -383,6 +384,61 @@ function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, lineHeight 
   }
 
   // devuelve la nueva Y
+  return y - lineas.length * lineHeight;
+}*/
+/**
+ * Dibuja texto multilínea con ajuste automático y alineación
+ * @param {object} page - Página PDF
+ * @param {string} text - Texto a dibujar
+ * @param {object} font - Fuente embebida de pdf-lib
+ * @param {number} fontSize - Tamaño de fuente
+ * @param {number} maxWidth - Ancho máximo permitido (ej. ancho del ticket)
+ * @param {number} x - Posición X inicial (para left alignment)
+ * @param {number} y - Posición Y inicial
+ * @param {string} align - Alineación: "left" | "center" | "right"
+ * @param {number} lineHeight - Altura de línea
+ * @returns {number} - Nueva posición Y después del texto
+ */
+function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "left", lineHeight = 12) {
+  const palabras = text.split(/\s+/);
+  let linea = "";
+  const lineas = [];
+
+  for (let palabra of palabras) {
+    const testLine = linea.length > 0 ? linea + " " + palabra : palabra;
+    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+    if (testWidth > maxWidth && linea.length > 0) {
+      lineas.push(linea);
+      linea = palabra;
+    } else {
+      linea = testLine;
+    }
+  }
+
+  if (linea.length > 0) {
+    lineas.push(linea);
+  }
+
+  // Dibujar cada línea con alineación
+  lineas.forEach((ln, i) => {
+    const textWidth = font.widthOfTextAtSize(ln, fontSize);
+    let drawX = x;
+
+    if (align === "center") {
+      drawX = x + (maxWidth - textWidth) / 2;
+    } else if (align === "right") {
+      drawX = x + (maxWidth - textWidth);
+    }
+
+    page.drawText(ln, {
+      x: drawX,
+      y: y - i * lineHeight,
+      size: fontSize,
+      font,
+    });
+  });
+
   return y - lineas.length * lineHeight;
 }
 

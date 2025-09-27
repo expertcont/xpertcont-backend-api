@@ -131,7 +131,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(guia.llegada_direccion?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
-
+  y -= 12;
 
   page.drawRectangle({
     x: margin,
@@ -192,11 +192,8 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText("PESO TOTAL KG: " + guia.peso_total?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
-
-  textWidth = fontNegrita.widthOfTextAtSize("NUMERO BULTOS: " + guia.numero_bultos, fontSize);
-  x = (ticketWidth - textWidth - marginLeftSize) / 2;
-  page.drawText("NUMERO BULTOS: " + guia.numero_bultos?.toString() ?? "", { x, y, size: fontSize });
   y -= 12;
+  //Numero de bultos para otros motivos
 
   page.drawRectangle({
     x: margin,
@@ -215,7 +212,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   y -= 12;
 
   //CASO TRANSPORTE: PUBLICO
-  if (sModalidad === '01') {
+  if (IDMODOTRASLADO === '01') {
     textWidth = fontNegrita.widthOfTextAtSize(guia.transp_razon_social, fontSize);
     x = (ticketWidth - textWidth - marginLeftSize) / 2;
     page.drawText(guia.transp_razon_social?.toString() ?? "", { x, y, size: fontSize });
@@ -228,7 +225,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   }
 
   //CASO TRANSPORTE: PRIVADO
-  if (sModalidad === '02') {
+  if (IDMODOTRASLADO === '02') {
     textWidth = fontNegrita.widthOfTextAtSize(guia.conductor_nombres, fontSize);
     x = (ticketWidth - textWidth - marginLeftSize) / 2;
     page.drawText(guia.conductor_nombres?.toString() ?? "", { x, y, size: fontSize });
@@ -310,10 +307,8 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   //////////////////
   //SeccionQR
   // Generar el código QR como base64
-  const numeroFormateado = guia.numero.padStart(8, '0');
-  const comprobanteConvertido = `${guia.codigo}|${guia.serie}|${numeroFormateado}`;
 
-  const qrImage = await QRCode.toDataURL(empresa.ruc + '|' + comprobanteConvertido + '|');
+  const qrImage = await QRCode.toDataURL(digestvalue);
   // Convertir la imagen base64 a formato compatible con pdf-lib
   const qrImageBytes = qrImage.split(',')[1]; // Eliminar el encabezado base64
   const qrImageBuffer = base64ToUint8Array(qrImageBytes);
@@ -328,7 +323,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   // Dibujar el código QR en el PDF
   page.drawImage(qrImageEmbed, {
       x,
-      y: y-espaciadoDet-26-45,
+      y: y-espaciadoDet-26-25,
       width: qrWidth,
       height: qrHeight,
   });
@@ -337,7 +332,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = margin;
   textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize-2);
   // Calcular el punto x para alinear a la derecha
-  page.drawText(digestvalue, { x, y:y-espaciadoDet-80, size: fontSize-2 }); //Actualizar urgente
+  page.drawText(digestvalue, { x, y:y-espaciadoDet-60, size: fontSize-2 }); //Actualizar urgente
 
   const pdfBytes = await pdfDoc.save();
   // Retorna el buffer en un objeto junto a estado y nombre sugerido

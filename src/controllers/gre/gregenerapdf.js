@@ -70,7 +70,8 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
 
   const ticketWidth = 227;
-
+  let textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
+  
   textWidth = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(empresa.razon_social, { x, y, size: fontSize });
@@ -87,8 +88,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   //page.drawText(empresa.domicilio_fiscal, { x, y, size: 8 });
   y -= 12;
 
-  let textWidth = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
-  x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(sDocumento, { x, y, size: fontSize+2, font: fontNegrita });
   y -= 12;
 

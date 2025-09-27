@@ -277,14 +277,13 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   x = (ticketWidth - textWidth - margin - marginLeftSize);
   page.drawText("UNIDAD", { x, y, size: fontSize - 1 });
 
-  let cantidad;
   //console.log('antes forEach producto');
   registrosdet.forEach(detalle => {
-    //calcular precio unitario con igv 
-    //calcular precio neto (importe) con igv
-    cantidad = Number(detalle.cantidad);
+    //cantidad = Number(detalle.cantidad);
 
-    page.drawText(`${detalle.producto}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
+    //page.drawText(`${detalle.producto}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
+    espaciadoDet = drawTextWrapped(page, empresa.domicilio_fiscal, font, fontSize-2, ticketWidth - margin * 2, margin, y-espaciadoDet, 'left', 10);    
+
     espaciadoDet += 10;
     page.drawText('Cant: ' + detalle.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 

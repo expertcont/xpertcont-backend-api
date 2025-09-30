@@ -248,7 +248,7 @@ async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
 }
 
 // Función para procesar y guardar el CDR
-async function procesarRespuestaSunat(soapResponse, dataVenta) {
+/*async function procesarRespuestaSunat(soapResponse, dataVenta) {
   try {
       const { ruc, codigo, serie, numero } = {
         ruc: dataVenta.empresa.ruc,
@@ -306,6 +306,99 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
       const descripcion = descNode ? descNode.textContent.trim() : 'Sin descripción SUNAT';
 
       return { estado: true, descripcion };
+
+  } catch (error) {
+    console.error('❌ Error procesando respuesta SUNAT:', error.message);
+    return { estado: false, descripcion: error.message };
+  }
+}*/
+
+// Función para procesar y guardar el CDR
+async function procesarRespuestaSunat(soapResponse, dataVenta) {
+  try {
+    const { ruc, codigo, serie, numero } = {
+      ruc: dataVenta.empresa.ruc,
+      codigo: dataVenta.venta.codigo,
+      serie: dataVenta.venta.serie,
+      numero: dataVenta.venta.numero
+    };
+
+    // Parsear SOAP XML
+    const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
+    const select = xpath.useNamespaces({
+      'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
+    });
+
+    // Verificar si hay Fault
+    const faultNode = select('//*[local-name()="Fault"]', doc)[0];
+    if (faultNode) {
+      const faultCodeNode = select('//*[local-name()="faultcode"]', doc)[0];
+      const faultStringNode = select('//*[local-name()="faultstring"]', doc)[0];
+
+      const faultCode = faultCodeNode ? faultCodeNode.textContent.trim() : 'UNKNOWN';
+      const faultMessage = faultStringNode ? faultStringNode.textContent.trim() : 'Error desconocido en SOAP';
+
+      // Mensaje personalizado solo para los más frecuentes
+      let userMessage = faultMessage;
+      if (faultCode.includes("0100")) {
+        userMessage = "SUNAT está fuera de servicio. Intente más tarde.";
+      } else if (faultCode.includes("1032")) {
+        userMessage = "Credenciales SOL incorrectas.";
+      } else if (faultCode.includes("1020")) {
+        userMessage = "El XML enviado no cumple con el formato exigido.";
+      } else if (faultCode.includes("1033")) {
+        userMessage = "El certificado digital no es válido o está vencido.";
+      } else if (faultCode.includes("1035")) {
+        userMessage = "El archivo ZIP enviado está dañado.";
+      }
+
+      return {
+        estado: false,
+        descripcion: userMessage,
+        detalleSunat: faultMessage, // 🔹 Mantener el mensaje oficial de SUNAT
+        codigo: faultCode
+      };
+    }
+
+    // Localizar applicationResponse
+    const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
+    if (!appRespNode) {
+      throw new Error('❌ No se encontró applicationResponse en SOAP.');
+    }
+
+    // Decodificar base64 a buffer ZIP
+    const base64Zip = appRespNode.textContent.trim();
+    const zipBuffer = Buffer.from(base64Zip, 'base64');
+
+    // Leer ZIP
+    const zip = new AdmZip(zipBuffer);
+    const entries = zip.getEntries();
+    if (entries.length === 0) {
+      throw new Error('❌ ZIP devuelto está vacío.');
+    }
+
+    // Obtener primer archivo XML CDR dentro del ZIP
+    const entry = entries.find(e => e.entryName.endsWith('.xml'));
+    if (!entry) {
+      throw new Error('❌ No se encontró archivo XML dentro del ZIP.');
+    }
+
+    const rawBuffer = entry.getData();
+    const contenidoCDR = rawBuffer.toString('utf8');
+
+    // Subir CDR con prefijo R-
+    await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR, 'R');
+
+    // Extraer cbc:Description
+    const descDoc = new DOMParser().parseFromString(contenidoCDR, 'text/xml');
+    const descSelect = xpath.useNamespaces({
+      cbc: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2'
+    });
+
+    const descNode = descSelect('//*[local-name()="Description"]', descDoc)[0];
+    const descripcion = descNode ? descNode.textContent.trim() : 'Sin descripción SUNAT';
+
+    return { estado: true, descripcion };
 
   } catch (error) {
     console.error('❌ Error procesando respuesta SUNAT:', error.message);

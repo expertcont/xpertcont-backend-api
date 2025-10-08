@@ -1,5 +1,7 @@
 const gregeneraxml = require('./gre/gregeneraxml');
 const gregenerapdf = require('./gre/gregenerapdf');
+const gregenerapdfa4 = require('./gre/gregenerapdfa4');
+
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 /////////////////////////////////////////////////////////
@@ -479,6 +481,8 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) 
       /////////////////////////////////////////////////////////////////////
       //05. New: Generar PDF  NEWWW
       const documentDescription = obtenerDocumentDescription(cdrXml);
+      void procesarPDFGRE('80mm', dataGuia, documentDescription);
+      /*
       (async () => {
         try {
           //Consulta previa datos necesarios(Logo)
@@ -504,7 +508,7 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) 
         } catch (error) {
           console.error('Error al generar PDF:', error);
         }
-      })();
+      })();*/
       /////////////////////////////////////////////////////////////////////
     }
     return estado;
@@ -514,6 +518,42 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) 
     return 'ERROR_CONEXION';
   }
 };
+
+async function procesarPDFGRE(sTamaño, dataGuia, sDigestInicial) {
+  try {
+    //Consulta previa datos necesarios(Logo)
+    const { rows } = await pool.query(`SELECT logo FROM api_usuariocertificado WHERE documento_id = $1`, [dataGuia.empresa.ruc]);
+    const {logo:logoBuffer} = rows[0];
+
+    //const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
+    let resultadoPdf;
+    if (sTamaño === 'A4') {
+      resultadoPdf = await gregenerapdfa4(logoBuffer, dataGuia, sDigestInicial);
+    } else {
+      resultadoPdf = await gregenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
+    }
+
+    if (resultadoPdf?.estado) {
+      console.log('✅ PDF generado correctamente');
+
+      await subirArchivoDesdeMemoria(
+        dataGuia.empresa.ruc,
+        dataGuia.guia.codigo,
+        dataGuia.guia.serie,
+        dataGuia.guia.numero,
+        resultadoPdf.buffer_pdf,
+        'PDF'
+      );
+
+      console.log('📤 PDF subido correctamente');
+    } else {
+      console.error('❌ Error: El proceso de generación PDF no devolvió un estado exitoso.');
+    }
+
+  } catch (error) {
+    console.error('💥 Error al generar o subir el PDF:', error);
+  }
+}
 
 function extraerCDRDesdeBase64String(sBase64Zip) {
   try {
@@ -536,6 +576,50 @@ function extraerCDRDesdeBase64String(sBase64Zip) {
     return null;
   }
 }
+
+// 🔹 Función auxiliar reutilizable
+async function generarPDFPrevioSunat(req, res, formatoPDF) {
+  try {
+    const dataGuia = req.body;
+    const sDigestInicial = "-" //esto debe estar llegar por parametro, si llega vacio igual genera QR
+    // 2️⃣ Generar PDF asincrónicamente (sin bloquear respuesta)
+    void procesarPDFGRE(formatoPDF, dataGuia, sDigestInicial);
+
+    // 3️⃣ Construir URL de descarga del PDF
+    const server_sftp = process.env.CPE_HOST;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataGuia.empresa.ruc}/${dataGuia.empresa.ruc}-${dataGuia.venta.codigo}-${dataGuia.venta.serie}-${dataGuia.venta.numero}.pdf`;
+
+    // 4️⃣ Responder inmediatamente al cliente
+    return res.status(200).json({
+      respuesta_sunat_descripcion: 'PDF generado correctamente',
+      ruta_pdf,
+    });
+
+  } catch (error) {
+    console.error('Error al registrar PDF Sunat:', error);
+    return res.status(400).json({
+      respuesta_sunat_descripcion: 'PDF no generado',
+      ruta_pdf: 'error',
+    });
+  }
+}
+
+//
+// 🔹 Endpoint para ticket 80mm
+//
+const registrarGRESunatPrevioPDF = async (req, res, next) => {
+  await generarPDFPrevioSunat(req, res, '80mm');
+};
+
+//
+// 🔹 Endpoint para A4
+//
+const registrarGRESunatPrevioPDFA4 = async (req, res, next) => {
+  await generarPDFPrevioSunat(req, res, 'A4');
+};
+
 module.exports = {
-    registrarGRESunat
- }; 
+    registrarGRESunat,
+    registrarGRESunatPrevioPDF,
+    registrarGRESunatPrevioPDFA4
+}; 

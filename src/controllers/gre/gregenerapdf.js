@@ -1,6 +1,5 @@
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
-const numeral = require('numeral');
 
 const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   const pdfDoc = await PDFDocument.create();
@@ -353,38 +352,6 @@ function base64ToUint8Array(base64) {
   return bytes;
 }
 
-/*function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, lineHeight = 12) {
-  const palabras = text.split(/\s+/); // separa por espacios
-  let linea = "";
-  const lineas = [];
-
-  // construir líneas que no excedan el ancho
-  for (let palabra of palabras) {
-    const testLine = linea.length > 0 ? linea + " " + palabra : palabra;
-    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-
-    if (testWidth > maxWidth && linea.length > 0) {
-      lineas.push(linea);   // guarda la línea completa
-      linea = palabra;      // empieza una nueva
-    } else {
-      linea = testLine;
-    }
-  }
-  if (linea.length > 0) lineas.push(linea);
-
-  // aquí se hace el verdadero "multilínea":
-  for (let i = 0; i < lineas.length; i++) {
-    page.drawText(lineas[i], {
-      x,
-      y: y - i * lineHeight,
-      size: fontSize,
-      font,
-    });
-  }
-
-  // devuelve la nueva Y
-  return y - lineas.length * lineHeight;
-}*/
 /**
  * Dibuja texto multilínea con ajuste automático y alineación
  * @param {object} page - Página PDF

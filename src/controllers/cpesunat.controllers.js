@@ -1,5 +1,6 @@
 const cpegeneraxml = require('./cpe/cpegeneraxml');
 const cpegenerapdf = require('./cpe/cpegenerapdf');
+const cpegenerapdfa4 = require('./cpe/cpegenerapdfa4');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
@@ -86,36 +87,11 @@ const registrarCPESunat = async (req,res,next)=> {
         const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
 
         // 07. Generar PDF
-        /*const resultadoPdf = await cpegenerapdf('80mm',logoBuffer,dataVenta, sDigestInicial);
-        if (resultadoPdf.estado) {
-            console.log('PDF EXITOSO');
-            await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, resultadoPdf.buffer_pdf,'PDF');
-        } else {
-            console.log('REVISAR PROCESO PDF ERRORRR');
-        }*/
-        
         //PDF version asyncrono (desconectado)
         (async () => {
-          try {
-            const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
-            if (resultadoPdf.estado) {
-              console.log('PDF EXITOSO');
-              await subirArchivoDesdeMemoria(
-                dataVenta.empresa.ruc,
-                dataVenta.venta.codigo,
-                dataVenta.venta.serie,
-                dataVenta.venta.numero,
-                resultadoPdf.buffer_pdf,
-                'PDF'
-              );
-            } else {
-              console.log('REVISAR PROCESO PDF ERRORRR');
-            }
-          } catch (error) {
-            console.error('Error al generar PDF:', error);
-          }
+          procesarPDFCPE('80mm', logoBuffer, dataVenta, sDigestInicial);
         })();
-            
+
         
         const server_sftp = process.env.CPE_HOST;
         const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
@@ -158,6 +134,38 @@ function canonicalizarManual(xmlStr) {
     .replace(/>\s+</g, '><')
     .trim();
 }
+async function procesarPDFCPE(sTamaño, logoBuffer, dataVenta, sDigestInicial) {
+  try {
+    //const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
+    let resultadoPdf;
+    if (sTamaño === 'A4') {
+      resultadoPdf = await cpegenerapdfa4(logoBuffer, dataVenta, sDigestInicial);
+    } else {
+      resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
+    }
+
+    if (resultadoPdf?.estado) {
+      console.log('✅ PDF generado correctamente');
+
+      await subirArchivoDesdeMemoria(
+        dataVenta.empresa.ruc,
+        dataVenta.venta.codigo,
+        dataVenta.venta.serie,
+        dataVenta.venta.numero,
+        resultadoPdf.buffer_pdf,
+        'PDF'
+      );
+
+      console.log('📤 PDF subido correctamente');
+    } else {
+      console.error('❌ Error: El proceso de generación PDF no devolvió un estado exitoso.');
+    }
+
+  } catch (error) {
+    console.error('💥 Error al generar o subir el PDF:', error);
+  }
+}
+
 async function firmarXMLUBL(unsignedXML, certificadoBuffer, password) {
   try {
     // 📌 Generar ruta temporal única para el PFX
@@ -246,72 +254,6 @@ async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
     throw error;
   }
 }
-
-// Función para procesar y guardar el CDR
-/*async function procesarRespuestaSunat(soapResponse, dataVenta) {
-  try {
-      const { ruc, codigo, serie, numero } = {
-        ruc: dataVenta.empresa.ruc,
-        codigo: dataVenta.venta.codigo,
-        serie: dataVenta.venta.serie,
-        numero: dataVenta.venta.numero
-      };
-
-      // Parsear SOAP XML
-      const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
-      const select = xpath.useNamespaces({
-        'soap': 'http://schemas.xmlsoap.org/soap/envelope/'
-      });
-
-      // Localizar applicationResponse
-      const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
-      if (!appRespNode) {
-        throw new Error('❌ No se encontró applicationResponse en SOAP.');
-      }
-
-      // Decodificar base64 a buffer ZIP
-      const base64Zip = appRespNode.textContent.trim();
-      const zipBuffer = Buffer.from(base64Zip, 'base64');
-
-      // Leer ZIP
-      const zip = new AdmZip(zipBuffer);
-      const entries = zip.getEntries();
-      if (entries.length === 0) {
-        throw new Error('❌ ZIP devuelto está vacío.');
-      }
-
-      // Obtener primer archivo XML CDR dentro del ZIP
-      const entry = entries.find(e => e.entryName.endsWith('.xml'));
-      if (!entry) {
-        throw new Error('❌ No se encontró archivo XML dentro del ZIP.');
-      }
-
-      const rawBuffer = entry.getData();
-      const contenidoCDR = rawBuffer.toString('utf8');
-
-      // Subir CDR con prefijo R-
-      await subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenidoCDR, 'R');
-      //console.log(`📦 CDR descomprimido (${rawBuffer.length} bytes)`);
-      //console.log(`📝 Nombre CDR: ${entry.entryName}`);
-      //console.log('📑 Primeros bytes:', rawBuffer.slice(0, 80));
-      //console.log(`✅ CDR SUNAT guardado como R-${ruc}-${codigo}-${serie}-${numero}.xml`);
-      
-      // Extraer cbc:Description
-      const descDoc = new DOMParser().parseFromString(contenidoCDR, 'text/xml');
-      const descSelect = xpath.useNamespaces({
-        cbc: 'urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2'
-      });
-
-      const descNode = descSelect('//*[local-name()="Description"]', descDoc)[0];
-      const descripcion = descNode ? descNode.textContent.trim() : 'Sin descripción SUNAT';
-
-      return { estado: true, descripcion };
-
-  } catch (error) {
-    console.error('❌ Error procesando respuesta SUNAT:', error.message);
-    return { estado: false, descripcion: error.message };
-  }
-}*/
 
 // Función para procesar y guardar el CDR
 async function procesarRespuestaSunat(soapResponse, dataVenta) {
@@ -424,19 +366,66 @@ function obtenerDigestValue(xmlFirmado) {
   // Retornar su contenido
   return digestNode.textContent.trim();
 }
-//////////////////////////////////////////////////////////////////////////////
-/*function limpiarXML(xmlString) {
-  const doc = new DOMParser().parseFromString(xmlString, 'text/xml');
 
-  let serializer = new XMLSerializer();
-  let xmlLimpio = serializer.serializeToString(doc.documentElement)
-    .replace(/(\r\n|\n|\r)/gm, "")
-    .replace(/\t/g, "")
-    .replace(/\s{2,}/g, " "); // opcional: reducir espacios repetidos
+// 🔹 Función auxiliar reutilizable
+async function generarPDFPrevioSunat(req, res, formatoPDF) {
+  try {
+    const dataVenta = req.body;
 
-  return xmlLimpio;
-}*/
-/////////////////////////////////////////////////////////////////////////////
+    // 1️⃣ Consultar logo desde la BD
+    const { rows } = await pool.query(
+      `SELECT logo FROM api_usuariocertificado WHERE documento_id = $1`,
+      [dataVenta.empresa.ruc]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({
+        respuesta_sunat_descripcion: 'No se encontró logo para el RUC indicado',
+        ruta_pdf: 'error',
+      });
+    }
+
+    const { logo: logoBuffer } = rows[0];
+    
+    const sDigestInicial = "-" //esto debe llegar como parametro para el previo, si llega vacio igual genera QR 
+    // 2️⃣ Generar PDF asincrónicamente (sin bloquear respuesta)
+    void procesarPDFCPE(formatoPDF, logoBuffer, dataVenta, sDigestInicial);
+
+    // 3️⃣ Construir URL de descarga del PDF
+    const server_sftp = process.env.CPE_HOST;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.pdf`;
+
+    // 4️⃣ Responder inmediatamente al cliente
+    return res.status(200).json({
+      respuesta_sunat_descripcion: 'PDF generado correctamente',
+      ruta_pdf,
+    });
+
+  } catch (error) {
+    console.error('Error al registrar PDF Sunat:', error);
+    return res.status(400).json({
+      respuesta_sunat_descripcion: 'PDF no generado',
+      ruta_pdf: 'error',
+    });
+  }
+}
+
+//
+// 🔹 Endpoint para ticket 80mm
+//
+const registrarCPESunatPrevioPDF = async (req, res, next) => {
+  await generarPDFPrevioSunat(req, res, '80mm');
+};
+
+//
+// 🔹 Endpoint para A4
+//
+const registrarCPESunatPrevioPDFA4 = async (req, res, next) => {
+  await generarPDFPrevioSunat(req, res, 'A4');
+};
+
 module.exports = {
-    registrarCPESunat
+    registrarCPESunat,
+    registrarCPESunatPrevioPDF,
+    registrarCPESunatPrevioPDFA4
  }; 

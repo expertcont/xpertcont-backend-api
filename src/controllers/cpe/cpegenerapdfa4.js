@@ -102,7 +102,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     font: fontNegrita,
     color: rgb(0.4, 0.49, 0.92) // Color azul
   });
-  y -= 20;
+  y -= 15;
 
   // Fecha
   const fechaText = 'FECHA: ' + venta.fecha_emision;
@@ -113,7 +113,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     size: 11,
     font 
   });
-  y -= 20;
+  y -= 15;
 
   // Línea separadora
   page.drawLine({
@@ -122,7 +122,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     thickness: 2,
     color: rgb(0.2, 0.2, 0.2),
   });
-  y -= 20;
+  y -= 15;
 
   // ============ SECCIÓN CLIENTE ============
   // Fondo gris para el título
@@ -190,7 +190,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     size: 10,
     font 
   });
-  y -= 25;
+  y -= 15;
 
   // ============ TABLA DE PRODUCTOS ============
   // Header de la tabla
@@ -234,7 +234,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   });
   
   page.drawText('IMPORTE', { 
-    x: colImporte, 
+    x: colImporte + 20, 
     y: y - 13, 
     size: 10, 
     font: fontNegrita,
@@ -368,7 +368,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   const sMoneda = moneda[venta.moneda_id] || 'S/';
 
   // Monto en letras (lado izquierdo)
-  page.drawRectangle({
+  /*page.drawRectangle({
     x: marginLeft,
     y: y - 45,
     width: contentWidth * 0.6,
@@ -391,6 +391,40 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     y: y - 32, 
     size: 10,
     font 
+  });*/
+ // Monto en letras (lado izquierdo) - con ajuste multilínea
+  const montoLetrasWidth = contentWidth * 0.6 - 10; // Ancho disponible menos padding
+  const montoLetrasLines = wrapText(MontoEnLetras, montoLetrasWidth, 10, font);
+  const montoLetrasHeight = Math.max(45, montoLetrasLines.length * 12 + 20); // Altura dinámica
+
+  page.drawRectangle({
+    x: marginLeft,
+    y: y - montoLetrasHeight,
+    width: contentWidth * 0.6,
+    height: montoLetrasHeight,
+    color: rgb(1, 0.98, 0.9),
+    borderColor: rgb(1, 0.85, 0.4),
+    borderWidth: 1,
+  });
+
+  page.drawText('IMPORTE EN LETRAS:', { 
+    x: marginLeft + 5, 
+    y: y - 15, 
+    size: 9, 
+    font: fontNegrita,
+    color: rgb(0.4, 0.4, 0.4)
+  });
+
+  // Dibujar cada línea del monto en letras
+  let montoY = y - 28;
+  montoLetrasLines.forEach(line => {
+    page.drawText(line, { 
+      x: marginLeft + 5, 
+      y: montoY, 
+      size: 10,
+      font 
+    });
+    montoY -= 12;
   });
 
   // Totales (lado derecho)

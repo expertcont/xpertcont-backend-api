@@ -387,7 +387,9 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
 
     const { logo: logoBuffer } = rows[0];
     
-    const sDigestInicial = "-" //esto debe llegar como parametro para el previo, si llega vacio igual genera QR 
+    //(null o valor)esto llega en json, en solicitud renovar pdf o pdf libre
+    const sDigestInicial = dataVenta.venta.r_vfirmado;
+    
     // 2️⃣ Generar PDF asincrónicamente (sin bloquear respuesta)
     void procesarPDFCPE(formatoPDF, logoBuffer, dataVenta, sDigestInicial);
 

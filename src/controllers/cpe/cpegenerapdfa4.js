@@ -315,7 +315,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     const punitText = numeral(precio_unitario).format('0,0.00');
     textWidth = font.widthOfTextAtSize(punitText, 9);
     page.drawText(punitText, { 
-      x: colImporte - 80 - textWidth, 
+      x: colImporte - 40 - textWidth, 
       y: centeredY, 
       size: 9,
       font 

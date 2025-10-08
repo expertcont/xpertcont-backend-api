@@ -139,8 +139,10 @@ async function procesarPDFCPE(sTamaño, logoBuffer, dataVenta, sDigestInicial) {
     //const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
     let resultadoPdf;
     if (sTamaño === 'A4') {
+      console.log('A4 sTamaño: ',sTamaño);
       resultadoPdf = await cpegenerapdfa4(logoBuffer, dataVenta, sDigestInicial);
     } else {
+      console.log('sTamaño: ',sTamaño);
       resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
     }
 

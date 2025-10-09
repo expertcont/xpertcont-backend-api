@@ -393,8 +393,8 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
     //const sDigestInicial = dataVenta.venta.r_vfirmado;
     const sDigestInicial = dataVenta?.venta?.r_vfirmado ?? "";
     
-    // 2️⃣ Generar PDF asincrónicamente (sin bloquear respuesta)
-    void procesarPDFCPE(formatoPDF, logoBuffer, dataVenta, sDigestInicial);
+    // 2️⃣ Generar PDF esperando respuesta)
+    await procesarPDFCPE(formatoPDF, logoBuffer, dataVenta, sDigestInicial);
 
     // 3️⃣ Construir URL de descarga del PDF
     const server_sftp = process.env.CPE_HOST;

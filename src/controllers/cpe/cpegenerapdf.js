@@ -200,7 +200,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
   // Monto en letras con multilínea
   //y = drawTextWrapped(page, MontoEnLetras, font, 8, maxTextWidth, margin, y-espaciadoDet, 'left', 10);
-  drawTextWrapped(page, MontoEnLetras, font, fontSize, maxTextWidth, margin, y-espaciadoDet+20, 'left', 10);
+  drawTextWrapped(page, MontoEnLetras, font, fontSize, maxTextWidth, margin, y-espaciadoDet+30, 'left', 10);
     
   y += 10;
 

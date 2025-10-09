@@ -199,7 +199,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   MontoEnLetras = 'SON: ' + MontoEnLetras.toUpperCase();
 
   // Monto en letras con multilínea
-  y = drawTextWrapped(page, MontoEnLetras, font, 8, maxTextWidth, margin, y-espaciadoDet, 'left', 10);
+  //y = drawTextWrapped(page, MontoEnLetras, font, 8, maxTextWidth, margin, y-espaciadoDet, 'left', 10);
+  x = margin;
+  page.drawText(MontoEnLetras, { x, y: y - espaciadoDet + 4, size: 9 });
   
   y += 10;
 

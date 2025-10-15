@@ -291,7 +291,8 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     }
 
     // Cantidad (centrada verticalmente)
-    const centeredY = y - (rowHeight / 2) - 3;
+    //const centeredY = y - (rowHeight / 2) - 3;
+    const centeredY = y - 8;
     page.drawText(cantidad.toString(), { 
       x: colCant + 10, 
       y: centeredY, 
@@ -313,7 +314,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     let descY = y - 8;
     descLines.forEach(line => {
       page.drawText(line, { 
-        x: colDesc + 15,  //+10 original ....NEWW
+        x: colDesc + 10,  //+10 original ....NEWW
         y: descY, 
         size: 9,
         font 

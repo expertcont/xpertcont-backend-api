@@ -163,7 +163,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
     page.drawText('Cant: ' + detalle.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
-    page.drawText(detalle.codigo_unidad, { x: margin + 40, y: y + 4 - espaciadoDet, size: fontSize - 1 });
+    page.drawText(detalle.codigo_unidad, { x: margin + 70, y: y + 4 - espaciadoDet, size: fontSize - 1 });
 
     textWidth = fontNegrita.widthOfTextAtSize(numeral(precio_unitario).format('0,0.00'), fontSize);
     x = (ticketWidth - textWidth - margin - 50 - marginLeftSize);

@@ -314,7 +314,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     let descY = y - 8;
     descLines.forEach(line => {
       page.drawText(line, { 
-        x: colDesc + 10,  //+10 original ....NEWW
+        x: colDesc + 5,  //+10 original ....NEWW
         y: descY, 
         size: 9,
         font 

@@ -300,9 +300,10 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     });
 
     // codigo_unidad (centrada verticalmente) NEWWWW
-    const centeredUni = y - (rowHeight / 2) - 3;
+    //const centeredUni = y - (rowHeight / 2) - 3;
+    const centeredUni = y - 8;
     page.drawText(detalle.codigo_unidad, { 
-      x: colCant + 20, 
+      x: colCant + 35, 
       y: centeredUni, 
       size: 9,
       font 
@@ -312,7 +313,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     let descY = y - 8;
     descLines.forEach(line => {
       page.drawText(line, { 
-        x: colDesc + 20,  //+10 original ....NEWW
+        x: colDesc + 25,  //+10 original ....NEWW
         y: descY, 
         size: 9,
         font 

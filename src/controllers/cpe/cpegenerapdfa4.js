@@ -218,7 +218,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   });
   
   page.drawText('DESCRIPCIÓN', { 
-    x: colDesc, 
+    x: colDesc+5, 
     y: y - 13, 
     size: 10, 
     font: fontNegrita,
@@ -313,7 +313,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     let descY = y - 8;
     descLines.forEach(line => {
       page.drawText(line, { 
-        x: colDesc + 25,  //+10 original ....NEWW
+        x: colDesc + 15,  //+10 original ....NEWW
         y: descY, 
         size: 9,
         font 

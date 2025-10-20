@@ -539,7 +539,8 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     borderColor: rgb(0.8, 0.8, 0.8),
     borderWidth: 0.5,
   });
-
+  
+  //Esta Linea imprime codigo hash, variable digestvalue
   textWidth = font.widthOfTextAtSize(digestvalue, 8);
   page.drawText(digestvalue, { 
     x: (width - textWidth) / 2, 
@@ -548,6 +549,28 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     font,
     color: rgb(0.6, 0.6, 0.6)
   });
+
+  //Esta Linea imprime descarga de pdf y cdr
+  const sCdr = `http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  textWidth = font.widthOfTextAtSize(sCdr, 8);
+  page.drawText(sCdr, { 
+    x: (width - textWidth) / 2, 
+    y: y - 28, 
+    size: 8,
+    font,
+    color: rgb(0.6, 0.6, 0.6)
+  });
+  //Esta Linea imprime descarga de pdf y cdr
+  const sPdf = `http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
+  textWidth = font.widthOfTextAtSize(sPdf, 8);
+  page.drawText(sPdf, { 
+    x: (width - textWidth) / 2, 
+    y: y - 38, 
+    size: 8,
+    font,
+    color: rgb(0.6, 0.6, 0.6)
+  });
+  
 
   const pdfBytes = await pdfDoc.save();
   

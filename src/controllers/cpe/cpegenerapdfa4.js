@@ -551,21 +551,32 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   });
 
   //Esta Linea imprime descarga de pdf y cdr
-  const sCdr = `http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  textWidth = font.widthOfTextAtSize(sXml, 8);
+  page.drawText(sXml, { 
+    x: marginLeft, 
+    y: y - 38, 
+    size: 8,
+    font,
+    color: rgb(0.6, 0.6, 0.6)
+  });
+  
+  //Esta Linea imprime descarga de pdf y cdr
+  const sCdr = `Descarga CDR  http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
   textWidth = font.widthOfTextAtSize(sCdr, 8);
   page.drawText(sCdr, { 
-    x: (width - textWidth) / 2, 
-    y: y - 28, 
+    x: marginLeft, 
+    y: y - 38, 
     size: 8,
     font,
     color: rgb(0.6, 0.6, 0.6)
   });
   //Esta Linea imprime descarga de pdf y cdr
-  const sPdf = `http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
+  const sPdf = `Descarga PDF  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
   textWidth = font.widthOfTextAtSize(sPdf, 8);
   page.drawText(sPdf, { 
-    x: (width - textWidth) / 2, 
-    y: y - 38, 
+    x: marginLeft, 
+    y: y - 48, 
     size: 8,
     font,
     color: rgb(0.6, 0.6, 0.6)

@@ -2,7 +2,6 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const numeral = require('numeral');
 const {numeroALetras} = require('../../utils/libreria.utils');
-import { rgb } from 'pdf-lib';
 
 const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   const pdfDoc = await PDFDocument.create();

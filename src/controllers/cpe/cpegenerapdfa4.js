@@ -595,7 +595,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
 }
 
 
-export async function agregarLinksDescarga(page, font, empresa, venta, marginLeft, y) {
+async function agregarLinksDescarga(page, font, empresa, venta, marginLeft, y) {
   const fontSize = 8;
   const colorTexto = rgb(0.2, 0.2, 0.8); // Azul tenue tipo link
   const base = `http://74.208.184.113:8080/descargas/${empresa.ruc}`;

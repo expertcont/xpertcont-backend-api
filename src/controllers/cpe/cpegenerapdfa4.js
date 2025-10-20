@@ -1,4 +1,4 @@
-const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const { PDFDocument, StandardFonts, PDFName, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 const numeral = require('numeral');
 const {numeroALetras} = require('../../utils/libreria.utils');
@@ -595,30 +595,25 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
 }
 
 
-async function agregarLinksDescarga(page, font, empresa, venta, marginLeft, y) {
+export async function agregarLinksDescarga(page, font, empresa, venta, marginLeft, y) {
   const fontSize = 8;
   const colorTexto = rgb(0.2, 0.2, 0.8); // Azul tenue tipo link
-
   const base = `http://74.208.184.113:8080/descargas/${empresa.ruc}`;
   const nombreBase = `${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}`;
 
-  // Definimos los tres links
   const links = [
     { label: 'Descarga XML', url: `${base}/${nombreBase}.xml`, offsetY: 38 },
     { label: 'Descarga CDR', url: `${base}/R-${nombreBase}.xml`, offsetY: 48 },
     { label: 'Descarga PDF', url: `${base}/${nombreBase}.pdf`, offsetY: 58 },
   ];
 
-  // Asegura que la página tenga anotaciones activas
-  const annots = page.node.lookupMaybe('Annots')?.array || page.doc.context.obj([]);
-  page.node.set('Annots', annots);
+  const annots = [];
 
   for (const { label, url, offsetY } of links) {
     const sText = `${label}  ${url}`;
     const x = marginLeft;
     const yPos = y - offsetY;
 
-    // Dibuja el texto
     page.drawText(sText, {
       x,
       y: yPos,
@@ -627,26 +622,27 @@ async function agregarLinksDescarga(page, font, empresa, venta, marginLeft, y) {
       color: colorTexto,
     });
 
-    // Calcula ancho/alto del texto
     const textWidth = font.widthOfTextAtSize(sText, fontSize);
     const textHeight = fontSize + 2;
 
-    // Crea el área clickeable (hipervínculo)
+    // Creamos el objeto de anotación correctamente
     const linkAnnot = page.doc.context.obj({
       Type: 'Annot',
       Subtype: 'Link',
       Rect: [x, yPos, x + textWidth, yPos + textHeight],
       Border: [0, 0, 0],
-      A: {
+      A: page.doc.context.obj({
         Type: 'Action',
         S: 'URI',
         URI: url,
-      },
+      }),
     });
 
-    // Agrega la anotación
     annots.push(linkAnnot);
   }
+
+  // Vinculamos todas las anotaciones a la página
+  page.node.set(PDFName.of('Annots'), page.doc.context.obj(annots));
 }
 
 function base64ToUint8Array(base64) {

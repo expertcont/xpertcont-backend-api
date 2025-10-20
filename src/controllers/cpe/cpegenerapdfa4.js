@@ -582,8 +582,10 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     font,
     color: rgb(0.6, 0.6, 0.6)
   });*/
-  await agregarLinksDescarga(page, font, empresa, venta, 50, 100);
   
+  //cambiamos un sola linea, enlaces
+  await agregarLinksDescarga(page, font, empresa, venta, 50, 100);
+
 
   const pdfBytes = await pdfDoc.save();
   

@@ -551,7 +551,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   });
 
   //Esta Linea imprime descarga de pdf y cdr
-  /*const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
   textWidth = font.widthOfTextAtSize(sXml, 8);
   page.drawText(sXml, { 
     x: marginLeft, 
@@ -580,11 +580,8 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     size: 8,
     font,
     color: rgb(0.6, 0.6, 0.6)
-  });*/
+  });
   
-  //cambiamos un sola linea, enlaces
-  await agregarLinksDescarga(page, font, empresa, venta, 50, 100);
-
 
   const pdfBytes = await pdfDoc.save();
   
@@ -594,56 +591,6 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   };
 }
 
-
-async function agregarLinksDescarga(page, font, empresa, venta, marginLeft, y) {
-  const fontSize = 8;
-  const colorTexto = rgb(0.2, 0.2, 0.8); // Azul tenue tipo link
-  const base = `http://74.208.184.113:8080/descargas/${empresa.ruc}`;
-  const nombreBase = `${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}`;
-
-  const links = [
-    { label: 'Descarga XML', url: `${base}/${nombreBase}.xml`, offsetY: 38 },
-    { label: 'Descarga CDR', url: `${base}/R-${nombreBase}.xml`, offsetY: 48 },
-    { label: 'Descarga PDF', url: `${base}/${nombreBase}.pdf`, offsetY: 58 },
-  ];
-
-  const annots = [];
-
-  for (const { label, url, offsetY } of links) {
-    const sText = `${label}  ${url}`;
-    const x = marginLeft;
-    const yPos = y - offsetY;
-
-    page.drawText(sText, {
-      x,
-      y: yPos,
-      size: fontSize,
-      font,
-      color: colorTexto,
-    });
-
-    const textWidth = font.widthOfTextAtSize(sText, fontSize);
-    const textHeight = fontSize + 2;
-
-    // Creamos el objeto de anotación correctamente
-    const linkAnnot = page.doc.context.obj({
-      Type: 'Annot',
-      Subtype: 'Link',
-      Rect: [x, yPos, x + textWidth, yPos + textHeight],
-      Border: [0, 0, 0],
-      A: page.doc.context.obj({
-        Type: 'Action',
-        S: 'URI',
-        URI: url,
-      }),
-    });
-
-    annots.push(linkAnnot);
-  }
-
-  // Vinculamos todas las anotaciones a la página
-  page.node.set(PDFName.of('Annots'), page.doc.context.obj(annots));
-}
 
 function base64ToUint8Array(base64) {
   const buffer = Buffer.from(base64, 'base64');

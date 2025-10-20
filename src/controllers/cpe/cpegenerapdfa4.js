@@ -566,7 +566,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   textWidth = font.widthOfTextAtSize(sCdr, 8);
   page.drawText(sCdr, { 
     x: marginLeft, 
-    y: y - 38, 
+    y: y - 48, 
     size: 8,
     font,
     color: rgb(0.6, 0.6, 0.6)
@@ -576,7 +576,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   textWidth = font.widthOfTextAtSize(sPdf, 8);
   page.drawText(sPdf, { 
     x: marginLeft, 
-    y: y - 48, 
+    y: y - 58, 
     size: 8,
     font,
     color: rgb(0.6, 0.6, 0.6)

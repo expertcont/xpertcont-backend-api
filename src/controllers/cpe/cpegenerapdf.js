@@ -254,7 +254,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize - 2);
   page.drawText(digestvalue, { x, y: y - espaciadoDet - 80, size: fontSize - 2 });
 
-  y=y - espaciadoDet - 70;
+  y=y - espaciadoDet - 80;
   //Esta Linea imprime descarga de pdf y cdr
   const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
   drawTextWrapped(page, sXml, font, 8, maxTextWidth, margin, y - 10, 'left', 10);

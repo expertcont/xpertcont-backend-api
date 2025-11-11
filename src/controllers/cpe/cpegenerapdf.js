@@ -254,6 +254,18 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize - 2);
   page.drawText(digestvalue, { x, y: y - espaciadoDet - 80, size: fontSize - 2 });
 
+  //Esta Linea imprime descarga de pdf y cdr
+  const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  drawTextWrapped(page, sXml, font, 8, maxTextWidth, margin, y - 38, 'left', 10);
+  
+  //Esta Linea imprime descarga de pdf y cdr
+  const sCdr = `Descarga CDR  http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  drawTextWrapped(page, sCdr, font, 8, maxTextWidth, margin, y - 38, 'left', 10);
+
+  //Esta Linea imprime descarga de pdf y cdr
+  const sPdf = `Descarga PDF  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
+  drawTextWrapped(page, sPdf, font, 8, maxTextWidth, margin, y - 38, 'left', 10);
+
   const pdfBytes = await pdfDoc.save();
   return {
     estado: true,

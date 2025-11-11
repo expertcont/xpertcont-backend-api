@@ -227,7 +227,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   x = margin;
   page.drawText("TOTAL.:" + sMoneda, { x, y: y - espaciadoDet + 4 - 25, size: fontSize + 2, font: fontNegrita });
   textWidth = fontNegrita.widthOfTextAtSize(numeral(monto_total).format('0,0.00'), fontSize + 2);
-  x = (ticketWidth - textWidth - margin - marginLeftSize);
+  x = (ticketWidth - textWidth - margin - marginLeftSize-10);
   page.drawText(numeral(monto_total).format('0,0.00')?.toString() ?? "", { x, y: y + 4 - espaciadoDet - 25, size: fontSize + 2, font: fontNegrita });
 
   // Sección QR
@@ -254,17 +254,18 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   textWidth = fontNegrita.widthOfTextAtSize(digestvalue, fontSize - 2);
   page.drawText(digestvalue, { x, y: y - espaciadoDet - 80, size: fontSize - 2 });
 
+  y=y - espaciadoDet - 90;
   //Esta Linea imprime descarga de pdf y cdr
   const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
   drawTextWrapped(page, sXml, font, 8, maxTextWidth, margin, y - 38, 'left', 10);
   
   //Esta Linea imprime descarga de pdf y cdr
   const sCdr = `Descarga CDR  http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
-  drawTextWrapped(page, sCdr, font, 8, maxTextWidth, margin, y - 38, 'left', 10);
+  drawTextWrapped(page, sCdr, font, 8, maxTextWidth, margin, y - 48, 'left', 10);
 
   //Esta Linea imprime descarga de pdf y cdr
   const sPdf = `Descarga PDF  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
-  drawTextWrapped(page, sPdf, font, 8, maxTextWidth, margin, y - 38, 'left', 10);
+  drawTextWrapped(page, sPdf, font, 8, maxTextWidth, margin, y - 58, 'left', 10);
 
   const pdfBytes = await pdfDoc.save();
   return {

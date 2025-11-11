@@ -256,8 +256,10 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
   y = y - espaciadoDet - 90;
   //Esta Linea imprime descarga de xml
+
   //Esta Linea imprime descarga de cdr
-  drawTextWrapped(page, sCdr, font, 8, maxTextWidth, margin, y, 'left', 10);
+  const sCdr = `Descarga CDR  http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+  drawTextWrapped(page, sCdr, font, 8, maxTextWidth, margin, y-30, 'left', 10);
 
   
   const pdfBytes = await pdfDoc.save();

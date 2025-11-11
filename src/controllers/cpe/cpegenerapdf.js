@@ -309,7 +309,7 @@ function wrapText(text, maxWidth, fontSize, font) {
 /**
  * Dibuja texto multilínea con ajuste automático y alineación
  */
-function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "left", lineHeight = 12) {
+/*function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "left", lineHeight = 12) {
   const palabras = text.split(/\s+/);
   let linea = "";
   const lineas = [];
@@ -323,6 +323,84 @@ function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "le
       linea = palabra;
     } else {
       linea = testLine;
+    }
+  }
+
+  if (linea.length > 0) {
+    lineas.push(linea);
+  }
+
+  // Dibujar cada línea con alineación
+  lineas.forEach((ln, i) => {
+    const textWidth = font.widthOfTextAtSize(ln, fontSize);
+    let drawX = x;
+
+    if (align === "center") {
+      drawX = x + (maxWidth - textWidth) / 2;
+    } else if (align === "right") {
+      drawX = x + (maxWidth - textWidth);
+    }
+
+    page.drawText(ln, {
+      x: drawX,
+      y: y - i * lineHeight,
+      size: fontSize,
+      font,
+    });
+  });
+
+  return y - lineas.length * lineHeight;
+}*/
+function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "left", lineHeight = 12) {
+  const palabras = text.split(/\s+/);
+  let linea = "";
+  const lineas = [];
+
+  for (let palabra of palabras) {
+    // Verificar si la palabra sola es más ancha que maxWidth
+    const palabraWidth = font.widthOfTextAtSize(palabra, fontSize);
+    
+    if (palabraWidth > maxWidth) {
+      // Si hay contenido en la línea actual, guardarlo primero
+      if (linea.length > 0) {
+        lineas.push(linea);
+        linea = "";
+      }
+      
+      // Partir la palabra larga en pedazos que quepan
+      let palabraRestante = palabra;
+      while (palabraRestante.length > 0) {
+        let pedazo = "";
+        for (let i = 1; i <= palabraRestante.length; i++) {
+          const testPedazo = palabraRestante.substring(0, i);
+          const testWidth = font.widthOfTextAtSize(testPedazo, fontSize);
+          
+          if (testWidth <= maxWidth) {
+            pedazo = testPedazo;
+          } else {
+            break;
+          }
+        }
+        
+        // Si no cabe ni un carácter, forzar al menos uno
+        if (pedazo.length === 0) {
+          pedazo = palabraRestante.substring(0, 1);
+        }
+        
+        lineas.push(pedazo);
+        palabraRestante = palabraRestante.substring(pedazo.length);
+      }
+    } else {
+      // Lógica normal para palabras que caben
+      const testLine = linea.length > 0 ? linea + " " + palabra : palabra;
+      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+
+      if (testWidth > maxWidth && linea.length > 0) {
+        lineas.push(linea);
+        linea = palabra;
+      } else {
+        linea = testLine;
+      }
     }
   }
 

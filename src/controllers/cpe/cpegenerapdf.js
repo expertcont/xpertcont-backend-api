@@ -75,7 +75,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   if (venta.ref_numero !== '') {
     textWidth = fontNegrita.widthOfTextAtSize(venta.ref_serie+'-'+venta.ref_numero, 10);
     x = (ticketWidth - textWidth - marginLeftSize) / 2;
-    page.drawText(venta.ref_serie+'-'+venta.ref_numero, { x, y, size: 10, font: fontNegrita });
+    page.drawText('REF: ' + venta.ref_serie+'-'+venta.ref_numero, { x, y, size: 10 });
     y -= 12;
   }
 

@@ -70,6 +70,14 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   x = (ticketWidth - textWidth - marginLeftSize) / 2;
   page.drawText(venta.serie+'-'+venta.numero, { x, y, size: 12, font: fontNegrita });
   y -= 12;
+  
+  //Nueva ref en caso Nota Credito o Debito
+  if (venta.serie_ref && venta.numero_ref && venta.serie_ref !== '' && venta.numero_ref !== '') {
+    textWidth = fontNegrita.widthOfTextAtSize(venta.serie_ref+'-'+venta.numero_ref, 10);
+    x = (ticketWidth - textWidth - marginLeftSize) / 2;
+    page.drawText(venta.serie_ref+'-'+venta.numero_ref, { x, y, size: 10, font: fontNegrita });
+    y -= 12;
+  }
 
   textWidth = fontNegrita.widthOfTextAtSize("FECHA: " + venta.fecha_emision, fontSize);
   x = (ticketWidth - textWidth - marginLeftSize) / 2;

@@ -104,6 +104,19 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   });
   y -= 15;
 
+  //Nueva ref en caso Nota Credito o Debito
+  if (venta.ref_numero !== '') {
+    const refNota = 'REF: ' + venta.ref_serie+'-'+venta.ref_numero;
+    textWidth = font.widthOfTextAtSize(refNota, 9);
+    page.drawText(refNota, { 
+      x: (width - textWidth) / 2, 
+      y, 
+      size: 11,
+      font 
+    });
+    y -= 15;
+  }
+
   // Fecha
   const fechaText = 'FECHA: ' + venta.fecha_emision;
   textWidth = font.widthOfTextAtSize(fechaText, 11);

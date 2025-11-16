@@ -107,7 +107,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   //Nueva ref en caso Nota Credito o Debito
   if (venta.ref_numero !== '') {
     const refNota = 'REF: ' + venta.ref_serie+'-'+venta.ref_numero;
-    textWidth = font.widthOfTextAtSize(refNota, 9);
+    textWidth = font.widthOfTextAtSize(refNota, 11);
     page.drawText(refNota, { 
       x: (width - textWidth) / 2, 
       y, 

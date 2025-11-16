@@ -73,9 +73,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   
   //Nueva ref en caso Nota Credito o Debito
   if (venta.ref_numero !== '') {
-    textWidth = fontNegrita.widthOfTextAtSize(venta.ref_serie+'-'+venta.ref_numero, 10);
+    textWidth = fontNegrita.widthOfTextAtSize('REF: ' + venta.ref_serie+'-'+venta.ref_numero, 8);
     x = (ticketWidth - textWidth - marginLeftSize) / 2;
-    page.drawText('REF: ' + venta.ref_serie+'-'+venta.ref_numero, { x, y, size: 10 });
+    page.drawText('REF: ' + venta.ref_serie+'-'+venta.ref_numero, { x, y, size: 8 });
     y -= 12;
   }
 

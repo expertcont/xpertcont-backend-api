@@ -101,8 +101,10 @@ const registrarCPESunat = async (req,res,next)=> {
         const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
         // Enviar respuesta HTTP según resultado
         console.log('resultadoSunat', resultadoSunat);
+        const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
         if (resultadoSunat.estado) {
           res.status(200).json({
+            estado: true,
             respuesta_sunat_descripcion: resultadoSunat.descripcion,
             ruta_xml: ruta_xml,
             ruta_cdr: ruta_cdr,
@@ -112,7 +114,8 @@ const registrarCPESunat = async (req,res,next)=> {
           });
         } else {
           res.status(400).json({
-            respuesta_sunat_descripcion: 'error',
+            estado: false,
+            respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
             ruta_xml: 'error',
             ruta_cdr: 'error',
             ruta_pdf: 'error',

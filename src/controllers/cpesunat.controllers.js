@@ -2,10 +2,10 @@ const cpegeneraxml = require('./cpe/cpegeneraxml');
 const cpegenerapdf = require('./cpe/cpegenerapdf');
 const cpegenerapdfa4 = require('./cpe/cpegenerapdfa4');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
+const { esErrorCDRPendiente } = require('../services/cdrvalidapendiente.services');
 const pool = require('../db');
 
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
-
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
@@ -102,9 +102,14 @@ const registrarCPESunat = async (req,res,next)=> {
         // Enviar respuesta HTTP según resultado
         console.log('resultadoSunat', resultadoSunat);
         const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
+
+        let codigoErrorSunat;
+        let mensajeErrorSunat;
         if (resultadoSunat.estado) {
+          //retorna de op exitosa
           res.status(200).json({
             estado: true,
+            cdr_pendiente: false, //new , debemos actualizar en backend
             respuesta_sunat_descripcion: resultadoSunat.descripcion,
             ruta_xml: ruta_xml,
             ruta_cdr: ruta_cdr,
@@ -113,15 +118,55 @@ const registrarCPESunat = async (req,res,next)=> {
             mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion': 'CDR Recibido Beta'
           });
         } else {
-          res.status(400).json({
-            estado: false,
-            respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
-            ruta_xml: 'error',
-            ruta_cdr: 'error',
-            ruta_pdf: 'error',
-            codigo_hash: null,
-            mensaje: 'CDR No recibido'
-          });
+          //Aqui insertar codigo de consulta de cdr en caso tenga el error   si codigo: 'soap-env:Client.0132' 
+          //resultadoSunat: {
+          //  estado: false,
+          //  descripcion: userMessage,
+          //  detalleSunat: faultMessage, // 🔹 Mantener el mensaje oficial de SUNAT
+          //  codigo: faultCode
+          //};
+          codigoErrorSunat = (resultadoSunat.codigo || '').substring(0, 100); //caso cdr
+          mensajeErrorSunat = (resultadoSunat.descripcion || '');
+          if (dataVenta.venta.codigo === '01' || dataVenta.venta.codigo === '07' || dataVenta.venta.codigo === '08'){
+            const {esPendiente, descripcion} = esErrorCDRPendiente(codigoErrorSunat,mensajeErrorSunat);
+            if (esPendiente){
+                //retorna de op exitosa (con CDR pendiente, notificacion a consumidor backend)
+                res.status(200).json({
+                  estado: true,
+                  cdr_pendiente: true, //new , debemos actualizar en backend
+                  respuesta_sunat_descripcion: descripcion,
+                  ruta_xml: ruta_xml,
+                  ruta_cdr: ruta_cdr,
+                  ruta_pdf: ruta_pdf,
+                  codigo_hash: sDigestInicial,
+                  mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion': 'CDR Recibido Beta'
+                });
+            }else{
+              //retorna de fallo real
+              res.status(400).json({
+                estado: false,
+                cdr_pendiente: false, //new , debemos actualizar en backend
+                respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
+                ruta_xml: 'error',
+                ruta_cdr: 'error',
+                ruta_pdf: 'error',
+                codigo_hash: null,
+                mensaje: 'CDR No recibido'
+              });
+            }
+          }else{
+            //retorna de fallo real
+            res.status(400).json({
+              estado: false,
+              cdr_pendiente: false, //new , debemos actualizar en backend
+              respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
+              ruta_xml: 'error',
+              ruta_cdr: 'error',
+              ruta_pdf: 'error',
+              codigo_hash: null,
+              mensaje: 'CDR No recibido'
+            });
+          }
         }
         
     }catch(error){

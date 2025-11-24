@@ -11,7 +11,12 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
   try {
     const dataConsulta = req.body;
     // Esperamos: { ruc_emisor, ruc, codigo, serie, numero }
-    const { ruc:ruc_emisor, documento_identidad:ruc, codigo, serie, numero } = dataConsulta;
+
+    const { ruc:ruc_emisor } = dataConsulta.empresa;
+    const { documento_identidad:ruc } = dataConsulta.cliente;
+    const { codigo, serie, numero } = dataConsulta.venta;
+
+    //const { ruc:ruc_emisor, documento_identidad:ruc, codigo, serie, numero } = dataConsulta;
 
     console.log('🔍 Consultando CDR:', ruc_emisor,ruc, codigo, serie, numero);
 

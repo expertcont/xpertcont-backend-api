@@ -96,14 +96,15 @@ const registrarCPESunat = async (req,res,next)=> {
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
         //Desestructuramos valores escenciales, verificacion inicial de cdr_pendiente
-        const { ruc:ruc_emisor } = dataVenta.empresa;
-        const { codigo, serie, numero } = dataVenta.venta;
+        const { ruc } = dataVenta.empresa;
         const { documento_identidad } = dataVenta.cliente;
+        const { codigo, serie, numero } = dataVenta.venta;
+        
 
         // 🟡 PRIMER PASO: verificar si existe en tabla de pendientes
         const yaPendiente = await existeCDRPendiente({ 
-            ruc_emisor, 
-            documento_identidad: ruc,
+            ruc, 
+            documento_identidad,
             codigo, 
             serie, 
             numero 
@@ -553,7 +554,7 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
   }
 }
 
-const existeCDRPendiente = async ({ruc_emisor, ruc, codigo, serie, numero}) =>{
+const existeCDRPendiente = async ({ruc, documento_identidad, codigo, serie, numero}) =>{
   try{
     const strSQL = `
       SELECT 1
@@ -564,9 +565,9 @@ const existeCDRPendiente = async ({ruc_emisor, ruc, codigo, serie, numero}) =>{
       AND serie    = $4
       AND numero   = $5
     `;
-    console.log(strSQL,[ruc_emisor,ruc, codigo,serie,numero]);
+    console.log(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
 
-    const result = await pool.query(strSQL,[ruc_emisor,ruc, codigo,serie,numero]);
+    const result = await pool.query(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
     return result.rowCount > 0;
   } catch (error){
     console.error('Error en existeCDRPendiente:', error);

@@ -19,7 +19,7 @@ const fetch = require('node-fetch');
 const cpegenerarxmlnota = require('./cpe/cpegeneraxmlnota');
 
 const { esErrorCDRPendiente } = require('../services/cdrvalidapendiente.services');
-const { procesarCDRPendienteSunat } = require('../controllers/cpesunatgetcdr.controllers');
+//const { procesarCDRPendienteSunat } = require('../controllers/cpesunatgetcdr.controllers');
 
 require('dotenv').config();
 

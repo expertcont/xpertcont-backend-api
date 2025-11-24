@@ -19,16 +19,84 @@ const fetch = require('node-fetch');
 const cpegenerarxmlnota = require('./cpe/cpegeneraxmlnota');
 
 const { esErrorCDRPendiente } = require('../services/cdrvalidapendiente.services');
-//const { procesarCDRPendienteSunat } = require('../controllers/cpesunatgetcdr.controllers');
-
+const { procesarCDRPendienteSunat } = require('../controllers/cpesunatgetcdr.controllers');
 require('dotenv').config();
+
+/**
+ * @typedef {Object} Empresa
+ * @property {string} ruc
+ * @property {string} razon_social
+ * @property {string} nombre_comercial
+ * @property {string} domicilio_fiscal
+ * @property {string} ubigeo
+ * @property {string} distrito
+ * @property {string} provincia
+ * @property {string} departamento
+ * @property {number} modo  // 0 = test, 1 = prod
+ */
+
+/**
+ * @typedef {Object} Cliente
+ * @property {string} razon_social_nombres
+ * @property {string} documento_identidad
+ * @property {string} tipo_identidad
+ * @property {string} cliente_direccion
+ */
+
+/**
+ * @typedef {Object} Venta
+ * @property {string} codigo
+ * @property {string} serie
+ * @property {string|number} numero
+ * @property {string} fecha_emision
+ * @property {string} hora_emision
+ * @property {string} fecha_vencimiento
+ * @property {string} moneda_id
+ * @property {string} forma_pago_id
+ * @property {number} base_gravada
+ * @property {number} base_exonerada
+ * @property {number|string} base_inafecta
+ * @property {number} base_gratuita
+ * @property {number} total_igv
+ * @property {string} vendedor
+ * @property {string} nota
+ * @property {string} ref_codigo
+ * @property {string} ref_serie
+ * @property {string|number} ref_numero
+ * @property {string} motivo_id
+ * @property {string} motivo
+ * @property {string} r_vfirmado
+ */
+
+/**
+ * @typedef {Object} Item
+ * @property {string} producto
+ * @property {number} cantidad
+ * @property {number} precio_base
+ * @property {string} codigo_sunat
+ * @property {string} codigo_producto
+ * @property {string} codigo_unidad
+ * @property {string} tipo_igv_codigo
+ * @property {number} porc_igv
+ */
+
+/**
+ * @typedef {Object} DataVenta
+ * @property {Empresa} empresa
+ * @property {Cliente} cliente
+ * @property {Venta} venta
+ * @property {Array<Item>} items
+ */
 
 const registrarCPESunat = async (req,res,next)=> {
     try {
+       /** @type {DataVenta} */
+
         const dataVenta = req.body;
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
-        /*const { ruc } = dataVenta.empresa;
+        //Desestructuramos valores escenciales, verificacion inicial de cdr_pendiente
+        const { ruc } = dataVenta.empresa;
         const { codigo, serie, numero } = dataVenta.venta;
         const { documento_identidad } = dataVenta.cliente;
 
@@ -40,11 +108,10 @@ const registrarCPESunat = async (req,res,next)=> {
             serie, 
             numero 
         });
-
         if (yaPendiente) {
             console.log(`📌 CPE pendiente detectado ${ruc}-${documento_identidad}-${codigo}-${serie}-${numero}`);
             return procesarCDRPendienteSunat(req,res,next);
-        }*/
+        }
         
         //Flujo normal
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url

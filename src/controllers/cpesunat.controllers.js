@@ -92,82 +92,8 @@ const registrarCPESunat = async (req,res,next)=> {
           procesarPDFCPE('80mm', logoBuffer, dataVenta, sDigestInicial);
         })();
 
-        
-        const server_sftp = process.env.CPE_HOST;
-        const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
-        const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
-        const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf'
-
-        const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
-        // Enviar respuesta HTTP según resultado
-        console.log('resultadoSunat', resultadoSunat);
-        const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
-
-        let codigoErrorSunat;
-        let mensajeErrorSunat;
-        if (resultadoSunat.estado) {
-          //retorna de op exitosa
-          res.status(200).json({
-            estado: true,
-            cdr_pendiente: false, //new , debemos actualizar en backend
-            respuesta_sunat_descripcion: resultadoSunat.descripcion,
-            ruta_xml: ruta_xml,
-            ruta_cdr: ruta_cdr,
-            ruta_pdf: ruta_pdf,
-            codigo_hash: sDigestInicial,
-            mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion': 'CDR Recibido Beta'
-          });
-        } else {
-          //Aqui insertar codigo de consulta de cdr en caso tenga el error   si codigo: 'soap-env:Client.0132' 
-          //resultadoSunat: {
-          //  estado: false,
-          //  descripcion: userMessage,
-          //  detalleSunat: faultMessage, // 🔹 Mantener el mensaje oficial de SUNAT
-          //  codigo: faultCode
-          //};
-          codigoErrorSunat = (resultadoSunat.codigo || '').substring(0, 100); //caso cdr
-          mensajeErrorSunat = (resultadoSunat.descripcion || '');
-          if (dataVenta.venta.codigo === '01' || dataVenta.venta.codigo === '07' || dataVenta.venta.codigo === '08'){
-            const {esPendiente, descripcion} = esErrorCDRPendiente(codigoErrorSunat,mensajeErrorSunat);
-            if (esPendiente){
-                //retorna de op exitosa (con CDR pendiente, notificacion a consumidor backend)
-                res.status(200).json({
-                  estado: true,
-                  cdr_pendiente: true, //new , debemos actualizar en backend
-                  respuesta_sunat_descripcion: descripcion,
-                  ruta_xml: ruta_xml,
-                  ruta_cdr: ruta_cdr,
-                  ruta_pdf: ruta_pdf,
-                  codigo_hash: sDigestInicial,
-                  mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion': 'CDR Recibido Beta'
-                });
-            }else{
-              //retorna de fallo real
-              res.status(400).json({
-                estado: false,
-                cdr_pendiente: false, //new , debemos actualizar en backend
-                respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
-                ruta_xml: 'error',
-                ruta_cdr: 'error',
-                ruta_pdf: 'error',
-                codigo_hash: null,
-                mensaje: 'CDR No recibido'
-              });
-            }
-          }else{
-            //retorna de fallo real
-            res.status(400).json({
-              estado: false,
-              cdr_pendiente: false, //new , debemos actualizar en backend
-              respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
-              ruta_xml: 'error',
-              ruta_cdr: 'error',
-              ruta_pdf: 'error',
-              codigo_hash: null,
-              mensaje: 'CDR No recibido'
-            });
-          }
-        }
+        // Encapsulación final:
+        return responderSunat(res, resultadoSunat, dataVenta, sDigestInicial);
         
     }catch(error){
         console.log(error);
@@ -175,6 +101,81 @@ const registrarCPESunat = async (req,res,next)=> {
         next(error)
     }
 };
+
+function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
+
+  const server_sftp = process.env.CPE_HOST;
+  const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
+  const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
+  const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf'
+
+  const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
+  const codigoSunat = (resultadoSunat.codigo || '').trim();
+  const mensajeSunat = (resultadoSunat.descripcion || '');
+  const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
+          
+          //Formato de respuesta sunat//////////////////////////////////////////////////////////
+          //resultadoSunat: {
+          //  estado: false,
+          //  descripcion: userMessage,
+          //  detalleSunat: faultMessage, // 🔹 Mantener el mensaje oficial de SUNAT
+          //  codigo: faultCode
+          //};
+          /////////////////////////////////////////////////////////////////////////////////////
+  
+  console.log('resultadoSunat', resultadoSunat);
+  // Caso éxito normal
+  if (resultadoSunat.estado) {
+    return res.status(200).json({
+      estado: true,
+      cdr_pendiente: '0',
+      respuesta_sunat_descripcion: resultadoSunat.descripcion,
+      ruta_xml,
+      ruta_cdr,
+      ruta_pdf,
+      codigo_hash: sDigestInicial,
+      mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion' : 'CDR Recibido Beta'
+    });
+  }
+
+  // Caso: CDR Pendiente (solo facturas, NC, ND)
+  if (['01','07','08'].includes(dataVenta.venta.codigo)) {
+    const { esPendiente, descripcion } = esErrorCDRPendiente(codigoSunat, mensajeSunat);
+
+    if (esPendiente){
+        registrarCdrPendienteDB({
+            documento_id: dataVenta.empresa.ruc,
+            codigo: dataVenta.venta.codigo,
+            serie: dataVenta.venta.serie,
+            numero: dataVenta.venta.numero
+        }).catch(error => console.error('Error al registrar pendiente', error));
+
+        return res.status(200).json({
+            estado: true,
+            cdr_pendiente: '1',
+            respuesta_sunat_descripcion: descripcion,
+            ruta_xml,
+            ruta_cdr,
+            ruta_pdf,
+            codigo_hash: sDigestInicial,
+            mensaje: 'CDR pendiente en SUNAT'
+        });
+    }
+  }
+
+  // Error real SUNAT
+  return res.status(400).json({
+    estado: false,
+    cdr_pendiente: '0',
+    respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
+    ruta_xml: 'error',
+    ruta_cdr: 'error',
+    ruta_pdf: 'error',
+    codigo_hash: null,
+    mensaje: 'CDR No recibido'
+  });
+}
+
 function canonicalizarManual(xmlStr) {
   return xmlStr
     .replace(/(\r\n|\n|\r)/g, '')
@@ -462,6 +463,50 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
     });
   }
 }
+
+const registrarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) => {
+  try {
+      const strSQL = `
+          INSERT INTO api_cdrpendiente
+          (documento_id, codigo, serie, numero, ctrl_crea)
+          VALUES ($1, $2, $3, $4,CURRENT_TIMESTAMP)
+          RETURNING *
+      `;
+      const result = await pool.query(strSQL, [documento_id, codigo, serie, numero]);
+
+      // Validar si se insertó al menos una fila
+      if (result.rowCount > 0) {
+          return true;
+      } else {
+          return false;
+      }
+  } catch (error) {
+      console.error('Error al registrar tabla api_cdrpendiente:', error); // para depuración
+      return false;
+  }
+};
+const eliminarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) => {
+  try {
+      const strSQL = `
+          DELETE FROM api_cdrpendiente
+          WHERE documento_id = $1
+          AND codigo = $2
+          AND serie = $3
+          AND numero = $4
+      `;
+      const result = await pool.query(strSQL, [documento_id, codigo, serie, numero]);
+
+      // Verificar cuántas filas fueron eliminadas
+      if (result.rowCount > 0) {
+          return true; // Eliminado correctamente
+      } else {
+          return false; // No existía o no se eliminó
+      }
+  } catch (error) {
+      console.error('Error al eliminar de api_cdrpendiente:', error); // para depuración
+      return false;
+  }
+};
 
 //
 // 🔹 Endpoint para ticket 80mm

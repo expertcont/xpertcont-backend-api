@@ -565,7 +565,7 @@ const existeCDRPendiente = async ({ruc, documento_identidad, codigo, serie, nume
       AND serie    = $4
       AND numero   = $5
     `;
-    console.log(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
+    //console.log(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
 
     const result = await pool.query(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
     return result.rowCount > 0;

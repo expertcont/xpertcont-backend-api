@@ -7,12 +7,12 @@ const pool = require('../db');
  * Endpoint para consultar el estado y CDR de un comprobante en SUNAT
  * Ruta sugerida: POST /api/consultar-cdr
  */
-const consultarCDRSunat = async (req, res, next) => {
+const procesarCDRPendienteSunat = async (req, res, next) => {
   try {
     const dataConsulta = req.body;
-    // Esperamos: { ruc_emisor, ruc, tipo, serie, numero }
+    // Esperamos: { ruc_emisor, ruc, codigo, serie, numero }
     
-    console.log('🔍 Consultando CDR:', dataConsulta.ruc_emisor, dataConsulta.ruc, dataConsulta.tipo, dataConsulta.serie, dataConsulta.numero);
+    console.log('🔍 Consultando CDR:', dataConsulta.ruc_emisor, dataConsulta.ruc, dataConsulta.codigo, dataConsulta.serie, dataConsulta.numero);
 
     // 01. Consulta previa datos necesarios: usuario secundario
     const { rows } = await pool.query(`
@@ -37,7 +37,7 @@ const consultarCDRSunat = async (req, res, next) => {
     const contenidoSOAP = construirSOAPConsultaCdr(
       dataConsulta.ruc_emisor,
       dataConsulta.ruc,
-      dataConsulta.tipo,
+      dataConsulta.codigo,
       dataConsulta.serie,
       dataConsulta.numero,
       secundario_user,
@@ -53,15 +53,27 @@ const consultarCDRSunat = async (req, res, next) => {
 
     // 05. Construir rutas de archivos
     const server_sftp = process.env.CPE_HOST;
-    const ruta_xml = `http://${server_sftp}:8080/descargas/${dataConsulta.ruc}/${dataConsulta.ruc}-${dataConsulta.tipo}-${dataConsulta.serie}-${dataConsulta.numero}.xml`;
-    const ruta_cdr = `http://${server_sftp}:8080/descargas/${dataConsulta.ruc}/R-${dataConsulta.ruc}-${dataConsulta.tipo}-${dataConsulta.serie}-${dataConsulta.numero}.xml`;
-    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataConsulta.ruc}/${dataConsulta.ruc}-${dataConsulta.tipo}-${dataConsulta.serie}-${dataConsulta.numero}.pdf`;
+    const ruta_xml = `http://${server_sftp}:8080/descargas/${dataConsulta.ruc}/${dataConsulta.ruc}-${dataConsulta.codigo}-${dataConsulta.serie}-${dataConsulta.numero}.xml`;
+    const ruta_cdr = `http://${server_sftp}:8080/descargas/${dataConsulta.ruc}/R-${dataConsulta.ruc}-${dataConsulta.codigo}-${dataConsulta.serie}-${dataConsulta.numero}.xml`;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataConsulta.ruc}/${dataConsulta.ruc}-${dataConsulta.codigo}-${dataConsulta.serie}-${dataConsulta.numero}.pdf`;
 
     // 06. Enviar respuesta HTTP según resultado
     console.log('resultadoSunat', resultadoSunat);
     const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
 
     if (resultadoSunat.estado && resultadoSunat.tieneCdr) {
+
+      await pool.query(`
+        DELETE FROM api_cdrpendiente
+        WHERE documento_id = $1 AND ruc = $2 AND codigo = $3 AND serie = $4 AND numero = $5
+      `, [
+        dataConsulta.ruc_emisor,
+        dataConsulta.ruc,
+        dataConsulta.codigo,
+        dataConsulta.serie,
+        dataConsulta.numero
+      ]);
+
       res.status(200).json({
         estado: true,
         respuesta_sunat_descripcion: resultadoSunat.descripcion,
@@ -97,7 +109,7 @@ const consultarCDRSunat = async (req, res, next) => {
 /**
  * Construir SOAP XML para consulta getStatusCdr
  */
-function construirSOAPConsultaCdr(ruc_emisor, ruc, tipo, serie, numero, usuarioSol, claveSol) {
+function construirSOAPConsultaCdr(ruc_emisor, ruc, codigo, serie, numero, usuarioSol, claveSol) {
   // Concatenar RUC emisor + Usuario SOL
   const username = `${ruc_emisor}${usuarioSol}`;
 
@@ -116,7 +128,7 @@ function construirSOAPConsultaCdr(ruc_emisor, ruc, tipo, serie, numero, usuarioS
   <soapenv:Body>
     <ser:getStatusCdr>
       <rucComprobante>${ruc}</rucComprobante>
-      <tipoComprobante>${tipo}</tipoComprobante>
+      <tipoComprobante>${codigo}</tipoComprobante>
       <serieComprobante>${serie}</serieComprobante>
       <numeroComprobante>${numero}</numeroComprobante>
     </ser:getStatusCdr>
@@ -132,7 +144,7 @@ function construirSOAPConsultaCdr(ruc_emisor, ruc, tipo, serie, numero, usuarioS
 async function procesarRespuestaConsultaCdr(soapResponse, dataConsulta) {
   try {
     //Para procesar, 
-    const { ruc_emisor, tipo, serie, numero } = dataConsulta;
+    const { ruc_emisor, codigo, serie, numero } = dataConsulta;
 
     // Parsear SOAP XML
     const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
@@ -216,7 +228,7 @@ async function procesarRespuestaConsultaCdr(soapResponse, dataConsulta) {
     // 🔹 Subir CDR con prefijo R- (versión asíncrona desconectada)
     (async () => {
       try {
-        await subirArchivoDesdeMemoria(ruc_emisor, tipo, serie, numero, contenidoCDR, 'R');
+        await subirArchivoDesdeMemoria(ruc_emisor, codigo, serie, numero, contenidoCDR, 'R');
         console.log('✅ CDR almacenado correctamente.');
       } catch (error) {
         console.error('❌ Error al almacenar CDR:', error);
@@ -271,5 +283,5 @@ async function enviarSOAPSunat(soapXml,urlEnvio) {
   
 // Exportar función principal
 module.exports = {
-  consultarCDRSunat
+  procesarCDRPendienteSunat
 };

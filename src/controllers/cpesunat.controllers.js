@@ -2,7 +2,6 @@ const cpegeneraxml = require('./cpe/cpegeneraxml');
 const cpegenerapdf = require('./cpe/cpegenerapdf');
 const cpegenerapdfa4 = require('./cpe/cpegenerapdfa4');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
-const { esErrorCDRPendiente } = require('../services/cdrvalidapendiente.services');
 const pool = require('../db');
 
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
@@ -19,6 +18,9 @@ const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
 const cpegenerarxmlnota = require('./cpe/cpegeneraxmlnota');
 
+const { esErrorCDRPendiente } = require('../services/cdrvalidapendiente.services');
+const { procesarCDRPendienteSunat } = require('../controllers/cpesunatgetcdr.controllers');
+
 require('dotenv').config();
 
 const registrarCPESunat = async (req,res,next)=> {
@@ -26,6 +28,25 @@ const registrarCPESunat = async (req,res,next)=> {
         const dataVenta = req.body;
         //console.log('Procesando comprobante: ',dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero);
 
+        /*const { ruc } = dataVenta.empresa;
+        const { codigo, serie, numero } = dataVenta.venta;
+        const { documento_identidad } = dataVenta.cliente;
+
+        // 🟡 PRIMER PASO: verificar si existe en tabla de pendientes
+        const yaPendiente = await existeCDRPendiente({ 
+            documento_id: ruc, 
+            documento_identidad,
+            codigo, 
+            serie, 
+            numero 
+        });
+
+        if (yaPendiente) {
+            console.log(`📌 CPE pendiente detectado ${ruc}-${documento_identidad}-${codigo}-${serie}-${numero}`);
+            return procesarCDRPendienteSunat(req,res,next);
+        }*/
+        
+        //Flujo normal
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
           SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
@@ -81,7 +102,7 @@ const registrarCPESunat = async (req,res,next)=> {
         
         //05. Enviar SOAP y recepcionar respuesta SUNAT
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
-        console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
+        //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
         
         // 06. Procesar respuesta SUNAT
         const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
@@ -145,6 +166,7 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
     if (esPendiente){
         registrarCdrPendienteDB({
             documento_id: dataVenta.empresa.ruc,
+            ruc: dataVenta.cliente.documento_identidad,
             codigo: dataVenta.venta.codigo,
             serie: dataVenta.venta.serie,
             numero: dataVenta.venta.numero
@@ -464,15 +486,34 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
   }
 }
 
-const registrarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) => {
+const existeCDRPendiente = async ({documento_id, ruc, codigo, serie, numero}) =>{
+  try{
+    const strSQL = `
+      SELECT 1
+      FROM api_cdrpendiente
+      WHERE documento_id = $1
+      AND ruc      = $2
+      AND codigo   = $3
+      AND serie    = $4
+      AND numero   = $5
+    `;
+    const result = await pool.query(strSQL,[documento_id,ruc, codigo,serie,numero]);
+    return result.rowCount > 0;
+  } catch (error){
+    console.error('Error en existeCDRPendiente:', error);
+    return false;
+  }
+};
+
+const registrarCdrPendienteDB = async ({documento_id, ruc, codigo, serie, numero}) => {
   try {
       const strSQL = `
           INSERT INTO api_cdrpendiente
-          (documento_id, codigo, serie, numero, ctrl_crea)
-          VALUES ($1, $2, $3, $4,CURRENT_TIMESTAMP)
+          (documento_id, ruc, codigo, serie, numero, ctrl_crea)
+          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
           RETURNING *
       `;
-      const result = await pool.query(strSQL, [documento_id, codigo, serie, numero]);
+      const result = await pool.query(strSQL, [documento_id, ruc, codigo, serie, numero]);
 
       // Validar si se insertó al menos una fila
       if (result.rowCount > 0) {
@@ -482,28 +523,6 @@ const registrarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) =>
       }
   } catch (error) {
       console.error('Error al registrar tabla api_cdrpendiente:', error); // para depuración
-      return false;
-  }
-};
-const eliminarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) => {
-  try {
-      const strSQL = `
-          DELETE FROM api_cdrpendiente
-          WHERE documento_id = $1
-          AND codigo = $2
-          AND serie = $3
-          AND numero = $4
-      `;
-      const result = await pool.query(strSQL, [documento_id, codigo, serie, numero]);
-
-      // Verificar cuántas filas fueron eliminadas
-      if (result.rowCount > 0) {
-          return true; // Eliminado correctamente
-      } else {
-          return false; // No existía o no se eliminó
-      }
-  } catch (error) {
-      console.error('Error al eliminar de api_cdrpendiente:', error); // para depuración
       return false;
   }
 };

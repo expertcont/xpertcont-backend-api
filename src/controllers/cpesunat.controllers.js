@@ -102,8 +102,8 @@ const registrarCPESunat = async (req,res,next)=> {
 
         // 🟡 PRIMER PASO: verificar si existe en tabla de pendientes
         const yaPendiente = await existeCDRPendiente({ 
-            documento_id: ruc, 
-            documento_identidad,
+            documento_id, 
+            documento_identidad: ruc,
             codigo, 
             serie, 
             numero 
@@ -565,7 +565,7 @@ const existeCDRPendiente = async ({documento_id, ruc, codigo, serie, numero}) =>
       AND numero   = $5
     `;
     console.log(strSQL,[documento_id,ruc, codigo,serie,numero]);
-    
+
     const result = await pool.query(strSQL,[documento_id,ruc, codigo,serie,numero]);
     return result.rowCount > 0;
   } catch (error){

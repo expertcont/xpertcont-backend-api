@@ -141,6 +141,7 @@ function construirSOAPConsultaCdr(ruc_emisor, ruc, codigo, serie, numero, usuari
   </soapenv:Body>
 </soapenv:Envelope>`;
 
+  console.log('soapXml Generado: ',soapXml);
   return soapXml;
 }
 

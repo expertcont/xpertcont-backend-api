@@ -42,7 +42,6 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
     // 03. Construir SOAP para getStatusCdr
     const contenidoSOAP = construirSOAPConsultaCdr(
       ruc_emisor,
-      ruc,
       codigo,
       serie,
       numero,
@@ -115,7 +114,7 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
 /**
  * Construir SOAP XML para consulta getStatusCdr
  */
-function construirSOAPConsultaCdr(ruc_emisor, ruc, codigo, serie, numero, usuarioSol, claveSol) {
+function construirSOAPConsultaCdr(ruc_emisor, codigo, serie, numero, usuarioSol, claveSol) {
   // Concatenar RUC emisor + Usuario SOL
   const username = `${ruc_emisor}${usuarioSol}`;
 
@@ -133,7 +132,7 @@ function construirSOAPConsultaCdr(ruc_emisor, ruc, codigo, serie, numero, usuari
   </soapenv:Header>
   <soapenv:Body>
     <ser:getStatusCdr>
-      <rucComprobante>${ruc}</rucComprobante>
+      <rucComprobante>${ruc_emisor}</rucComprobante>
       <tipoComprobante>${codigo}</tipoComprobante>
       <serieComprobante>${serie}</serieComprobante>
       <numeroComprobante>${numero}</numeroComprobante>

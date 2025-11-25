@@ -140,7 +140,7 @@ function construirSOAPConsultaCdr(ruc_emisor, codigo, serie, numero, usuarioSol,
   </soapenv:Body>
 </soapenv:Envelope>`;
 
-  console.log('soapXml Generado: ',soapXml);
+  //console.log('soapXml Generado: ',soapXml);
   return soapXml;
 }
 
@@ -150,7 +150,10 @@ function construirSOAPConsultaCdr(ruc_emisor, codigo, serie, numero, usuarioSol,
 async function procesarRespuestaConsultaCdr(soapResponse, dataConsulta) {
   try {
     //Para procesar, 
-    const { ruc:ruc_emisor, documento_identidad:ruc , codigo, serie, numero } = dataConsulta;
+    const { ruc:ruc_emisor } = dataConsulta.empresa;
+    const { codigo, serie, numero } = dataConsulta.venta;
+
+    //const { ruc:ruc_emisor, documento_identidad:ruc , codigo, serie, numero } = dataConsulta;
 
     // Parsear SOAP XML
     const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');

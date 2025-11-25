@@ -81,6 +81,7 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
 
       res.status(200).json({
         estado: true,
+        cdr_pendiente: '0',
         respuesta_sunat_descripcion: resultadoSunat.descripcion,
         ruta_xml: ruta_xml,
         ruta_cdr: ruta_cdr,
@@ -91,6 +92,7 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
     } else if (resultadoSunat.estado && !resultadoSunat.tieneCdr) {
       res.status(200).json({
         estado: true,
+        cdr_pendiente: '1',
         respuesta_sunat_descripcion: resultadoSunat.descripcion,
         status_code: resultadoSunat.statusCode,
         mensaje: 'Comprobante encontrado pero sin CDR disponible'
@@ -98,6 +100,7 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
     } else {
       res.status(400).json({
         estado: false,
+        cdr_pendiente: '1',
         respuesta_sunat_descripcion: 'Error SUNAT: ' + descripcionCorta,
         detalle_sunat: resultadoSunat.detalleSunat,
         codigo: resultadoSunat.codigo,

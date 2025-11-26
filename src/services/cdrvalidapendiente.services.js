@@ -34,40 +34,12 @@ function esErrorCDRPendiente(codigoSunat = '', mensajeSunat = '') {
     }
 
     // ================================================================
-    // 2) Mensajes textuales que indican error al generar el CDR
-    // ================================================================
-    if (
-        mensaje.includes('no se pudo grabar') ||
-        mensaje.includes('no se pudo escribir') ||
-        mensaje.includes('no se pudo guardar el cdr') ||
-        (mensaje.includes('zip') && mensaje.includes('error'))
-    ) {
-        return {
-            esPendiente: true,
-            codigoInterno: 1002,
-            descripcion: 'SUNAT aceptó el documento, pero falló la generación del CDR.',
-        };
-    }
-
-    // ================================================================
-    // 3) Otros casos donde SUNAT aceptó pero no devolvió ZIP
-    // (faultCode vacío pero estado=false)
-    // ================================================================
-    if (codigo === '') {
-        return {
-            esPendiente: true,
-            codigoInterno: 1004,
-            descripcion: 'SUNAT recibió el documento, pero el CDR no está listo aún.',
-        };
-    }
-
-    // ================================================================
     // No es error de CDR pendiente → error real
     // ================================================================
     return {
         esPendiente: false,
         codigoInterno: 0,
-        descripcion: 'Error SUNAT: el comprobante no fue aceptado.',
+        descripcion: mensaje,
     };
 }
 

@@ -70,10 +70,9 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
 
       await pool.query(`
         DELETE FROM api_cdrpendiente
-        WHERE documento_id = $1 AND ruc = $2 AND codigo = $3 AND serie = $4 AND numero = $5
+        WHERE documento_id = $1 AND codigo = $2 AND serie = $3 AND numero = $4
       `, [
         ruc_emisor,
-        ruc,
         codigo,
         serie,
         numero

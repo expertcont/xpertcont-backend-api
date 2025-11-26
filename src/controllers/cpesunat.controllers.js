@@ -97,20 +97,17 @@ const registrarCPESunat = async (req,res,next)=> {
 
         //Desestructuramos valores escenciales, verificacion inicial de cdr_pendiente
         const { ruc } = dataVenta.empresa;
-        const { documento_identidad } = dataVenta.cliente;
         const { codigo, serie, numero } = dataVenta.venta;
         
-
         // 🟡 PRIMER PASO: verificar si existe en tabla de pendientes
         const yaPendiente = await existeCDRPendiente({ 
             ruc, 
-            documento_identidad,
             codigo, 
             serie, 
             numero 
         });
         if (yaPendiente) {
-            console.log(`📌 CPE pendiente detectado ${ruc}-${documento_identidad}-${codigo}-${serie}-${numero}`);
+            console.log(`📌 CPE pendiente detectado ${ruc}-${codigo}-${serie}-${numero}`);
             return procesarCDRPendienteSunat(req,res,next);
         }
         
@@ -234,7 +231,6 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
     if (esPendiente){
         registrarCdrPendienteDB({
             documento_id: dataVenta.empresa.ruc,
-            ruc: dataVenta.cliente.documento_identidad,
             codigo: dataVenta.venta.codigo,
             serie: dataVenta.venta.serie,
             numero: dataVenta.venta.numero
@@ -554,20 +550,19 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
   }
 }
 
-const existeCDRPendiente = async ({ruc, documento_identidad, codigo, serie, numero}) =>{
+const existeCDRPendiente = async ({ruc, codigo, serie, numero}) =>{
   try{
     const strSQL = `
       SELECT 1
       FROM api_cdrpendiente
       WHERE documento_id = $1
-      AND ruc      = $2
-      AND codigo   = $3
-      AND serie    = $4
-      AND numero   = $5
+      AND codigo   = $2
+      AND serie    = $3
+      AND numero   = $4
     `;
     //console.log(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
 
-    const result = await pool.query(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
+    const result = await pool.query(strSQL,[ruc, codigo,serie,numero]);
     return result.rowCount > 0;
   } catch (error){
     console.error('Error en existeCDRPendiente:', error);
@@ -575,15 +570,15 @@ const existeCDRPendiente = async ({ruc, documento_identidad, codigo, serie, nume
   }
 };
 
-const registrarCdrPendienteDB = async ({documento_id, ruc, codigo, serie, numero}) => {
+const registrarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) => {
   try {
       const strSQL = `
           INSERT INTO api_cdrpendiente
-          (documento_id, ruc, codigo, serie, numero, ctrl_crea)
-          VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+          (documento_id, codigo, serie, numero, ctrl_crea)
+          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
           RETURNING *
       `;
-      const result = await pool.query(strSQL, [documento_id, ruc, codigo, serie, numero]);
+      const result = await pool.query(strSQL, [documento_id, codigo, serie, numero]);
 
       // Validar si se insertó al menos una fila
       if (result.rowCount > 0) {

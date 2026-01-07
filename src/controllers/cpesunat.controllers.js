@@ -5,6 +5,8 @@ const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
+const { QpseService } = require('../utils/qpse.service');
+
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
@@ -115,11 +117,12 @@ const registrarCPESunat = async (req,res,next)=> {
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
           SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
+                ,cert_externo,cert_username,cert_password
           FROM api_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
-        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer} = rows[0];
+        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, cert_externo,cert_username,cert_password} = rows[0];
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante;
@@ -131,20 +134,49 @@ const registrarCPESunat = async (req,res,next)=> {
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
-        //let xmlComprobanteFirmado = await firmarXMLUBL(xmlComprobante, certificadoBuffer,password);
-        //const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
-        const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
-        
+        /*const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
         if (dataVenta.venta.codigo === '07'){
             signerManual.setSignNodeName('CreditNote');
         }else{
             signerManual.setSignNodeName('Invoice');
         }
         const xmlComprobanteFirmado = await signerManual.getSignedXML();
-        const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+        const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);*/
+
+        let xmlComprobanteFirmado;
+        let sDigestInicial;
+        const usaCertExterno = String(cert_externo) === '1';
+        if (usaCertExterno) {
+          // ===== FIRMA EXTERNA =====
+          const qpse = new QpseService({
+            baseUrl: process.env.QPSE_URL, // demo o prod
+            username: cert_username,
+            password: cert_password,
+          });
+
+          const xmlFilename = `${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.xml`;
+
+          const resultFirma = await qpse.firmarXml({
+            xmlFilename,
+            xmlContent: xmlComprobante,
+          });
+
+          xmlComprobanteFirmado = resultFirma.xmlFirmado;
+          sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+
+        } else {
+          // ===== FIRMA INTERNA (LEGACY / BACKUP) =====
+          const signerManual = new XmlSignatureMod(certificadoBuffer,password,xmlComprobante);
+          if (dataVenta.venta.codigo === '07') {
+            signerManual.setSignNodeName('CreditNote');
+          } else {
+            signerManual.setSignNodeName('Invoice');
+          }
+          xmlComprobanteFirmado = await signerManual.getSignedXML();
+          sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
+        }        
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
-        //await subirArchivoDesdeMemoria(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero, xmlComprobanteFirmado,'-');
         //03. Guardar xml firmado en Server Ubuntu, version asyncrono(desconectado)
         (async () => {
           try {

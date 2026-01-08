@@ -2,7 +2,7 @@
 //import AdmZip from 'adm-zip';
 const AdmZip = require('adm-zip');
 
-export class QpseService {
+class QpseService {
   constructor({ baseUrl, username, password }) {
     this.baseUrl = baseUrl;
     this.username = username;

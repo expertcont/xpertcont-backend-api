@@ -1,5 +1,6 @@
 // src/infra/qpse/qpse.service.js
-import AdmZip from 'adm-zip';
+//import AdmZip from 'adm-zip';
+const AdmZip = require('adm-zip');
 
 export class QpseService {
   constructor({ baseUrl, username, password }) {

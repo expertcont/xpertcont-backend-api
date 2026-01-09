@@ -34,7 +34,7 @@ class QpseService {
 
     this.token = data.token_acceso;
     this.tokenExpiraEn = Number(data.expira_en);
-
+    console.log('toke firma:', this.token);
     return this.token;
   }
 

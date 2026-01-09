@@ -160,7 +160,8 @@ const registrarCPESunat = async (req,res,next)=> {
             xmlFilename,
             xmlContent: xmlComprobante,
           });
-
+          console.log(resultFirma.xmlFirmado);
+          
           xmlComprobanteFirmado = resultFirma.xmlFirmado;
           sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 

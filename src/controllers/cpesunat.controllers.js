@@ -117,12 +117,12 @@ const registrarCPESunat = async (req,res,next)=> {
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
           SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
-                ,cert_externo,cert_username,cert_password
+                ,cert_externo,cert_username,cert_password,cert_url
           FROM api_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
-        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, cert_externo,cert_username,cert_password} = rows[0];
+        const {certificado: certificadoBuffer, password, secundario_user, secundario_passwd, url_envio, logo:logoBuffer, cert_externo,cert_username,cert_password,cert_url} = rows[0];
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante;
@@ -149,7 +149,7 @@ const registrarCPESunat = async (req,res,next)=> {
         if (usaCertExterno) {
           // ===== FIRMA EXTERNA =====
           const qpse = new QpseService({
-            baseUrl: process.env.QPSE_URL, // demo o prod
+            baseUrl: cert_url, // demo o prod
             username: cert_username,
             password: cert_password,
           });

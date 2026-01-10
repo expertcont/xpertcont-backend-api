@@ -76,7 +76,7 @@ class QpseService {
     }
 
     console.log('data.xml resultado:', data.xml);
-    
+
     const xmlFirmado = this._extraerXmlFirmado(data.xml);
 
     return {
@@ -86,17 +86,32 @@ class QpseService {
     };
   }
 
-  _extraerXmlFirmado(base64Zip) {
-    const zipBuffer = Buffer.from(base64Zip, 'base64');
-    const zip = new AdmZip(zipBuffer);
+  _extraerXmlFirmado(base64Data) {
+  const buffer = Buffer.from(base64Data, 'base64');
 
+  // ZIP → empieza con PK
+  if (buffer.slice(0, 2).toString('hex') === '504b') {
+    const zip = new AdmZip(buffer);
     const entries = zip.getEntries();
+
     if (!entries.length) {
-      throw new Error('ZIP firmado vacío o inválido');
+      throw new Error('ZIP firmado vacío');
     }
 
     return entries[0].getData().toString('utf8');
   }
+
+  // XML directo (no ZIP)
+  const xml = buffer.toString('utf8');
+
+  if (!xml.trim().startsWith('<?xml')) {
+    throw new Error('El contenido firmado no es ZIP ni XML válido');
+  }
+
+  return xml;
+}
+
+
 }
 
 module.exports = { QpseService };

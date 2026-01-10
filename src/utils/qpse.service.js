@@ -75,6 +75,8 @@ class QpseService {
       throw new Error(data.message || 'QPSE no pudo firmar el XML');
     }
 
+    console.log('data.xml resultado:', data.xml);
+    
     const xmlFirmado = this._extraerXmlFirmado(data.xml);
 
     return {

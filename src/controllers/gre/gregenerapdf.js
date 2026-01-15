@@ -69,6 +69,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
 
 
   const ticketWidth = 227;
+  const maxTextWidth = ticketWidth - margin * 2 - marginLeftSize;
   let textWidth;
 
   textWidth = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
@@ -280,8 +281,14 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   registrosdet.forEach(detalle => {
     //cantidad = Number(detalle.cantidad);
 
-    //page.drawText(`${detalle.producto}`, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
-    drawTextWrapped(page, detalle.producto, font, fontSize-1, ticketWidth - margin * 2, margin, y+4-espaciadoDet, 'left', 10);
+    //drawTextWrapped(page, detalle.producto, font, fontSize-1, ticketWidth - margin * 2, margin, y+4-espaciadoDet, 'left', 10);
+    // Producto con multilínea
+    const productoLines = wrapText(detalle.producto, maxTextWidth, fontSize - 1, font);
+    productoLines.forEach(line => {
+      page.drawText(line, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1, font });
+      espaciadoDet += 10;
+    });
+
 
     espaciadoDet += 10;
     page.drawText('Cant: ' + detalle.cantidad, { x: margin, y: y + 4 - espaciadoDet, size: fontSize - 1 });
@@ -406,6 +413,27 @@ function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "le
   });
 
   return y - lineas.length * lineHeight;
+}
+
+function wrapText(text, maxWidth, fontSize, font) {
+  const words = text.split(' ');
+  const lines = [];
+  let currentLine = '';
+
+  words.forEach(word => {
+    const testLine = currentLine ? `${currentLine} ${word}` : word;
+    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+    
+    if (testWidth <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+    }
+  });
+  
+  if (currentLine) lines.push(currentLine);
+  return lines;
 }
 
 module.exports = gregenerapdf;

@@ -86,6 +86,7 @@ const obtenerAnfitrion = async (req,res,next)=> {
     //Todas las contabilidades autorizadas por el anfitrion y permisos al auxiliar contable
     //el anfitrion esta autorizado a todos sin permiso
     //luego el invitado con permisos nomas
+
     try {
         const {id_usuario} = req.params;
         var strSQL;

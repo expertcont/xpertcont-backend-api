@@ -24,7 +24,7 @@ function esErrorCDRPendiente(codigoSunat = '', mensajeSunat = '') {
         'soap-env:Client.0100': 'Servicio de SUNAT temporalmente no disponible.',
         'soap-env:Client.0098': 'Error temporal en SUNAT, CDR aún no generado.',
     };
-
+    //Cuidado error 0133, reporto, pero luego de 2 dias, desconocio ticket y no genero CDR, se volvio a enviar comprobante(envio natural) y registro ok
     if (CODIGOS_CDR_PENDIENTE[codigo]) {
         return {
             esPendiente: true,

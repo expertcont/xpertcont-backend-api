@@ -1,4 +1,4 @@
-require('dotenv').config();
+/*require('dotenv').config();
 const Client = require('ssh2-sftp-client');
 
 const config = {
@@ -57,7 +57,7 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, r
   }
 }
 
-module.exports = { subirArchivoDesdeMemoria };
+module.exports = { subirArchivoDesdeMemoria };*/
 
 /**
  * Sube un archivo desde memoria (buffer o string) a una carpeta de RUC y serie-numero
@@ -68,7 +68,7 @@ module.exports = { subirArchivoDesdeMemoria };
  * @param {string} nombreRemoto - Nombre final del archivo remoto (incluyendo .xml o .cdr)
  */
 
-/*require('dotenv').config();
+require('dotenv').config();
 const Client = require('ssh2-sftp-client');
 
 const config = {
@@ -118,4 +118,4 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, r
     await sftp.end();
   }
 }
-module.exports = { subirArchivoDesdeMemoria };*/
+module.exports = { subirArchivoDesdeMemoria };

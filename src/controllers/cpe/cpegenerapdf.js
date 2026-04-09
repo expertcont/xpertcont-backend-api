@@ -77,7 +77,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
       const tw = fontNegrita.widthOfTextAtSize(sDocumento, fontSize);
       P.drawText(sDocumento, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y()-5, size:fontSize, font:fontNegrita });
     }
-    consumed += 12+5; //5 es por la linea anterior, estaba muy junto
+    consumed += 12+5; //por la linea anterior
 
     // ── RUC empresa ─────────────────────────────────────────────────────
     if (draw) {
@@ -88,13 +88,15 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
     // ── Razón social empresa ────────────────────────────────────────────
     const rsLines = wrapText(empresa.razon_social, maxTextWidth, fontSize, font);
-    if (draw) drawLines(P, rsLines, font, fontSize, maxTextWidth, margin, Y(), 'center', 12);
+    const rsY = Y();
     consumed += rsLines.length * 12 + 2;
+    if (draw) drawLines(P, rsLines, font, fontSize, maxTextWidth, margin, rsY, 'center', 12);
 
     // ── Domicilio fiscal ────────────────────────────────────────────────
     const dfLines = wrapText(empresa.domicilio_fiscal, maxTextWidth, 8, font);
-    if (draw) drawLines(P, dfLines, font, 8, maxTextWidth, margin, Y(), 'center', 10);
+    const dfY = Y();
     consumed += dfLines.length * 10 + 2;
+    if (draw) drawLines(P, dfLines, font, 8, maxTextWidth, margin, dfY, 'center', 10);
 
     // ── Serie-Número ────────────────────────────────────────────────────
     if (draw) {
@@ -129,8 +131,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
     // ── Razón social cliente ────────────────────────────────────────────
     const rcLines = wrapText(cliente.razon_social_nombres?.toString() ?? "", maxTextWidth, fontSize, font);
-    if (draw) drawLines(P, rcLines, font, fontSize, maxTextWidth, margin, Y(), 'center', 12);
+    const rcY = Y();
     consumed += rcLines.length * 12 + 2;
+    if (draw) drawLines(P, rcLines, font, fontSize, maxTextWidth, margin, rcY, 'center', 12);
 
     // ── RUC/DNI cliente ─────────────────────────────────────────────────
     if (draw) {
@@ -141,8 +144,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
     // ── Dirección cliente ───────────────────────────────────────────────
     const dirLines = wrapText(cliente.cliente_direccion?.toString() ?? "", maxTextWidth, fontSize, font);
-    if (draw) drawLines(P, dirLines, font, fontSize, maxTextWidth, margin, Y(), 'center', 12);
+    const dirY = Y();
     consumed += dirLines.length * 12 + 2;
+    if (draw) drawLines(P, dirLines, font, fontSize, maxTextWidth, margin, dirY, 'center', 12);
 
     // ── Vendedor (opcional) ─────────────────────────────────────────────
     if (venta.vendedor?.trim()) {
@@ -207,8 +211,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     // ── Monto en letras ─────────────────────────────────────────────────
     consumed += 5;
     const letrasLines = wrapText(MontoEnLetras, maxTextWidth, 8, font);
-    if (draw) drawLines(P, letrasLines, font, 8, maxTextWidth, margin, Y(), 'left', 10);
+    const letrasY = Y();
     consumed += letrasLines.length * 10 + 5;
+    if (draw) drawLines(P, letrasLines, font, 8, maxTextWidth, margin, letrasY, 'left', 10);
 
     // ── BASE ────────────────────────────────────────────────────────────
     if (draw) {
@@ -246,8 +251,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
     // ── CDR ─────────────────────────────────────────────────────────────
     const cdrLines = wrapText(sCdr, maxTextWidth, 8, font);
-    if (draw) drawLines(P, cdrLines, font, 8, maxTextWidth, margin, Y(), 'left', 10);
+    const cdrY = Y(); // capturar Y antes de consumir
     consumed += cdrLines.length * 10;
+    if (draw) drawLines(P, cdrLines, font, 8, maxTextWidth, margin, cdrY, 'left', 10);
 
     // Margen inferior
     consumed += 15;
@@ -303,7 +309,6 @@ function drawLines(page, lines, font, fontSize, maxWidth, x, y, align = 'left', 
 }
 
 module.exports = cpegenerapdf;
-
 
 /*const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');

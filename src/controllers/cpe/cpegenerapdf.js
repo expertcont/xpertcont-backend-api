@@ -75,9 +75,9 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     const sDocumento = documentos[venta.codigo] || 'DOCUMENTO';
     if (draw) {
       const tw = fontNegrita.widthOfTextAtSize(sDocumento, fontSize);
-      P.drawText(sDocumento, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize, font:fontNegrita });
+      P.drawText(sDocumento, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y()-5, size:fontSize, font:fontNegrita });
     }
-    consumed += 12;
+    consumed += 12+5; //5 es por la linea anterior, estaba muy junto
 
     // ── RUC empresa ─────────────────────────────────────────────────────
     if (draw) {

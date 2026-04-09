@@ -21,18 +21,22 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   const maxTextWidth = ticketWidth - margin * 2 - marginLeftSize;
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // PASO 1: Pre-cargar fuentes temporalmente para medir texto antes de crear página
+  // PASO 1: Pre-cargar fuentes y logo para medir antes de crear la página
   // ─────────────────────────────────────────────────────────────────────────────
   const font        = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontNegrita = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+  const pngImage = await pdfDoc.embedPng(logo);
+  const pngDims  = pngImage.scale(0.6);
+  const logoHeight = pngDims.height + 10; // alto real del logo + pequeño margen
 
   // ─────────────────────────────────────────────────────────────────────────────
   // PASO 2: Calcular la altura total necesaria (simulación del layout)
   // ─────────────────────────────────────────────────────────────────────────────
   let estimatedHeight = 0;
 
-  // Logo
-  estimatedHeight += 90; // espacio aproximado del logo
+  // Logo (alto real, no fijo)
+  estimatedHeight += logoHeight;
 
   // Encabezado empresa
   estimatedHeight += 12; // tipo documento
@@ -92,18 +96,16 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
   // ─────────────────────────────────────────────────────────────────────────────
   // PASO 4: Dibujar todo el contenido (igual que antes, pero Y parte desde arriba)
   // ─────────────────────────────────────────────────────────────────────────────
-  const pngImage = await pdfDoc.embedPng(logo);
-  const pngDims = pngImage.scale(0.6);
-
+  // pngImage y pngDims ya fueron calculados arriba para medir logoHeight
   page.drawImage(pngImage, {
     x: margin + (marginLeftSize / 2),
-    y: height - 80,           // <-- relativo al alto real de la página
+    y: height - logoHeight,   // posición real: arriba de la página menos el alto del logo
     width: pngDims.width,
     height: pngDims.height,
   });
 
   let x = margin;
-  let y = height - 90;        // <-- punto de partida relativo al alto real
+  let y = height - logoHeight; // y arranca justo debajo del logo, sin espacio extra
 
   const COD = venta.codigo;
   const documentos = {
@@ -423,6 +425,7 @@ function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "le
 }
 
 module.exports = cpegenerapdf;
+
 
 /*const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');

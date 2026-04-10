@@ -4,32 +4,32 @@ const numeral = require('numeral');
 const { numeroALetras } = require('../../utils/libreria.utils');
 
 // ─── Constantes de layout ────────────────────────────────────────────────────
-const PAGE_W      = 595.28;
-const PAGE_H      = 841.89;
-const MARGIN_L    = 56.69;
-const MARGIN_R    = 56.69;
-const MARGIN_TOP  = 45;
-const MARGIN_BOT  = 45;
-const CONTENT_W   = PAGE_W - MARGIN_L - MARGIN_R;
+const PAGE_W     = 595.28;
+const PAGE_H     = 841.89;
+const MARGIN_L   = 56.69;
+const MARGIN_R   = 56.69;
+const MARGIN_TOP = 45;
+const MARGIN_BOT = 40;
+const CONTENT_W  = PAGE_W - MARGIN_L - MARGIN_R;
 
-// Columnas de la tabla (posiciones X absolutas)
-const COL_CANT    = MARGIN_L + 5;
-const COL_UNI     = MARGIN_L + 38;
-const COL_DESC    = MARGIN_L + CONTENT_W * 0.18;
-const COL_PUNIT   = MARGIN_L + CONTENT_W * 0.72;
-const COL_IMP     = MARGIN_L + CONTENT_W * 0.86;
+// Y mínimo disponible para dibujar ítems (por encima del pie de página)
+const Y_MIN = MARGIN_BOT + 10;
 
-// Altura de fila mínima (producto en 1 línea)
-const ROW_MIN_H   = 14;
-const ROW_PAD     = 4;  // padding vertical dentro de la fila
-const FONT_ROW    = 9;
+// Columnas de la tabla
+const COL_CANT  = MARGIN_L + 5;
+const COL_UNI   = MARGIN_L + 38;
+const COL_DESC  = MARGIN_L + CONTENT_W * 0.18;
+const COL_PUNIT = MARGIN_L + CONTENT_W * 0.72;
+const COL_IMP   = MARGIN_L + CONTENT_W * 0.86;
 
-// ─── Helper: wrapText con corte de palabras largas ───────────────────────────
+const FONT_ROW  = 9;
+const ROW_PAD   = 4;
+
+// ─── wrapText: corta por espacios y también parte palabras largas (URLs) ─────
 function wrapText(text, maxWidth, fontSize, font) {
   const words = (text || '').split(' ');
   const lines = [];
   let current = '';
-
   for (const word of words) {
     if (!word) continue;
     if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
@@ -55,18 +55,16 @@ function wrapText(text, maxWidth, fontSize, font) {
   return lines;
 }
 
-function drawLines(page, lines, font, fontSize, x, y, lineHeight = 12) {
-  lines.forEach((ln, i) => {
-    page.drawText(ln, { x, y: y - i * lineHeight, size: fontSize, font });
-  });
+function drawLines(page, lines, font, fontSize, x, y, lineH) {
+  lines.forEach((ln, i) => page.drawText(ln, { x, y: y - i * lineH, size: fontSize, font }));
 }
 
 function base64ToUint8Array(base64) {
   return new Uint8Array(Buffer.from(base64, 'base64'));
 }
 
-// ─── Dibuja el encabezado de la empresa en una página ────────────────────────
-function drawHeader(page, { pngImage, pngDims, empresa, venta, font, fontNegrita }) {
+// ─── Encabezado completo (primera página) ────────────────────────────────────
+function drawHeader(page, { pngImage, pngDims, empresa, venta, cliente, font, fontNegrita }) {
   let y = PAGE_H - MARGIN_TOP;
 
   // Logo
@@ -76,93 +74,80 @@ function drawHeader(page, { pngImage, pngDims, empresa, venta, font, fontNegrita
     width: pngDims.width,
     height: pngDims.height,
   });
-  y -= pngDims.height + 8;
+  y -= pngDims.height + 6;
 
   // Tipo de documento
-  const documentos = { '01':'FACTURA ELECTRONICA','03':'BOLETA ELECTRONICA','07':'NOTA CRED. ELECTRONICA','08':'NOTA DEB. ELECTRONICA' };
-  const sDocumento = documentos[venta.codigo] || 'DOCUMENTO';
-  let tw = fontNegrita.widthOfTextAtSize(sDocumento, 14);
-  page.drawText(sDocumento, { x: (PAGE_W - tw) / 2, y, size: 14, font: fontNegrita });
-  y -= 14;
+  const docs = { '01':'FACTURA ELECTRONICA','03':'BOLETA ELECTRONICA','07':'NOTA CRED. ELECTRONICA','08':'NOTA DEB. ELECTRONICA' };
+  const sDoc = docs[venta.codigo] || 'DOCUMENTO';
+  let tw = fontNegrita.widthOfTextAtSize(sDoc, 14);
+  page.drawText(sDoc, { x:(PAGE_W-tw)/2, y, size:14, font:fontNegrita }); y -= 14;
 
-  // RUC
-  tw = fontNegrita.widthOfTextAtSize('RUC ' + empresa.ruc, 12);
-  page.drawText('RUC ' + empresa.ruc, { x: (PAGE_W - tw) / 2, y, size: 12, font: fontNegrita });
-  y -= 12;
+  tw = fontNegrita.widthOfTextAtSize('RUC '+empresa.ruc, 12);
+  page.drawText('RUC '+empresa.ruc, { x:(PAGE_W-tw)/2, y, size:12, font:fontNegrita }); y -= 12;
 
-  // Razón social
   tw = font.widthOfTextAtSize(empresa.razon_social, 10);
-  page.drawText(empresa.razon_social, { x: (PAGE_W - tw) / 2, y, size: 10, font });
-  y -= 11;
+  page.drawText(empresa.razon_social, { x:(PAGE_W-tw)/2, y, size:10, font }); y -= 11;
 
-  // Domicilio
   tw = font.widthOfTextAtSize(empresa.domicilio_fiscal, 9);
-  page.drawText(empresa.domicilio_fiscal, { x: (PAGE_W - tw) / 2, y, size: 9, font });
-  y -= 11;
+  page.drawText(empresa.domicilio_fiscal, { x:(PAGE_W-tw)/2, y, size:9, font }); y -= 11;
 
-  // Serie-Número
-  tw = fontNegrita.widthOfTextAtSize(venta.serie + '-' + venta.numero, 16);
-  page.drawText(venta.serie + '-' + venta.numero, { x: (PAGE_W - tw) / 2, y, size: 16, font: fontNegrita, color: rgb(0.4, 0.49, 0.92) });
-  y -= 14;
+  tw = fontNegrita.widthOfTextAtSize(venta.serie+'-'+venta.numero, 16);
+  page.drawText(venta.serie+'-'+venta.numero, { x:(PAGE_W-tw)/2, y, size:16, font:fontNegrita, color:rgb(0.4,0.49,0.92) }); y -= 14;
 
-  // Referencia NC/ND
   if (venta.ref_numero !== '') {
-    const ref = 'REF: ' + venta.ref_serie + '-' + venta.ref_numero;
+    const ref = 'REF: '+venta.ref_serie+'-'+venta.ref_numero;
     tw = font.widthOfTextAtSize(ref, 10);
-    page.drawText(ref, { x: (PAGE_W - tw) / 2, y, size: 10, font });
-    y -= 12;
+    page.drawText(ref, { x:(PAGE_W-tw)/2, y, size:10, font }); y -= 12;
   }
 
-  // Fecha
-  const fechaText = 'FECHA: ' + venta.fecha_emision;
-  tw = font.widthOfTextAtSize(fechaText, 10);
-  page.drawText(fechaText, { x: (PAGE_W - tw) / 2, y, size: 10, font });
-  y -= 12;
+  tw = font.widthOfTextAtSize('FECHA: '+venta.fecha_emision, 10);
+  page.drawText('FECHA: '+venta.fecha_emision, { x:(PAGE_W-tw)/2, y, size:10, font }); y -= 10;
 
-  // Línea separadora
-  page.drawLine({ start: { x: MARGIN_L, y }, end: { x: PAGE_W - MARGIN_R, y }, thickness: 1.5, color: rgb(0.2, 0.2, 0.2) });
-  y -= 10;
+  page.drawLine({ start:{x:MARGIN_L,y}, end:{x:PAGE_W-MARGIN_R,y}, thickness:1.5, color:rgb(0.2,0.2,0.2) });
+  y -= 8;
 
-  // ── Sección cliente ──────────────────────────────────────────────────────
-  page.drawRectangle({ x: MARGIN_L, y: y - 14, width: CONTENT_W, height: 16, color: rgb(0.97, 0.97, 0.98), borderColor: rgb(0.4, 0.49, 0.92), borderWidth: 0.5 });
-  page.drawText('DATOS DEL CLIENTE', { x: MARGIN_L + 5, y: y - 11, size: 10, font: fontNegrita });
-  y -= 18;
+  // Banda cliente
+  page.drawRectangle({ x:MARGIN_L, y:y-14, width:CONTENT_W, height:16, color:rgb(0.97,0.97,0.98), borderColor:rgb(0.4,0.49,0.92), borderWidth:0.5 });
+  page.drawText('DATOS DEL CLIENTE', { x:MARGIN_L+5, y:y-11, size:10, font:fontNegrita }); y -= 17;
 
-  page.drawText('Cliente: ' + (venta.cliente_nombre || ''), { x: MARGIN_L + 5, y, size: 9, font });
-  y -= 11;
-  page.drawText('RUC/DNI: ' + (venta.documento_identidad || ''), { x: MARGIN_L + 5, y, size: 9, font });
-  y -= 11;
-  page.drawText('Dirección: ' + (venta.cliente_direccion || ''), { x: MARGIN_L + 5, y, size: 9, font });
-  y -= 11;
-
+  page.drawText('Cliente: '+(cliente.razon_social_nombres||''), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
+  page.drawText('RUC/DNI: '+(cliente.documento_identidad||''), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
+  page.drawText('Dirección: '+(cliente.cliente_direccion||''), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
   if (venta.vendedor?.trim()) {
-    page.drawText('Vendedor: ' + venta.vendedor.trim(), { x: MARGIN_L + 5, y, size: 9, font });
-    y -= 11;
+    page.drawText('Vendedor: '+venta.vendedor.trim(), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
   }
+  page.drawText('Forma de Pago: CONTADO', { x:MARGIN_L+5, y, size:9, font }); y -= 10;
 
-  page.drawText('Forma de Pago: CONTADO', { x: MARGIN_L + 5, y, size: 9, font });
-  y -= 12;
-
-  return y; // Y donde termina el encabezado
+  return y;
 }
 
-// ─── Dibuja la cabecera de la tabla de ítems ─────────────────────────────────
+// ─── Encabezado de continuación ───────────────────────────────────────────────
+function drawContinuationHeader(page, { venta, font, fontNegrita }, pageNum, totalPages) {
+  let y = PAGE_H - MARGIN_TOP;
+  const txt = `${venta.serie}-${venta.numero}  —  Continuación (${pageNum}/${totalPages})`;
+  const tw = fontNegrita.widthOfTextAtSize(txt, 11);
+  page.drawText(txt, { x:(PAGE_W-tw)/2, y, size:11, font:fontNegrita, color:rgb(0.4,0.49,0.92) });
+  y -= 14;
+  return y;
+}
+
+// ─── Cabecera de la tabla ────────────────────────────────────────────────────
 function drawTableHeader(page, y, fontNegrita) {
-  page.drawRectangle({ x: MARGIN_L, y: y - 14, width: CONTENT_W, height: 16, color: rgb(0.4, 0.49, 0.92) });
-  const white = rgb(1, 1, 1);
-  page.drawText('CANT',        { x: COL_CANT,  y: y - 11, size: 9, font: fontNegrita, color: white });
-  page.drawText('UND',         { x: COL_UNI,   y: y - 11, size: 9, font: fontNegrita, color: white });
-  page.drawText('DESCRIPCIÓN', { x: COL_DESC,  y: y - 11, size: 9, font: fontNegrita, color: white });
-  page.drawText('P.UNIT',      { x: COL_PUNIT, y: y - 11, size: 9, font: fontNegrita, color: white });
-  page.drawText('IMPORTE',     { x: COL_IMP,   y: y - 11, size: 9, font: fontNegrita, color: white });
+  page.drawRectangle({ x:MARGIN_L, y:y-14, width:CONTENT_W, height:16, color:rgb(0.4,0.49,0.92) });
+  const w = rgb(1,1,1);
+  page.drawText('CANT',        { x:COL_CANT,  y:y-11, size:9, font:fontNegrita, color:w });
+  page.drawText('UND',         { x:COL_UNI,   y:y-11, size:9, font:fontNegrita, color:w });
+  page.drawText('DESCRIPCIÓN', { x:COL_DESC,  y:y-11, size:9, font:fontNegrita, color:w });
+  page.drawText('P.UNIT',      { x:COL_PUNIT, y:y-11, size:9, font:fontNegrita, color:w });
+  page.drawText('IMPORTE',     { x:COL_IMP,   y:y-11, size:9, font:fontNegrita, color:w });
   return y - 16;
 }
 
-// ─── Dibuja número de página en el pie ───────────────────────────────────────
-function drawPageNumber(page, pageNum, totalPages, font) {
+// ─── Pie de página ───────────────────────────────────────────────────────────
+function drawPageFooter(page, pageNum, totalPages, font) {
   const txt = `Página ${pageNum} de ${totalPages}`;
   const tw = font.widthOfTextAtSize(txt, 8);
-  page.drawText(txt, { x: (PAGE_W - tw) / 2, y: MARGIN_BOT - 20, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
+  page.drawText(txt, { x:(PAGE_W-tw)/2, y:MARGIN_BOT-15, size:8, font, color:rgb(0.5,0.5,0.5) });
 }
 
 // ─── Función principal ───────────────────────────────────────────────────────
@@ -172,208 +157,186 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   const font        = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const fontNegrita = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pngImage    = await pdfDoc.embedPng(logo);
-  const pngDims     = pngImage.scale(0.5); // logo más compacto
+  const pngDims     = pngImage.scale(0.5);
 
   const empresa      = jsonVenta.empresa;
   const cliente      = jsonVenta.cliente;
   const venta        = jsonVenta.venta;
   const registrosdet = jsonVenta.items;
 
-  // Inyectar datos de cliente en venta para pasarlo fácil a drawHeader
-  venta.cliente_nombre    = cliente.razon_social_nombres || '';
-  venta.documento_identidad = cliente.documento_identidad || '';
-  venta.cliente_direccion = cliente.cliente_direccion || '';
-
-  // ── QR y datos comunes ────────────────────────────────────────────────────
-  const monto_total = (Number(venta.base_gravada)  || 0) +
-                      (Number(venta.base_exonerada) || 0) +
-                      (Number(venta.base_inafecta)  || 0) +
-                      (Number(venta.total_igv)      || 0);
-
+  // Calcular totales y textos comunes
+  const monto_total = (Number(venta.base_gravada)||0) + (Number(venta.base_exonerada)||0) +
+                      (Number(venta.base_inafecta)||0) + (Number(venta.total_igv)||0);
   const monedaDesc    = { PEN:'Soles', USD:'Dolares Americanos', EUR:'Euros' };
   const monedaSimbolo = { PEN:'S/', USD:'$ USD', EUR:'€' };
-  const sMonedaDesc   = monedaDesc[venta.moneda_id]    || 'Soles';
   const sMoneda       = monedaSimbolo[venta.moneda_id] || 'S/';
-  const MontoEnLetras = 'SON: ' + numeroALetras(monto_total, sMonedaDesc).toUpperCase();
+  const MontoEnLetras = 'SON: ' + numeroALetras(monto_total, monedaDesc[venta.moneda_id]||'Soles').toUpperCase();
 
-  const numeroFormateado      = venta.numero.padStart(8, '0');
-  const comprobanteConvertido = `${venta.codigo}|${venta.serie}|${numeroFormateado}`;
-  const qrDataUrl    = await QRCode.toDataURL(
-    empresa.ruc + '|' + comprobanteConvertido + '|' +
-    venta.r_igv002 + '|' + venta.r_monto_total + '|' +
-    venta.r_fecemi + '|' + venta.r_id_doc + '|' + venta.r_documento_id + '|'
+  // QR
+  const qrDataUrl = await QRCode.toDataURL(
+    empresa.ruc+'|'+venta.codigo+'|'+venta.serie+'|'+venta.numero.padStart(8,'0')+'|'+
+    venta.r_igv002+'|'+venta.r_monto_total+'|'+venta.r_fecemi+'|'+venta.r_id_doc+'|'+venta.r_documento_id+'|'
   );
   const qrImageEmbed = await pdfDoc.embedPng(base64ToUint8Array(qrDataUrl.split(',')[1]));
 
-  // ── Pre-calcular filas: líneas de descripción y altura de cada ítem ───────
+  // Pre-calcular filas
   const maxDescW = CONTENT_W * 0.52;
   const rows = registrosdet.map(detalle => {
-    const cantidad        = Number(detalle.cantidad);
-    const precio_base     = Number(detalle.precio_base);
-    const porc_igv        = Number(detalle.porc_igv);
-    const precio_unitario = (precio_base * (1 + porc_igv / 100)).toFixed(2);
-    const precio_neto     = (precio_unitario * cantidad).toFixed(2);
+    const precio_unitario = (Number(detalle.precio_base) * (1 + Number(detalle.porc_igv)/100)).toFixed(2);
+    const precio_neto     = (precio_unitario * Number(detalle.cantidad)).toFixed(2);
     const descLines       = wrapText(detalle.producto, maxDescW, FONT_ROW, font);
-    const rowH            = Math.max(ROW_MIN_H, descLines.length * (FONT_ROW + 2)) + ROW_PAD;
-    return { detalle, cantidad, precio_unitario, precio_neto, descLines, rowH };
+    const rowH            = Math.max(14, descLines.length * (FONT_ROW + 2)) + ROW_PAD;
+    return { detalle, cantidad: Number(detalle.cantidad), precio_unitario, precio_neto, descLines, rowH };
   });
 
-  // ── Distribuir ítems en páginas ───────────────────────────────────────────
-  // Altura disponible para ítems en la primera página y en las siguientes
-  // Se estima el encabezado de empresa+cliente (varía); usamos una medida fija conservadora.
-  const HEADER_H_P1   = 195; // altura aprox del encabezado en pág 1 (logo+empresa+cliente)
-  const HEADER_H_CONT = 20;  // en páginas de continuación solo tabla header
-  const TABLE_H_LINE  = 16;  // altura cabecera tabla
-  const FOOTER_AREA   = 180; // reservado para totales+QR+hash solo en última página
+  // ── PASO 1: Distribuir filas en páginas simulando el Y real ───────────────
+  // Para cada página calculamos el Y de inicio de tabla (tras encabezado)
+  // y vamos restando rowH hasta que no cabe más.
+  const ctx = { pngImage, pngDims, empresa, venta, cliente, font, fontNegrita };
 
-  // Agrupar filas por página
-  const pages = []; // cada elemento: { rows: [...] }
-  let currentPageRows = [];
-  let usedH = HEADER_H_P1 + TABLE_H_LINE;
-  let isFirstPage = true;
+  // Simular Y de inicio de tabla en página 1 (dry-run de drawHeader)
+  // Para no duplicar la lógica, usamos una página temporal
+  const tempDoc  = await PDFDocument.create();
+  const tempFont = await tempDoc.embedFont(StandardFonts.Helvetica);
+  const tempFontB= await tempDoc.embedFont(StandardFonts.HelveticaBold);
+  const tempPng  = await tempDoc.embedPng(logo);
+  const tempDims = tempPng.scale(0.5);
+  const tempPage = tempDoc.addPage([PAGE_W, PAGE_H]);
+  const yAfterHeader = drawHeader(tempPage, { pngImage:tempPng, pngDims:tempDims, empresa, venta, cliente, font:tempFont, fontNegrita:tempFontB });
+  const Y_START_P1   = drawTableHeader(tempPage, yAfterHeader, tempFontB); // Y tras cabecera tabla pág 1
 
-  for (const row of rows) {
-    const availH = PAGE_H - MARGIN_TOP - MARGIN_BOT -
-                   (isFirstPage ? HEADER_H_P1 : HEADER_H_CONT) -
-                   TABLE_H_LINE;
-    const footerReserve = (pages.length === 0 && currentPageRows.length === rows.length - 1) ? FOOTER_AREA : 0;
+  // Y de inicio de tabla en páginas de continuación
+  const Y_START_CONT = drawTableHeader(tempPage, PAGE_H - MARGIN_TOP - 14, tempFontB); // aprox: solo 14pt para el título + 16 tabla
 
-    if (usedH + row.rowH + footerReserve > PAGE_H - MARGIN_TOP - MARGIN_BOT) {
-      pages.push({ rows: currentPageRows });
-      currentPageRows = [];
-      usedH = HEADER_H_CONT + TABLE_H_LINE;
-      isFirstPage = false;
+  // Espacio que ocupa la sección de totales+QR+hash+urls en la última página
+  const FOOTER_SECTION_H = 220; // monto letras + base/igv + total + QR(90) + hash + urls
+
+  const pageGroups = []; // array de arrays de rows
+  let group = [];
+  let yAvail = Y_START_P1; // Y donde empieza a dibujarse el primer ítem de la página actual
+
+  for (let i = 0; i < rows.length; i++) {
+    const row = rows[i];
+    const isLast = i === rows.length - 1;
+
+    // ¿Cuánto espacio libre queda en esta página?
+    // Si es la última fila de la última página, reservar espacio para el footer
+    const yStop = (isLast && group.length === rows.length - 1 - i + group.length)
+      ? Y_MIN + FOOTER_SECTION_H
+      : Y_MIN;
+
+    // Si el ítem no cabe, cerrar la página actual y abrir una nueva
+    if (yAvail - row.rowH < Y_MIN) {
+      pageGroups.push(group);
+      group = [];
+      yAvail = Y_START_CONT;
     }
-    currentPageRows.push(row);
-    usedH += row.rowH;
+
+    group.push(row);
+    yAvail -= row.rowH;
   }
-  pages.push({ rows: currentPageRows }); // última página
+  pageGroups.push(group);
 
-  const totalPages = pages.length;
+  const totalPages = pageGroups.length;
 
-  // ── Dibujar páginas ───────────────────────────────────────────────────────
-  const pdfPages = [];
-
+  // ── PASO 2: Dibujar cada página ───────────────────────────────────────────
   for (let pi = 0; pi < totalPages; pi++) {
-    const pdfPage = pdfDoc.addPage([PAGE_W, PAGE_H]);
-    pdfPages.push(pdfPage);
+    const page = pdfDoc.addPage([PAGE_W, PAGE_H]);
+    const isLastPage = pi === totalPages - 1;
 
-    const ctx = { pngImage, pngDims, empresa, venta, font, fontNegrita };
-
+    // Encabezado
     let y;
     if (pi === 0) {
-      // Primera página: encabezado completo
-      y = drawHeader(pdfPage, ctx);
+      y = drawHeader(page, ctx);
     } else {
-      // Páginas siguientes: solo título compacto
-      y = PAGE_H - MARGIN_TOP;
-      const contText = `${venta.serie}-${venta.numero}  (continuación ${pi + 1}/${totalPages})`;
-      const tw = fontNegrita.widthOfTextAtSize(contText, 11);
-      pdfPage.drawText(contText, { x: (PAGE_W - tw) / 2, y, size: 11, font: fontNegrita, color: rgb(0.4, 0.49, 0.92) });
-      y -= 16;
+      y = drawContinuationHeader(page, ctx, pi + 1, totalPages);
     }
 
     // Cabecera tabla
-    y = drawTableHeader(pdfPage, y, fontNegrita);
+    y = drawTableHeader(page, y, fontNegrita);
 
-    // ── Filas de esta página ────────────────────────────────────────────────
-    let rowColor = pi % 2 === 0; // alternar fondo arrancando diferente por página
-
-    for (const { detalle, cantidad, precio_unitario, precio_neto, descLines, rowH } of pages[pi].rows) {
-      // Fondo alternado
-      if (rowColor) {
-        pdfPage.drawRectangle({ x: MARGIN_L, y: y - rowH, width: CONTENT_W, height: rowH, color: rgb(0.98, 0.98, 0.98) });
+    // Filas
+    let altColor = true;
+    for (const { detalle, cantidad, precio_unitario, precio_neto, descLines, rowH } of pageGroups[pi]) {
+      if (altColor) {
+        page.drawRectangle({ x:MARGIN_L, y:y-rowH, width:CONTENT_W, height:rowH, color:rgb(0.98,0.98,0.98) });
       }
+      const textY = y - FONT_ROW - ROW_PAD/2;
 
-      const textY = y - FONT_ROW - ROW_PAD / 2;
+      page.drawText(cantidad.toString(), { x:COL_CANT, y:textY, size:FONT_ROW, font });
+      page.drawText(detalle.codigo_unidad||'', { x:COL_UNI, y:textY, size:FONT_ROW, font });
+      drawLines(page, descLines, font, FONT_ROW, COL_DESC, textY, FONT_ROW+2);
 
-      // Cantidad
-      pdfPage.drawText(cantidad.toString(), { x: COL_CANT, y: textY, size: FONT_ROW, font });
-      // Unidad
-      pdfPage.drawText(detalle.codigo_unidad || '', { x: COL_UNI, y: textY, size: FONT_ROW, font });
-      // Descripción (multilínea)
-      drawLines(pdfPage, descLines, font, FONT_ROW, COL_DESC, textY, FONT_ROW + 2);
-      // Precio unitario (alineado a la derecha de COL_IMP)
-      const puTxt = numeral(precio_unitario).format('0,0.00');
-      const puW   = font.widthOfTextAtSize(puTxt, FONT_ROW);
-      pdfPage.drawText(puTxt, { x: COL_IMP - puW - 5, y: textY, size: FONT_ROW, font });
-      // Importe (alineado al margen derecho)
-      const impTxt = numeral(precio_neto).format('0,0.00');
-      const impW   = font.widthOfTextAtSize(impTxt, FONT_ROW);
-      pdfPage.drawText(impTxt, { x: PAGE_W - MARGIN_R - impW - 2, y: textY, size: FONT_ROW, font });
+      const puW = font.widthOfTextAtSize(numeral(precio_unitario).format('0,0.00'), FONT_ROW);
+      page.drawText(numeral(precio_unitario).format('0,0.00'), { x:COL_IMP-puW-5, y:textY, size:FONT_ROW, font });
 
-      // Línea separadora
-      pdfPage.drawLine({ start: { x: MARGIN_L, y: y - rowH }, end: { x: PAGE_W - MARGIN_R, y: y - rowH }, thickness: 0.5, color: rgb(0.85, 0.85, 0.85) });
+      const impW = font.widthOfTextAtSize(numeral(precio_neto).format('0,0.00'), FONT_ROW);
+      page.drawText(numeral(precio_neto).format('0,0.00'), { x:PAGE_W-MARGIN_R-impW-2, y:textY, size:FONT_ROW, font });
+
+      page.drawLine({ start:{x:MARGIN_L,y:y-rowH}, end:{x:PAGE_W-MARGIN_R,y:y-rowH}, thickness:0.5, color:rgb(0.85,0.85,0.85) });
 
       y -= rowH;
-      rowColor = !rowColor;
+      altColor = !altColor;
     }
 
-    // ── Totales + QR solo en la última página ─────────────────────────────
-    if (pi === totalPages - 1) {
+    // Totales + QR + hash + urls solo en última página
+    if (isLastPage) {
       y -= 10;
 
-      // Monto en letras
-      const montoW     = CONTENT_W * 0.58;
+      // Monto en letras (izquierda) + base/igv (derecha)
+      const montoW     = CONTENT_W * 0.56;
       const montoLines = wrapText(MontoEnLetras, montoW - 10, 9, font);
-      const montoH     = Math.max(40, montoLines.length * 11 + 18);
+      const montoH     = Math.max(38, montoLines.length * 11 + 16);
 
-      pdfPage.drawRectangle({ x: MARGIN_L, y: y - montoH, width: montoW, height: montoH, color: rgb(1, 0.98, 0.9), borderColor: rgb(1, 0.85, 0.4), borderWidth: 1 });
-      pdfPage.drawText('IMPORTE EN LETRAS:', { x: MARGIN_L + 5, y: y - 12, size: 8, font: fontNegrita, color: rgb(0.4, 0.4, 0.4) });
-      drawLines(pdfPage, montoLines, font, 9, MARGIN_L + 5, y - 23, 11);
+      page.drawRectangle({ x:MARGIN_L, y:y-montoH, width:montoW, height:montoH, color:rgb(1,0.98,0.9), borderColor:rgb(1,0.85,0.4), borderWidth:1 });
+      page.drawText('IMPORTE EN LETRAS:', { x:MARGIN_L+5, y:y-11, size:8, font:fontNegrita, color:rgb(0.4,0.4,0.4) });
+      drawLines(page, montoLines, font, 9, MARGIN_L+5, y-22, 11);
 
-      // Totales derecha
-      const totalX = MARGIN_L + CONTENT_W * 0.62;
+      const totalX = MARGIN_L + CONTENT_W * 0.6;
 
-      pdfPage.drawText('Base Gravada:', { x: totalX, y: y - 12, size: 10, font });
+      page.drawText('Base Gravada:', { x:totalX, y:y-11, size:10, font });
       let tw = font.widthOfTextAtSize(numeral(venta.base_gravada).format('0,0.00'), 10);
-      pdfPage.drawText(sMoneda + ' ' + numeral(venta.base_gravada).format('0,0.00'), { x: PAGE_W - MARGIN_R - tw - 15, y: y - 12, size: 10, font });
+      page.drawText(sMoneda+' '+numeral(venta.base_gravada).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-11, size:10, font });
 
-      pdfPage.drawText('IGV (18%):', { x: totalX, y: y - 24, size: 10, font });
+      page.drawText('IGV (18%):', { x:totalX, y:y-23, size:10, font });
       tw = font.widthOfTextAtSize(numeral(venta.total_igv).format('0,0.00'), 10);
-      pdfPage.drawText(sMoneda + ' ' + numeral(venta.total_igv).format('0,0.00'), { x: PAGE_W - MARGIN_R - tw - 15, y: y - 24, size: 10, font });
+      page.drawText(sMoneda+' '+numeral(venta.total_igv).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-23, size:10, font });
 
-      y -= montoH + 5;
+      y -= montoH + 4;
 
-      // Línea total
-      pdfPage.drawLine({ start: { x: totalX, y }, end: { x: PAGE_W - MARGIN_R, y }, thickness: 1.5, color: rgb(0.2, 0.2, 0.2) });
-      y -= 14;
+      page.drawLine({ start:{x:totalX,y}, end:{x:PAGE_W-MARGIN_R,y}, thickness:1.5, color:rgb(0.2,0.2,0.2) });
+      y -= 13;
 
-      // TOTAL
-      pdfPage.drawText('TOTAL:', { x: totalX, y, size: 13, font: fontNegrita, color: rgb(0.4, 0.49, 0.92) });
-      tw = fontNegrita.widthOfTextAtSize(sMoneda + ' ' + numeral(monto_total).format('0,0.00'), 13);
-      pdfPage.drawText(sMoneda + ' ' + numeral(monto_total).format('0,0.00'), { x: PAGE_W - MARGIN_R - tw - 5, y, size: 13, font: fontNegrita, color: rgb(0.4, 0.49, 0.92) });
+      page.drawText('TOTAL:', { x:totalX, y, size:13, font:fontNegrita, color:rgb(0.4,0.49,0.92) });
+      tw = fontNegrita.widthOfTextAtSize(sMoneda+' '+numeral(monto_total).format('0,0.00'), 13);
+      page.drawText(sMoneda+' '+numeral(monto_total).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-5, y, size:13, font:fontNegrita, color:rgb(0.4,0.49,0.92) });
 
-      y -= 25;
+      y -= 22;
 
-      // QR centrado
-      const qrSize = 90;
-      pdfPage.drawImage(qrImageEmbed, { x: (PAGE_W - qrSize) / 2, y: y - qrSize, width: qrSize, height: qrSize });
-      y -= qrSize + 10;
+      // QR
+      const qrSize = 85;
+      page.drawImage(qrImageEmbed, { x:(PAGE_W-qrSize)/2, y:y-qrSize, width:qrSize, height:qrSize });
+      y -= qrSize + 8;
 
       // Hash
-      pdfPage.drawRectangle({ x: MARGIN_L, y: y - 22, width: CONTENT_W, height: 22, color: rgb(0.97, 0.97, 0.98), borderColor: rgb(0.8, 0.8, 0.8), borderWidth: 0.5 });
+      page.drawRectangle({ x:MARGIN_L, y:y-20, width:CONTENT_W, height:20, color:rgb(0.97,0.97,0.98), borderColor:rgb(0.8,0.8,0.8), borderWidth:0.5 });
       tw = font.widthOfTextAtSize(digestvalue, 7);
-      pdfPage.drawText(digestvalue, { x: (PAGE_W - tw) / 2, y: y - 15, size: 7, font, color: rgb(0.6, 0.6, 0.6) });
-      y -= 30;
+      page.drawText(digestvalue, { x:(PAGE_W-tw)/2, y:y-14, size:7, font, color:rgb(0.6,0.6,0.6) });
+      y -= 28;
 
-      // URLs (con wrapText por si son largas)
-      const urlFontSize = 7;
-      const urlColor    = rgb(0.4, 0.4, 0.8);
-
-      const sXml  = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
-      const sCdr  = `Descarga CDR  http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
-      const sPdf  = `Descarga PDF  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
+      // URLs
+      const sXml = `Descarga XML  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+      const sCdr = `Descarga CDR  http://74.208.184.113:8080/descargas/${empresa.ruc}/R-${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.xml`;
+      const sPdf = `Descarga PDF  http://74.208.184.113:8080/descargas/${empresa.ruc}/${empresa.ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
 
       for (const url of [sXml, sCdr, sPdf]) {
-        const urlLines = wrapText(url, CONTENT_W, urlFontSize, font);
-        drawLines(pdfPage, urlLines, font, urlFontSize, MARGIN_L, y, 9);
+        const urlLines = wrapText(url, CONTENT_W, 7, font);
+        drawLines(page, urlLines, font, 7, MARGIN_L, y, 9);
         y -= urlLines.length * 9 + 2;
       }
     }
 
-    // Número de página al pie
-    drawPageNumber(pdfPage, pi + 1, totalPages, font);
+    drawPageFooter(page, pi+1, totalPages, font);
   }
 
   const pdfBytes = await pdfDoc.save();

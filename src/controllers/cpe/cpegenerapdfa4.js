@@ -239,10 +239,6 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
 
   const totalPages = pageGroups.length;
 
-
-
-  const totalPages = pageGroups.length;
-
   // ── PASO 2: Dibujar cada página ───────────────────────────────────────────
   for (let pi = 0; pi < totalPages; pi++) {
     const page = pdfDoc.addPage([PAGE_W, PAGE_H]);

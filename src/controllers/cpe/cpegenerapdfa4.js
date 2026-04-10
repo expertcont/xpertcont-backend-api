@@ -8,7 +8,7 @@ const PAGE_W     = 595.28;
 const PAGE_H     = 841.89;
 const MARGIN_L   = 56.69;
 const MARGIN_R   = 56.69;
-const MARGIN_TOP = 45;
+const MARGIN_TOP = 20;
 const MARGIN_BOT = 40;
 const CONTENT_W  = PAGE_W - MARGIN_L - MARGIN_R;
 

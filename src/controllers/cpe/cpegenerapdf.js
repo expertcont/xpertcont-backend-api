@@ -285,13 +285,29 @@ function wrapText(text, maxWidth, fontSize, font) {
   const words = (text || '').split(' ');
   const lines = [];
   let current = '';
+ 
   for (const word of words) {
-    const test = current ? `${current} ${word}` : word;
-    if (font.widthOfTextAtSize(test, fontSize) <= maxWidth) {
-      current = test;
+    if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+      if (current) { lines.push(current); current = ''; }
+      let chunk = '';
+      for (const char of word) {
+        const test = chunk + char;
+        if (font.widthOfTextAtSize(test, fontSize) <= maxWidth) {
+          chunk = test;
+        } else {
+          if (chunk) lines.push(chunk);
+          chunk = char;
+        }
+      }
+      if (chunk) current = chunk;
     } else {
-      if (current) lines.push(current);
-      current = word;
+      const test = current ? `${current} ${word}` : word;
+      if (font.widthOfTextAtSize(test, fontSize) <= maxWidth) {
+        current = test;
+      } else {
+        if (current) lines.push(current);
+        current = word;
+      }
     }
   }
   if (current) lines.push(current);

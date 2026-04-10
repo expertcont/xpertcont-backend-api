@@ -194,41 +194,41 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   // y vamos restando rowH hasta que no cabe más.
   const ctx = { pngImage, pngDims, empresa, venta, cliente, font, fontNegrita };
 
-  // Simular Y de inicio de tabla en página 1 (dry-run de drawHeader)
-  // Para no duplicar la lógica, usamos una página temporal
-  const tempDoc  = await PDFDocument.create();
-  const tempFont = await tempDoc.embedFont(StandardFonts.Helvetica);
-  const tempFontB= await tempDoc.embedFont(StandardFonts.HelveticaBold);
-  const tempPng  = await tempDoc.embedPng(logo);
-  const tempDims = tempPng.scale(0.5);
-  const tempPage = tempDoc.addPage([PAGE_W, PAGE_H]);
-  const yAfterHeader = drawHeader(tempPage, { pngImage:tempPng, pngDims:tempDims, empresa, venta, cliente, font:tempFont, fontNegrita:tempFontB });
-  const Y_START_P1   = drawTableHeader(tempPage, yAfterHeader, tempFontB); // Y tras cabecera tabla pág 1
+  // Dry-run de drawHeader en página temporal para obtener Y real tras el encabezado
+  const tempDoc   = await PDFDocument.create();
+  const tempFontN = await tempDoc.embedFont(StandardFonts.Helvetica);
+  const tempFontB = await tempDoc.embedFont(StandardFonts.HelveticaBold);
+  const tempPng   = await tempDoc.embedPng(logo);
+  const tempDims  = tempPng.scale(0.5);
+  const tempPage  = tempDoc.addPage([PAGE_W, PAGE_H]);
+  const yAfterHeader = drawHeader(tempPage, { pngImage:tempPng, pngDims:tempDims, empresa, venta, cliente, font:tempFontN, fontNegrita:tempFontB });
 
-  // Y de inicio de tabla en páginas de continuación
-  const Y_START_CONT = drawTableHeader(tempPage, PAGE_H - MARGIN_TOP - 14, tempFontB); // aprox: solo 14pt para el título + 16 tabla
+  // ── Calcular Y de inicio de ítems en cada tipo de página ─────────────────
+  // Pág 1: drawHeader retorna Y real, luego drawTableHeader resta 16
+  // Pág continuación: título (14pt) + tabla header (16pt) = 30pt desde el tope
+  const Y_START_P1   = yAfterHeader - 16; // Y exacto tras encabezado + tabla header
+  const Y_START_CONT = (PAGE_H - MARGIN_TOP) - 14 - 16; // titulo + header tabla
 
-  // Espacio que ocupa la sección de totales+QR+hash+urls en la última página
-  const FOOTER_SECTION_H = 220; // monto letras + base/igv + total + QR(90) + hash + urls
+  // El footer (totales+QR+hash+urls) ocupa ~250pt en la última página
+  const FOOTER_H = 250;
 
-  const pageGroups = []; // array de arrays de rows
-  let group = [];
-  let yAvail = Y_START_P1; // Y donde empieza a dibujarse el primer ítem de la página actual
+  // ── Distribuir filas por página ────────────────────────────────────────────
+  // Regla simple: si el ítem no cabe en el Y actual, abrir nueva página.
+  // En la última página reservar FOOTER_H adicional.
+  const pageGroups = [];
+  let group  = [];
+  let yAvail = Y_START_P1;
 
   for (let i = 0; i < rows.length; i++) {
     const row = rows[i];
-    const isLast = i === rows.length - 1;
 
-    // ¿Cuánto espacio libre queda en esta página?
-    // Si es la última fila de la última página, reservar espacio para el footer
-    const yStop = (isLast && group.length === rows.length - 1 - i + group.length)
-      ? Y_MIN + FOOTER_SECTION_H
-      : Y_MIN;
-
-    // Si el ítem no cabe, cerrar la página actual y abrir una nueva
-    if (yAvail - row.rowH < Y_MIN) {
+    // Verificar si el ítem cabe en la página actual.
+    // Siempre reservamos FOOTER_H porque no sabemos si esta será la última página
+    // hasta después de distribuir todos los ítems. Es más seguro reservarlo siempre.
+    if (yAvail - row.rowH < MARGIN_BOT + FOOTER_H) {
+      // No cabe → cerrar página actual y abrir nueva
       pageGroups.push(group);
-      group = [];
+      group  = [];
       yAvail = Y_START_CONT;
     }
 
@@ -236,6 +236,10 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
     yAvail -= row.rowH;
   }
   pageGroups.push(group);
+
+  const totalPages = pageGroups.length;
+
+
 
   const totalPages = pageGroups.length;
 

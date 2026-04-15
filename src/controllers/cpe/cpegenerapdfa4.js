@@ -8,7 +8,7 @@ const PAGE_W     = 595.28;
 const PAGE_H     = 841.89;
 const MARGIN_L   = 56.69;
 const MARGIN_R   = 56.69;
-const MARGIN_TOP = 20;
+const MARGIN_TOP = 45;
 const MARGIN_BOT = 40;
 const CONTENT_W  = PAGE_W - MARGIN_L - MARGIN_R;
 
@@ -210,32 +210,29 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
   const Y_START_CONT = (PAGE_H - MARGIN_TOP) - 14 - 16; // titulo + header tabla
 
   // El footer (totales+QR+hash+urls) ocupa ~250pt en la última página
-  const FOOTER_H = 250;
+  const FOOTER_H = 250; // espacio que ocupa totales+QR+hash+urls
 
-  // ── Distribuir filas por página ────────────────────────────────────────────
-  // Regla simple: si el ítem no cabe en el Y actual, abrir nueva página.
-  // En la última página reservar FOOTER_H adicional.
+  // ── PASO 1a: Distribuir filas SIN reservar footer (no sabemos cuál es última) ──
   const pageGroups = [];
   let group  = [];
   let yAvail = Y_START_P1;
 
-  for (let i = 0; i < rows.length; i++) {
-    const row = rows[i];
-
-    // Verificar si el ítem cabe en la página actual.
-    // Siempre reservamos FOOTER_H porque no sabemos si esta será la última página
-    // hasta después de distribuir todos los ítems. Es más seguro reservarlo siempre.
-    if (yAvail - row.rowH < MARGIN_BOT + FOOTER_H) {
-      // No cabe → cerrar página actual y abrir nueva
+  for (const row of rows) {
+    if (yAvail - row.rowH < MARGIN_BOT) {
       pageGroups.push(group);
       group  = [];
       yAvail = Y_START_CONT;
     }
-
     group.push(row);
     yAvail -= row.rowH;
   }
   pageGroups.push(group);
+
+  // ── PASO 1b: Verificar si el footer cabe en la última página ──────────────
+  // Si no cabe, agregar una página extra solo para el footer (sin ítems)
+  if (yAvail - FOOTER_H < MARGIN_BOT) {
+    pageGroups.push([]); // página extra solo para totales+QR
+  }
 
   const totalPages = pageGroups.length;
 

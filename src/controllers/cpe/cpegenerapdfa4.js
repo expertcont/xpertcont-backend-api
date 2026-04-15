@@ -89,10 +89,10 @@ function drawHeader(page, { pngImage, pngDims, empresa, venta, cliente, font, fo
   page.drawText(empresa.razon_social, { x:(PAGE_W-tw)/2, y, size:10, font }); y -= 11;
 
   tw = font.widthOfTextAtSize(empresa.domicilio_fiscal, 9);
-  page.drawText(empresa.domicilio_fiscal, { x:(PAGE_W-tw)/2, y, size:9, font }); y -= 11;
+  page.drawText(empresa.domicilio_fiscal, { x:(PAGE_W-tw)/2, y, size:9, font }); y -= 18; // espacio antes de serie-número
 
   tw = fontNegrita.widthOfTextAtSize(venta.serie+'-'+venta.numero, 16);
-  page.drawText(venta.serie+'-'+venta.numero, { x:(PAGE_W-tw)/2, y, size:16, font:fontNegrita, color:rgb(0.4,0.49,0.92) }); y -= 14;
+  page.drawText(venta.serie+'-'+venta.numero, { x:(PAGE_W-tw)/2, y, size:16, font:fontNegrita, color:rgb(0.4,0.49,0.92) }); y -= 22; // fuente grande, bajar más
 
   if (venta.ref_numero !== '') {
     const ref = 'REF: '+venta.ref_serie+'-'+venta.ref_numero;
@@ -107,8 +107,8 @@ function drawHeader(page, { pngImage, pngDims, empresa, venta, cliente, font, fo
   y -= 8;
 
   // Banda cliente
-  page.drawRectangle({ x:MARGIN_L, y:y-14, width:CONTENT_W, height:16, color:rgb(0.97,0.97,0.98), borderColor:rgb(0.4,0.49,0.92), borderWidth:0.5 });
-  page.drawText('DATOS DEL CLIENTE', { x:MARGIN_L+5, y:y-11, size:10, font:fontNegrita }); y -= 17;
+  page.drawRectangle({ x:MARGIN_L, y:y-16, width:CONTENT_W, height:18, color:rgb(0.97,0.97,0.98), borderColor:rgb(0.4,0.49,0.92), borderWidth:0.5 });
+  page.drawText('DATOS DEL CLIENTE', { x:MARGIN_L+5, y:y-12, size:10, font:fontNegrita }); y -= 24; // bajar suficiente para no solapar
 
   page.drawText('Cliente: '+(cliente.razon_social_nombres||''), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
   page.drawText('RUC/DNI: '+(cliente.documento_identidad||''), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
@@ -341,6 +341,7 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
 };
 
 module.exports = cpegenerapdfa4;
+
 
 /*const { PDFDocument, StandardFonts, PDFName, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');

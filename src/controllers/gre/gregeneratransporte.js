@@ -65,10 +65,14 @@ function gregeneratransporte(data) {
             </cac:Delivery>`;
         
         if (data.guia_modalidad_id === "02"){
+            const placa = String(data.vehiculo_placa || "")
+            .toUpperCase()
+            .replace(/[-\s]/g, ""); // elimina guiones y espacios
+
             xmlTransporte +=
             `<cac:TransportHandlingUnit>
                 <cac:TransportEquipment>
-                    <cbc:ID>${data.vehiculo_placa}</cbc:ID>
+                    <cbc:ID>${placa}</cbc:ID>
                 </cac:TransportEquipment>
             </cac:TransportHandlingUnit>`;
         }

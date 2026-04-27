@@ -116,7 +116,11 @@ function drawHeader(page, { pngImage, pngDims, empresa, venta, cliente, font, fo
   if (venta.vendedor?.trim()) {
     page.drawText('Vendedor: '+venta.vendedor.trim(), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
   }
-  page.drawText('Forma de Pago: CONTADO', { x:MARGIN_L+5, y, size:9, font }); y -= 10;
+  page.drawText('Forma de Pago: CONTADO', { x:MARGIN_L+5, y, size:9, font }); 
+  page.drawText((venta.forma_pago2 || ''), { x:MARGIN_L+25, y, size:9, font });
+  page.drawText((venta.efectivo2 || ''), { x:MARGIN_L+45, y, size:9, font });
+  y -= 10;
+  
 
   return y;
 }

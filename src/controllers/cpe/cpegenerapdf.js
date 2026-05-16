@@ -181,7 +181,15 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
       const precio_base     = Number(detalle.precio_base);
       const porc_igv        = Number(detalle.porc_igv);
       const precio_unitario = (precio_base * (1 + porc_igv / 100)).toFixed(2);
-      const precio_neto     = (precio_unitario * cantidad).toFixed(2);
+      
+      //New: Para temas de redondeo de precios, no podemos depender del calculo, debemos tener un precio_neto fijo solo para tema de impresion
+      const precio_neto_calculado     = (precio_unitario * cantidad).toFixed(2);
+      const precio_neto_pdf = detalle.precio_neto != null
+        ? Number(detalle.precio_neto)
+        : 0;
+      const precio_neto = precio_neto_pdf !== 0
+        ? precio_neto_pdf
+        : precio_neto_calculado;        
 
       const prodLines = wrapText(detalle.producto, maxTextWidth, fontSize-1, font);
       if (draw) {

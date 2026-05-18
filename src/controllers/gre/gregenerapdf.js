@@ -63,11 +63,16 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
     consumed += pngDims.height + 8;
 
     // ── Razón social empresa ──────────────────────────────────────────────
-    if (draw) {
+    /*if (draw) {
       const tw = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
       P.drawText(empresa.razon_social, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
     }
-    consumed += 12;
+    consumed += 12;*/
+    // ── Razón social empresa ──────────────────────────────────────────────
+    const rsEmpLines = wrapText(empresa.razon_social, maxTextWidth, fontSize, fontNegrita);
+    const rsEmpY = Y();
+    consumed += rsEmpLines.length * 12;
+    if (draw) drawLines(P, rsEmpLines, fontNegrita, fontSize, maxTextWidth, margin, rsEmpY, 'center', 12);    
 
     // ── RUC ───────────────────────────────────────────────────────────────
     if (draw) {
@@ -253,7 +258,7 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
     const horaImpresion = 'IMPRESO: ' + new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' });
     if (draw) { const tw = font.widthOfTextAtSize(horaImpresion, fontSize-2); P.drawText(horaImpresion, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize-2, font }); }
     consumed += 12;
-    
+
     // ── QR ────────────────────────────────────────────────────────────────
     consumed += 15;
     if (draw) {

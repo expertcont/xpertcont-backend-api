@@ -249,6 +249,11 @@ const gregenerapdf = async (size, logo, sJson, digestvalue) => {
       consumed += 8;
     }
 
+    // ── Hora de impresión ─────────────────────────────────────────────────
+    const horaImpresion = 'IMPRESO: ' + new Date().toLocaleString('es-PE', { timeZone: 'America/Lima' });
+    if (draw) { const tw = font.widthOfTextAtSize(horaImpresion, fontSize-2); P.drawText(horaImpresion, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize-2, font }); }
+    consumed += 12;
+    
     // ── QR ────────────────────────────────────────────────────────────────
     consumed += 15;
     if (draw) {

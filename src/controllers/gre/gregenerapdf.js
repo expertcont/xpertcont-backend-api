@@ -4,6 +4,342 @@ const QRCode = require('qrcode');
 const gregenerapdf = async (size, logo, sJson, digestvalue) => {
   const pdfDoc = await PDFDocument.create();
 
+  const width        = (size === '80mm') ? 226.77 : 164.41;
+  const fontSize     = (size === '80mm') ? 10 : 8;
+  const marginLeftSize = (size === '80mm') ? 0 : 62.36;
+
+  const empresa      = sJson.empresa;
+  const guia         = sJson.guia;
+  const registrosdet = sJson.items;
+
+  const lineHeight   = fontSize * 1.2;
+  const margin       = 5;
+  const ticketWidth  = 227;
+  const maxTextWidth = ticketWidth - margin * 2 - marginLeftSize;
+
+  // ── Recursos embebidos ────────────────────────────────────────────────────
+  const font        = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const fontNegrita = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pngImage    = await pdfDoc.embedPng(logo);
+  const pngDims     = pngImage.scale(0.6);
+
+  // QR
+  const qrDataUrl    = await QRCode.toDataURL(digestvalue);
+  const qrImageEmbed = await pdfDoc.embedPng(base64ToUint8Array(qrDataUrl.split(',')[1]));
+  const qrSize       = 45;
+
+  // Textos derivados
+  const sDocumento = { '09':'GUIA REMISION REMITENTE', '31':'GUIA REMISION TRANSPORTISTA' }[guia.codigo] || 'DOCUMENTO';
+  const sMotivo    = {
+    '01':'VENTA','02':'COMPRA','03':'VENTA CON ENTREGA A TERCEROS',
+    '04':'TRASLADO ENTRE ESTABLECIMIENTOS MISMA EMPRESA','05':'CONSIGNACION',
+    '06':'DEVOLUCION','07':'RECOJO DE BIENES TRANSFORMADOS','08':'IMPORTACION',
+    '09':'EXPORTACION','13':'OTROS','14':'VENTA SUJETA A CONFIRMACION DEL COMPRADOR',
+    '15':'TRASLADO DE BIENES PARA SU TRANSFORMACION','18':'TRASLADO EMISOR ITINERANTE CP',
+  }[guia.guia_motivo_id] || 'OTROS';
+  const sModalidad = { '01':'TRANSPORTE PUBLICO', '02':'TRANSPORTE PRIVADO' }[guia.guia_modalidad_id] || 'OTROS';
+  const IDMODOTRASLADO = guia.guia_modalidad_id;
+
+  // ── runLayout: dry-run (draw=false) o dibujo real (draw=true) ─────────────
+  const runLayout = (page, draw, pageHeight) => {
+    const P = draw ? page : {
+      drawText: () => {}, drawImage: () => {},
+      drawRectangle: () => {}, drawLine: () => {},
+      getWidth: () => width,
+    };
+    const H  = draw ? pageHeight : 0;
+    let consumed = 0;
+    const Y = () => H - consumed;
+
+    // ── Logo ──────────────────────────────────────────────────────────────
+    if (draw) {
+      P.drawImage(pngImage, {
+        x: margin + (marginLeftSize / 2),
+        y: H - pngDims.height - 5,
+        width: pngDims.width,
+        height: pngDims.height,
+      });
+    }
+    consumed += pngDims.height + 8;
+
+    // ── Razón social empresa ──────────────────────────────────────────────
+    if (draw) {
+      const tw = fontNegrita.widthOfTextAtSize(empresa.razon_social, fontSize);
+      P.drawText(empresa.razon_social, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+    }
+    consumed += 12;
+
+    // ── RUC ───────────────────────────────────────────────────────────────
+    if (draw) {
+      const tw = fontNegrita.widthOfTextAtSize('RUC '+empresa.ruc, fontSize+1);
+      P.drawText('RUC '+empresa.ruc, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize+1, font:fontNegrita });
+    }
+    consumed += 12;
+
+    // ── Domicilio fiscal ──────────────────────────────────────────────────
+    const domLines = wrapText(empresa.domicilio_fiscal, maxTextWidth, fontSize-2, font);
+    const domY = Y();
+    consumed += domLines.length * 12 + 12;
+    if (draw) drawLines(P, domLines, font, fontSize-2, maxTextWidth, margin, domY, 'center', 12);
+
+    // ── Tipo documento ────────────────────────────────────────────────────
+    if (draw) {
+      const tw = fontNegrita.widthOfTextAtSize(sDocumento, fontSize+2);
+      P.drawText(sDocumento, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize+2, font:fontNegrita });
+    }
+    consumed += 12;
+
+    if (draw) {
+      const tw = fontNegrita.widthOfTextAtSize('ELECTRONICA', fontSize+1);
+      P.drawText('ELECTRONICA', { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize+1, font:fontNegrita });
+    }
+    consumed += 12;
+
+    // ── Serie-Número ──────────────────────────────────────────────────────
+    if (draw) {
+      const tw = fontNegrita.widthOfTextAtSize(guia.serie+'-'+guia.numero, 12);
+      P.drawText(guia.serie+'-'+guia.numero, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:12, font:fontNegrita });
+    }
+    consumed += 18; // 12 texto + 6 espacio extra
+
+    // ── Banda DESTINATARIO ────────────────────────────────────────────────
+    if (draw) {
+      P.drawRectangle({ x:margin, y:Y()-2, width:P.getWidth()-margin-5, height:lineHeight+2, borderWidth:1, color:rgb(0.778,0.778,0.778), borderColor:rgb(0.8,0.8,0.8) });
+      const tw = fontNegrita.widthOfTextAtSize('DESTINATARIO: ', fontSize-1);
+      P.drawText('DESTINATARIO: ', { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize-1 });
+    }
+    consumed += 12;
+
+    const destRSLines = wrapText(guia.destinatario_razon_social?.toString() ?? '', maxTextWidth, fontSize, font);
+    const destRSY = Y();
+    consumed += destRSLines.length * 12;
+    if (draw) drawLines(P, destRSLines, font, fontSize, maxTextWidth, margin, destRSY, 'center', 12);
+
+    if (draw) {
+      const tw = fontNegrita.widthOfTextAtSize('RUC: '+guia.destinatario_ruc_dni, fontSize);
+      P.drawText('RUC: '+(guia.destinatario_ruc_dni?.toString() ?? ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+    }
+    consumed += 12;
+
+    const llegDirLines = wrapText(guia.llegada_direccion?.toString() ?? '', maxTextWidth, fontSize, font);
+    const llegDirY = Y();
+    consumed += llegDirLines.length * 12 + 12;
+    if (draw) drawLines(P, llegDirLines, font, fontSize, maxTextWidth, margin, llegDirY, 'center', 12);
+
+    // ── Banda DATOS DE ENVIO ──────────────────────────────────────────────
+    if (draw) {
+      P.drawRectangle({ x:margin, y:Y()-2, width:P.getWidth()-margin-5, height:lineHeight+2, borderWidth:1, color:rgb(0.778,0.778,0.778), borderColor:rgb(0.8,0.8,0.8) });
+      const tw = fontNegrita.widthOfTextAtSize('DATOS DE ENVIO: ', fontSize-1);
+      P.drawText('DATOS DE ENVIO: ', { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize-1 });
+    }
+    consumed += 12;
+
+    const envioItems = [
+      'EMISION: '   + (guia.fecha_emision?.toString()  ?? ''),
+      'TRASLADO: '  + (guia.fecha_traslado?.toString() ?? ''),
+      'MOTIVO: '    + sMotivo,
+      'MODALIDAD: ' + sModalidad,
+      'PARTIDA UBIGEO: ' + (guia.partida_ubigeo?.toString() ?? ''),
+    ];
+    for (const txt of envioItems) {
+      if (draw) {
+        const tw = font.widthOfTextAtSize(txt, fontSize);
+        P.drawText(txt, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize, font });
+      }
+      consumed += 12;
+    }
+
+    // Dirección partida (puede ser larga)
+    const partDirLines = wrapText(guia.partida_direccion?.toString() ?? '', maxTextWidth, fontSize, font);
+    const partDirY = Y();
+    consumed += partDirLines.length * 12;
+    if (draw) drawLines(P, partDirLines, font, fontSize, maxTextWidth, margin, partDirY, 'center', 12);
+
+    if (draw) {
+      const tw = font.widthOfTextAtSize('LLEGADA UBIGEO: '+(guia.llegada_ubigeo?.toString() ?? ''), fontSize);
+      P.drawText('LLEGADA UBIGEO: '+(guia.llegada_ubigeo?.toString() ?? ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize, font });
+    }
+    consumed += 12;
+
+    // Dirección llegada (puede ser larga)
+    const llegDir2Lines = wrapText(guia.llegada_direccion?.toString() ?? '', maxTextWidth, fontSize, font);
+    const llegDir2Y = Y();
+    consumed += llegDir2Lines.length * 12;
+    if (draw) drawLines(P, llegDir2Lines, font, fontSize, maxTextWidth, margin, llegDir2Y, 'center', 12);
+
+    if (draw) {
+      const tw = font.widthOfTextAtSize('PESO TOTAL KG: '+(guia.peso_total?.toString() ?? ''), fontSize);
+      P.drawText('PESO TOTAL KG: '+(guia.peso_total?.toString() ?? ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize, font });
+    }
+    consumed += 24; // 12 texto + 12 espacio extra
+
+    // ── Banda DATOS DEL TRANSPORTE ────────────────────────────────────────
+    if (draw) {
+      P.drawRectangle({ x:margin, y:Y()-2, width:P.getWidth()-margin-5, height:lineHeight+2, borderWidth:1, color:rgb(0.778,0.778,0.778), borderColor:rgb(0.8,0.8,0.8) });
+      const tw = fontNegrita.widthOfTextAtSize('DATOS DEL TRANSPORTE: ', fontSize-1);
+      P.drawText('DATOS DEL TRANSPORTE: ', { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize-1 });
+    }
+    consumed += 12;
+
+    if (IDMODOTRASLADO === '01') {
+      // Transporte público
+      const transpLines = wrapText(guia.transp_razon_social?.toString() ?? '', maxTextWidth, fontSize, font);
+      const transpY = Y();
+      consumed += transpLines.length * 12;
+      if (draw) drawLines(P, transpLines, font, fontSize, maxTextWidth, margin, transpY, 'center', 12);
+
+      if (draw) {
+        const tw = font.widthOfTextAtSize('RUC: '+(guia.transp_ruc?.toString() ?? ''), fontSize);
+        P.drawText('RUC: '+(guia.transp_ruc?.toString() ?? ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize, font });
+      }
+      consumed += 12;
+    }
+
+    if (IDMODOTRASLADO === '02') {
+      // Transporte privado
+      const condItems = [
+        guia.conductor_nombres?.toString()   ?? '',
+        guia.conductor_apellidos?.toString() ?? '',
+        'DNI: '      + (guia.conductor_dni?.toString()     ?? ''),
+        'LICENCIA: ' + (guia.conductor_licencia?.toString() ?? ''),
+        'PLACA: '    + (guia.vehiculo_placa?.toString()    ?? ''),
+      ];
+      for (const txt of condItems) {
+        if (draw) {
+          const tw = font.widthOfTextAtSize(txt, fontSize);
+          P.drawText(txt, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize, font });
+        }
+        consumed += 12;
+      }
+    }
+    consumed += 12; // espacio antes de ítems
+
+    // ── Banda DESCRIPCION ─────────────────────────────────────────────────
+    if (draw) {
+      P.drawRectangle({ x:margin, y:Y()-2, width:P.getWidth()-margin-5, height:lineHeight+2, borderWidth:1, color:rgb(0.778,0.778,0.778), borderColor:rgb(0.8,0.8,0.8) });
+      P.drawText('DESCRIPCION', { x:margin, y:Y(), size:fontSize-1 });
+      const tw = fontNegrita.widthOfTextAtSize('UNIDAD', fontSize-1);
+      P.drawText('UNIDAD', { x:(ticketWidth-tw-margin-marginLeftSize), y:Y(), size:fontSize-1 });
+    }
+    consumed += 10;
+
+    // ── Ítems ─────────────────────────────────────────────────────────────
+    for (const detalle of registrosdet) {
+      const prodLines = wrapText(detalle.producto, maxTextWidth, fontSize-1, font);
+      if (draw) {
+        prodLines.forEach((line, i) => {
+          P.drawText(line, { x:margin, y:Y()-i*10, size:fontSize-1, font });
+        });
+      }
+      consumed += prodLines.length * 10;
+
+      // Fila cantidad + unidad
+      if (draw) {
+        const yRow = Y();
+        P.drawText('Cant: '+detalle.cantidad, { x:margin, y:yRow, size:fontSize-1 });
+        const tw = fontNegrita.widthOfTextAtSize(detalle.codigo_unidad, fontSize);
+        P.drawText(detalle.codigo_unidad, { x:(ticketWidth-tw-margin-marginLeftSize), y:yRow, size:fontSize-1 });
+      }
+      consumed += 5;
+
+      // Línea separadora
+      if (draw) {
+        P.drawLine({ start:{x:margin,y:Y()}, end:{x:P.getWidth()-margin-5,y:Y()}, thickness:1, color:rgb(0.778,0.778,0.778) });
+      }
+      consumed += 8;
+    }
+
+    // ── QR ────────────────────────────────────────────────────────────────
+    consumed += 15;
+    if (draw) {
+      P.drawImage(qrImageEmbed, {
+        x: (ticketWidth-qrSize-marginLeftSize)/2,
+        y: Y()-qrSize,
+        width: qrSize,
+        height: qrSize,
+      });
+    }
+    consumed += qrSize + 5;
+
+    // ── Digest ────────────────────────────────────────────────────────────
+    if (draw) P.drawText(digestvalue, { x:margin, y:Y(), size:fontSize-2 });
+
+    // Cortar digestvalue si es muy largo (ya que no hacemos wrap aquí)
+    consumed += 15;
+
+    // Margen inferior
+    consumed += 15;
+
+    return consumed;
+  };
+
+  // ── Paso 1: dry-run → altura exacta ──────────────────────────────────────
+  const totalConsumed = runLayout(null, false, 0);
+  const pageHeight    = Math.max(totalConsumed, 200);
+
+  // ── Paso 2: crear página con alto exacto ─────────────────────────────────
+  const page = pdfDoc.addPage([width, pageHeight]);
+
+  // ── Paso 3: dibujar ──────────────────────────────────────────────────────
+  runLayout(page, true, pageHeight);
+
+  const pdfBytes = await pdfDoc.save();
+  return { estado: true, buffer_pdf: pdfBytes };
+};
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function base64ToUint8Array(base64) {
+  return new Uint8Array(Buffer.from(base64, 'base64'));
+}
+
+function wrapText(text, maxWidth, fontSize, font) {
+  const words = (text || '').split(' ');
+  const lines = [];
+  let current = '';
+  for (const word of words) {
+    if (!word) continue;
+    if (font.widthOfTextAtSize(word, fontSize) > maxWidth) {
+      if (current) { lines.push(current); current = ''; }
+      let chunk = '';
+      for (const char of word) {
+        const test = chunk + char;
+        if (font.widthOfTextAtSize(test, fontSize) <= maxWidth) chunk = test;
+        else { if (chunk) lines.push(chunk); chunk = char; }
+      }
+      if (chunk) current = chunk;
+    } else {
+      const test = current ? `${current} ${word}` : word;
+      if (font.widthOfTextAtSize(test, fontSize) <= maxWidth) {
+        current = test;
+      } else {
+        if (current) lines.push(current);
+        current = word;
+      }
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
+
+function drawLines(page, lines, font, fontSize, maxWidth, x, y, align = 'left', lineHeight = 12) {
+  lines.forEach((ln, i) => {
+    const tw = font.widthOfTextAtSize(ln, fontSize);
+    let drawX = x;
+    if (align === 'center') drawX = x + (maxWidth - tw) / 2;
+    else if (align === 'right') drawX = x + (maxWidth - tw);
+    page.drawText(ln, { x: drawX, y: y - i * lineHeight, size: fontSize, font });
+  });
+}
+
+module.exports = gregenerapdf;
+
+/*const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const QRCode = require('qrcode');
+
+const gregenerapdf = async (size, logo, sJson, digestvalue) => {
+  const pdfDoc = await PDFDocument.create();
+
   const width = (size === '80mm') ? 226.77 : 164.41;
   const fontSize = (size === '80mm') ? 10 : 8;
   const marginLeftSize = (size === '80mm') ? 0 : 62.36;
@@ -359,19 +695,19 @@ function base64ToUint8Array(base64) {
   return bytes;
 }
 
-/**
- * Dibuja texto multilínea con ajuste automático y alineación
- * @param {object} page - Página PDF
- * @param {string} text - Texto a dibujar
- * @param {object} font - Fuente embebida de pdf-lib
- * @param {number} fontSize - Tamaño de fuente
- * @param {number} maxWidth - Ancho máximo permitido (ej. ancho del ticket)
- * @param {number} x - Posición X inicial (para left alignment)
- * @param {number} y - Posición Y inicial
- * @param {string} align - Alineación: "left" | "center" | "right"
- * @param {number} lineHeight - Altura de línea
- * @returns {number} - Nueva posición Y después del texto
- */
+
+// * Dibuja texto multilínea con ajuste automático y alineación
+// * @param {object} page - Página PDF
+// * @param {string} text - Texto a dibujar
+// * @param {object} font - Fuente embebida de pdf-lib
+// * @param {number} fontSize - Tamaño de fuente
+// * @param {number} maxWidth - Ancho máximo permitido (ej. ancho del ticket)
+// * @param {number} x - Posición X inicial (para left alignment)
+// * @param {number} y - Posición Y inicial
+// * @param {string} align - Alineación: "left" | "center" | "right"
+// * @param {number} lineHeight - Altura de línea
+// * @returns {number} - Nueva posición Y después del texto
+
 function drawTextWrapped(page, text, font, fontSize, maxWidth, x, y, align = "left", lineHeight = 12) {
   const palabras = text.split(/\s+/);
   let linea = "";
@@ -436,4 +772,4 @@ function wrapText(text, maxWidth, fontSize, font) {
   return lines;
 }
 
-module.exports = gregenerapdf;
+module.exports = gregenerapdf;*/

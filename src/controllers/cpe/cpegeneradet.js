@@ -3,7 +3,7 @@ function cpegeneradet(items, moneda_id, codigo) {
     let {
       producto,
       cantidad,
-      precio_base,
+      precio_base, //Se requiero a 6 decimales para evitar errores de precision
       codigo_sunat,
       codigo_producto,
       codigo_unidad,

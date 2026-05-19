@@ -161,19 +161,8 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     if (draw) {
       const tw = fontNegrita.widthOfTextAtSize("PAGO: CONTADO", fontSize);
       P.drawText("PAGO: CONTADO", { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-
-      //Seccion nueva aumentada
-      if (venta.forma_pago2) {
-        consumed += 10;
-        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y()-10, size:fontSize });
-      }
-      if (venta.efectivo2) {
-        consumed += 10;
-        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y()-20, size:fontSize });
-      }
-      //Fin seccion nueva
     }
-    consumed += 15;
+    consumed += 10;
 
     //Seccion nueva aumentada
     if (draw) {
@@ -183,14 +172,13 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
       }
     }
     consumed += 10;
-
     if (draw) {
       if (venta.efectivo2) {
         const tw = fontNegrita.widthOfTextAtSize((venta.efectivo2 || ''), fontSize);
         P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
       }
     }
-    consumed += 10;
+    consumed += 15;
     //Fin seccion nueva
 
     // ── Cabecera de ítems ───────────────────────────────────────────────

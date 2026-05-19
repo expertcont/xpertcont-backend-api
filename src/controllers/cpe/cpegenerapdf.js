@@ -161,6 +161,17 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     if (draw) {
       const tw = fontNegrita.widthOfTextAtSize("PAGO: CONTADO", fontSize);
       P.drawText("PAGO: CONTADO", { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+
+      //Seccion nueva aumentada
+      if (venta.forma_pago2) {
+        consumed += 10;
+        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      }
+      if (venta.efectivo2) {
+        consumed += 10;
+        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      }
+      //Fin seccion nueva
     }
     consumed += 15;
 

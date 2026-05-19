@@ -169,16 +169,18 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
       if (venta.forma_pago2) {
         const tw = fontNegrita.widthOfTextAtSize((venta.forma_pago2 || ''), fontSize);
         P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+        consumed += 10;
+      }
+    }
+    
+    if (draw) {
+      if (Number(venta.efectivo2) > 0) {
+        const tw = fontNegrita.widthOfTextAtSize((venta.efectivo2 || ''), fontSize);
+        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+        consumed += 10;
       }
     }
     consumed += 10;
-    if (draw) {
-      if (venta.efectivo2) {
-        const tw = fontNegrita.widthOfTextAtSize((venta.efectivo2 || ''), fontSize);
-        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-      }
-    }
-    consumed += 15;
     //Fin seccion nueva
 
     // ── Cabecera de ítems ───────────────────────────────────────────────

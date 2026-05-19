@@ -165,11 +165,11 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
       //Seccion nueva aumentada
       if (venta.forma_pago2) {
         consumed += 10;
-        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y()+10, size:fontSize });
       }
       if (venta.efectivo2) {
         consumed += 10;
-        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y()+20, size:fontSize });
       }
       //Fin seccion nueva
     }

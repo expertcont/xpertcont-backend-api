@@ -161,21 +161,19 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     if (draw) {
       const tw = fontNegrita.widthOfTextAtSize("PAGO: CONTADO", fontSize);
       P.drawText("PAGO: CONTADO", { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-      
-      //Seccion nueva aumentada
-      if (venta.forma_pago2) {
-        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-        consumed += 15;
-      }
-      if (venta.efectivo2) {
-        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-        consumed += 15;
-      }
-      //Fin seccion nueva
-      
     }
     consumed += 15;
 
+    //Seccion nueva aumentada
+    if (venta.forma_pago2) {
+      P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      consumed += 10;
+    }
+    if (venta.efectivo2) {
+      P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      consumed += 10;
+    }
+    //Fin seccion nueva
 
     // ── Cabecera de ítems ───────────────────────────────────────────────
     if (draw) {

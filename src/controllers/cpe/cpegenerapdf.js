@@ -175,6 +175,24 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     }
     consumed += 15;
 
+    //Seccion nueva aumentada
+    if (draw) {
+      if (venta.forma_pago2) {
+        const tw = fontNegrita.widthOfTextAtSize((venta.forma_pago2 || ''), fontSize);
+        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      }
+    }
+    consumed += 10;
+
+    if (draw) {
+      if (venta.efectivo2) {
+        const tw = fontNegrita.widthOfTextAtSize((venta.efectivo2 || ''), fontSize);
+        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      }
+    }
+    consumed += 10;
+    //Fin seccion nueva
+
     // ── Cabecera de ítems ───────────────────────────────────────────────
     if (draw) {
       P.drawRectangle({ x:margin, y:Y()-2, width:page.getWidth()-margin-5, height:lineHeight+2, borderWidth:1, color:rgb(0.778,0.778,0.778), borderColor:rgb(0.8,0.8,0.8) });

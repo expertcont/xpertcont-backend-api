@@ -14,41 +14,29 @@ function gregeneratransporte(data) {
         `<cbc:TotalTransportHandlingUnitQuantity>${data.numero_bultos}</cbc:TotalTransportHandlingUnitQuantity>`;
     };
     
-    /*xmlTransporte +=
+    xmlTransporte +=
        `<cac:ShipmentStage>
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
-            </cac:TransitPeriod>`;*/
-    if (data.guia_modalidad_id === "01") {
-        xmlTransporte += `
-        <cac:ShipmentStage>
-            <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
-            <cbc:ActualDeliveryDate>${data.fecha_entrega_transportista || data.fecha_traslado}</cbc:ActualDeliveryDate>
-            <cac:TransitPeriod>
-                <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
             </cac:TransitPeriod>`;
-    } else {
-        xmlTransporte += `
-        <cac:ShipmentStage>
-            <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
-            <cac:TransitPeriod>
-                <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
-            </cac:TransitPeriod>`;
-    }            
 
     //<!--  Datos del Envío - Embarque - Transporte publico -->
     if (data.guia_modalidad_id === "01"){
         xmlTransporte +=
-           `<cac:CarrierParty>
+        `<cac:CarrierParty>
                 <cac:PartyIdentification>
                     <cbc:ID schemeID="6">${data.transp_ruc}</cbc:ID>
                 </cac:PartyIdentification>
                 <cac:PartyLegalEntity>
                     <cbc:RegistrationName><![CDATA[${data.transp_razon_social}]]></cbc:RegistrationName>
+                    <cac:CorporateRegistrationScheme>
+                        <cbc:ID>${data.transp_mtc}</cbc:ID>
+                    </cac:CorporateRegistrationScheme>
                 </cac:PartyLegalEntity>
             </cac:CarrierParty>`;
-    };
+    };    
+
     //<!--  Datos del Envío - Embarque - Transporte privado -->
     if (data.guia_modalidad_id === "02"){
         xmlTransporte += 

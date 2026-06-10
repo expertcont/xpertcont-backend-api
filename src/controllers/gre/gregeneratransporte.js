@@ -6,6 +6,7 @@ function gregeneratransporte(data) {
         <cbc:HandlingCode>${data.guia_motivo_id}</cbc:HandlingCode>
         <cbc:HandlingInstructions>VENTA</cbc:HandlingInstructions>
         <cbc:GrossWeightMeasure unitCode="KGM">${data.peso_total}</cbc:GrossWeightMeasure>`;
+        
         //<!--  Datos del Envío - Numero de bultos o pallets - Enteros -->
     //caso recojo bienes transformados,se requiere numero_bultos
         if (data.guia_motivo_id === "07"){    
@@ -13,12 +14,29 @@ function gregeneratransporte(data) {
         `<cbc:TotalTransportHandlingUnitQuantity>${data.numero_bultos}</cbc:TotalTransportHandlingUnitQuantity>`;
     };
     
-    xmlTransporte +=
+    /*xmlTransporte +=
        `<cac:ShipmentStage>
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
+            </cac:TransitPeriod>`;*/
+    if (data.guia_modalidad_id === "01") {
+        xmlTransporte += `
+        <cac:ShipmentStage>
+            <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
+            <cbc:ActualDeliveryDate>${data.fecha_entrega_transportista || data.fecha_traslado}</cbc:ActualDeliveryDate>
+            <cac:TransitPeriod>
+                <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
             </cac:TransitPeriod>`;
+    } else {
+        xmlTransporte += `
+        <cac:ShipmentStage>
+            <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
+            <cac:TransitPeriod>
+                <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
+            </cac:TransitPeriod>`;
+    }            
+
     //<!--  Datos del Envío - Embarque - Transporte publico -->
     if (data.guia_modalidad_id === "01"){
         xmlTransporte +=

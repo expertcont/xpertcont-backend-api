@@ -44,6 +44,7 @@ function gregeneratransporte(data) {
                         <cbc:ID>${data.transp_mtc}</cbc:ID>
                     </cac:CorporateRegistrationScheme>
                 </cac:PartyLegalEntity>
+                
                 <cac:TransportEvent>
                     <cbc:TransportEventTypeCode>1</cbc:TransportEventTypeCode>
                     <cac:Period>

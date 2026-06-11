@@ -21,8 +21,13 @@ function gregeneratransporte(data) {
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
-                <cbc:EndDate>${data.fecha_traslado}</cbc:EndDate>
-            </cac:TransitPeriod>`;
+            </cac:TransitPeriod>
+            <cac:TransportEvent>
+                <cbc:TransportEventTypeCode>1</cbc:TransportEventTypeCode>
+                <cac:Period>
+                    <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
+                </cac:Period>
+            </cac:TransportEvent>`;
     }else{
     xmlTransporte +=
        `<cac:ShipmentStage>

@@ -5,6 +5,7 @@ function gregeneratransporte(data) {
         <cbc:ID>1</cbc:ID>
         <cbc:HandlingCode>${data.guia_motivo_id}</cbc:HandlingCode>
         <cbc:HandlingInstructions>VENTA</cbc:HandlingInstructions>
+        <cbc:Information>Bienes</cbc:Information>
         <cbc:GrossWeightMeasure unitCode="KGM">${data.peso_total}</cbc:GrossWeightMeasure>`;
         
         //<!--  Datos del Envío - Numero de bultos o pallets - Enteros -->
@@ -19,7 +20,6 @@ function gregeneratransporte(data) {
     xmlTransporte +=
        `<cac:ShipmentStage>
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
-            <cbc:DocumentDescription>Bienes</cbc:DocumentDescription>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
                 <cbc:EndDate>${data.fecha_traslado}</cbc:EndDate>
@@ -28,7 +28,6 @@ function gregeneratransporte(data) {
     xmlTransporte +=
        `<cac:ShipmentStage>
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
-            <cbc:DocumentDescription>Bienes</cbc:DocumentDescription>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
             </cac:TransitPeriod>`;

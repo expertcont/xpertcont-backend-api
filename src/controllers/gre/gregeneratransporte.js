@@ -5,6 +5,7 @@ function gregeneratransporte(data) {
         <cbc:ID>1</cbc:ID>
         <cbc:HandlingCode>${data.guia_motivo_id}</cbc:HandlingCode>
         <cbc:HandlingInstructions>VENTA</cbc:HandlingInstructions>
+        <cbc:DocumentDescription>Bienes</cbc:DocumentDescription>
         <cbc:GrossWeightMeasure unitCode="KGM">${data.peso_total}</cbc:GrossWeightMeasure>`;
         
         //<!--  Datos del Envío - Numero de bultos o pallets - Enteros -->

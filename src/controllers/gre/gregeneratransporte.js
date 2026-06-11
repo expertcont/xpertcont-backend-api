@@ -14,12 +14,23 @@ function gregeneratransporte(data) {
         `<cbc:TotalTransportHandlingUnitQuantity>${data.numero_bultos}</cbc:TotalTransportHandlingUnitQuantity>`;
     };
     
+    if (data.guia_modalidad_id === "01"){
+        //consideramos fecha_entrega_transportista = fecha_traslado, condicion simple
+    xmlTransporte +=
+       `<cac:ShipmentStage>
+            <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
+            <cac:TransitPeriod>
+                <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
+                <cbc:EndDate>${data.fecha_traslado}</cbc:EndDate>
+            </cac:TransitPeriod>`;
+    }else{
     xmlTransporte +=
        `<cac:ShipmentStage>
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
             </cac:TransitPeriod>`;
+    };
 
     //<!--  Datos del Envío - Embarque - Transporte publico -->
     if (data.guia_modalidad_id === "01"){

@@ -16,6 +16,7 @@ function gregeneratransporte(data) {
     
     if (data.guia_modalidad_id === "01"){
         //consideramos fecha_entrega_transportista = fecha_traslado, condicion simple
+        //cambio 
     xmlTransporte +=
        `<cac:ShipmentStage>
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>

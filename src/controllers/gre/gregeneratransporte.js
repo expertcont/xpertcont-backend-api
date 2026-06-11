@@ -21,13 +21,7 @@ function gregeneratransporte(data) {
             <cbc:TransportModeCode>${data.guia_modalidad_id}</cbc:TransportModeCode>
             <cac:TransitPeriod>
                 <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
-            </cac:TransitPeriod>
-            <cac:TransportEvent>
-                <cbc:TransportEventTypeCode>1</cbc:TransportEventTypeCode>
-                <cac:Period>
-                    <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
-                </cac:Period>
-            </cac:TransportEvent>`;
+            </cac:TransitPeriod>`;
     }else{
     xmlTransporte +=
        `<cac:ShipmentStage>
@@ -50,7 +44,13 @@ function gregeneratransporte(data) {
                         <cbc:ID>${data.transp_mtc}</cbc:ID>
                     </cac:CorporateRegistrationScheme>
                 </cac:PartyLegalEntity>
-            </cac:CarrierParty>`;
+                <cac:TransportEvent>
+                    <cbc:TransportEventTypeCode>1</cbc:TransportEventTypeCode>
+                    <cac:Period>
+                        <cbc:StartDate>${data.fecha_traslado}</cbc:StartDate>
+                    </cac:Period>
+                </cac:TransportEvent>                
+        </cac:CarrierParty>`;
     };    
 
     //<!--  Datos del Envío - Embarque - Transporte privado -->

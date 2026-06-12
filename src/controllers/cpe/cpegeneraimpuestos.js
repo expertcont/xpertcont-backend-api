@@ -4,8 +4,6 @@ function cpegeneraimpuestos(data) {
 
   let taxSubtotals = "";
 
-  const totalIgv = toNumber(data.total_igv);
-
   // ============================
   // Gravadas (1000)
   // ============================
@@ -13,11 +11,11 @@ function cpegeneraimpuestos(data) {
     taxSubtotals += `
       <cac:TaxSubtotal>
         <cbc:TaxableAmount currencyID="${data.moneda_id}">
-          ${toNumber(data.base_gravada).toFixed(2)}
+          ${data.base_gravada}
         </cbc:TaxableAmount>
 
         <cbc:TaxAmount currencyID="${data.moneda_id}">
-          ${totalIgv.toFixed(2)}
+          ${data.total_igv}
         </cbc:TaxAmount>
 
         <cac:TaxCategory>
@@ -43,7 +41,7 @@ function cpegeneraimpuestos(data) {
       <cac:TaxSubtotal>
 
         <cbc:TaxableAmount currencyID="${data.moneda_id}">
-          ${toNumber(data.base_exonerada).toFixed(2)}
+          ${data.base_exonerada}
         </cbc:TaxableAmount>
 
         <cbc:TaxAmount currencyID="${data.moneda_id}">
@@ -73,7 +71,7 @@ function cpegeneraimpuestos(data) {
       <cac:TaxSubtotal>
 
         <cbc:TaxableAmount currencyID="${data.moneda_id}">
-          ${toNumber(data.base_inafecta).toFixed(2)}
+          ${data.base_inafecta}
         </cbc:TaxableAmount>
 
         <cbc:TaxAmount currencyID="${data.moneda_id}">
@@ -103,7 +101,7 @@ function cpegeneraimpuestos(data) {
       <cac:TaxSubtotal>
 
         <cbc:TaxableAmount currencyID="${data.moneda_id}">
-          ${toNumber(data.total_gratuito).toFixed(2)}
+          ${data.total_gratuito}
         </cbc:TaxableAmount>
 
         <cbc:TaxAmount currencyID="${data.moneda_id}">
@@ -127,9 +125,7 @@ function cpegeneraimpuestos(data) {
 
   return `
     <cac:TaxTotal>
-      <cbc:TaxAmount currencyID="${data.moneda_id}">
-        ${totalIgv.toFixed(2)}
-      </cbc:TaxAmount>
+      <cbc:TaxAmount currencyID="${data.moneda_id}">${data.total_igv}</cbc:TaxAmount>
       ${taxSubtotals}
     </cac:TaxTotal>`;
 }

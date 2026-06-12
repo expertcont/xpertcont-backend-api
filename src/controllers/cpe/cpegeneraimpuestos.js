@@ -11,7 +11,7 @@ function cpegeneraimpuestos(data) {
     taxSubtotals += `
       <cac:TaxSubtotal>
         <cbc:TaxableAmount currencyID="${data.moneda_id}">${data.base_gravada}</cbc:TaxableAmount>
-        <cbc:TaxAmount currencyID="${data.moneda_id}">${data.total_igv} </cbc:TaxAmount>
+        <cbc:TaxAmount currencyID="${data.moneda_id}">${data.total_igv}</cbc:TaxAmount>
         <cac:TaxCategory>
           <cac:TaxScheme>
             <cbc:ID schemeName="Codigo de tributos"

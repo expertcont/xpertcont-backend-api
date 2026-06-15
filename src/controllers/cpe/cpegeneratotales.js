@@ -7,7 +7,7 @@ function cpegeneratotales(data) {
   
   return `
   <cac:LegalMonetaryTotal>
-    <cbc:LineExtensionAmount currencyID="${data.moneda_id}">${data.base_gravada}</cbc:LineExtensionAmount>
+    <cbc:LineExtensionAmount currencyID="${data.moneda_id}">${subtotal}</cbc:LineExtensionAmount>
     <cbc:TaxInclusiveAmount currencyID="${data.moneda_id}">${nPrecioTotal}</cbc:TaxInclusiveAmount>
     <cbc:ChargeTotalAmount currencyID="${data.moneda_id}">0.00</cbc:ChargeTotalAmount>
     <cbc:PrepaidAmount currencyID="${data.moneda_id}">0.00</cbc:PrepaidAmount>

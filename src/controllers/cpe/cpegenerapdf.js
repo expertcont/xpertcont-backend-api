@@ -241,7 +241,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     if (draw) drawLines(P, letrasLines, font, 8, maxTextWidth, margin, letrasY, 'left', 10);
 
     // ── NEW EXONERADO ────────────────────────────────────────────────────────────
-    if (venta.base_exonerada){
+    if (venta.base_exonerada != null && Number(venta.base_exonerada) !== 0) {
       if (draw) {
         P.drawText("EXONERADO:", { x:margin, y:Y(), size:9 });
         const tw = font.widthOfTextAtSize(numeral(venta.base_exonerada).format('0,0.00'), 10);
@@ -249,7 +249,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
       }
       consumed += 10;
     }
-    
+
     // ── BASE ────────────────────────────────────────────────────────────
     if (draw) {
       P.drawText("BASE GRAV:", { x:margin, y:Y(), size:9 });

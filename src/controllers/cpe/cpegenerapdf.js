@@ -240,19 +240,19 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     consumed += letrasLines.length * 10 + 5;
     if (draw) drawLines(P, letrasLines, font, 8, maxTextWidth, margin, letrasY, 'left', 10);
 
-    // ── BASE ────────────────────────────────────────────────────────────
-    if (draw) {
-      P.drawText("BASE:", { x:margin, y:Y(), size:9 });
-      const tw = font.widthOfTextAtSize(numeral(venta.base_gravada).format('0,0.00'), 10);
-      P.drawText(numeral(venta.base_gravada).format('0,0.00')?.toString() ?? "", { x:ticketWidth-tw-margin-marginLeftSize, y:Y(), size:10, font });
-    }
-    consumed += 10;
-
     // ── NEW EXONERADO ────────────────────────────────────────────────────────────
     if (draw) {
       P.drawText("EXONERADO:", { x:margin, y:Y(), size:9 });
       const tw = font.widthOfTextAtSize(numeral(venta.base_exonerada).format('0,0.00'), 10);
       P.drawText(numeral(venta.base_exonerada).format('0,0.00')?.toString() ?? "", { x:ticketWidth-tw-margin-marginLeftSize, y:Y(), size:10, font });
+    }
+    consumed += 10;
+
+    // ── BASE ────────────────────────────────────────────────────────────
+    if (draw) {
+      P.drawText("BASE GRAV:", { x:margin, y:Y(), size:9 });
+      const tw = font.widthOfTextAtSize(numeral(venta.base_gravada).format('0,0.00'), 10);
+      P.drawText(numeral(venta.base_gravada).format('0,0.00')?.toString() ?? "", { x:ticketWidth-tw-margin-marginLeftSize, y:Y(), size:10, font });
     }
     consumed += 10;
 

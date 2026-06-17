@@ -270,7 +270,7 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     if (draw) {
       P.drawText("TOTAL.: "+sMoneda, { x:margin, y:Y(), size:fontSize+2, font:fontNegrita });
       const tw = fontNegrita.widthOfTextAtSize(numeral(monto_total).format('0,0.00'), fontSize+2);
-      P.drawText(numeral(monto_total).format('0,0.00')?.toString() ?? "", { x:ticketWidth-tw-margin-marginLeftSize-10, y:Y(), size:fontSize+2, font:fontNegrita });
+      P.drawText(numeral(monto_total).format('0,0.00')?.toString() ?? "", { x:ticketWidth-tw-margin-marginLeftSize-5, y:Y(), size:fontSize+2, font:fontNegrita });
     }
     consumed += 15;
 

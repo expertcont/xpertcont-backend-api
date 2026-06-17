@@ -248,6 +248,14 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
     }
     consumed += 10;
 
+    // ── NEW EXONERADO ────────────────────────────────────────────────────────────
+    if (draw) {
+      P.drawText("EXONERADO:", { x:margin, y:Y(), size:9 });
+      const tw = font.widthOfTextAtSize(numeral(venta.base_exonerada).format('0,0.00'), 10);
+      P.drawText(numeral(venta.base_exonerada).format('0,0.00')?.toString() ?? "", { x:ticketWidth-tw-margin-marginLeftSize, y:Y(), size:10, font });
+    }
+    consumed += 10;
+
     // ── IGV ─────────────────────────────────────────────────────────────
     if (draw) {
       P.drawText("IGV.:", { x:margin, y:Y(), size:9 });

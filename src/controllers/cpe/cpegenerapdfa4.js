@@ -302,13 +302,17 @@ const cpegenerapdfa4 = async (logo, jsonVenta, digestvalue) => {
 
       const totalX = MARGIN_L + CONTENT_W * 0.6;
 
-      page.drawText('Base Gravada:', { x:totalX, y:y-11, size:10, font });
-      let tw = font.widthOfTextAtSize(numeral(venta.base_gravada).format('0,0.00'), 10);
-      page.drawText(sMoneda+' '+numeral(venta.base_gravada).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-11, size:10, font });
+      page.drawText('Exonerado:', { x:totalX, y:y-11, size:10, font });
+      let tw = font.widthOfTextAtSize(numeral(venta.base_exonerada).format('0,0.00'), 10);
+      page.drawText(sMoneda+' '+numeral(venta.base_exonerada).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-11, size:10, font });
 
-      page.drawText('IGV (18%):', { x:totalX, y:y-23, size:10, font });
+      page.drawText('Base Gravada:', { x:totalX, y:y-23, size:10, font });
+      tw = font.widthOfTextAtSize(numeral(venta.base_gravada).format('0,0.00'), 10);
+      page.drawText(sMoneda+' '+numeral(venta.base_gravada).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-23, size:10, font });
+
+      page.drawText('IGV (18%):', { x:totalX, y:y-33, size:10, font });
       tw = font.widthOfTextAtSize(numeral(venta.total_igv).format('0,0.00'), 10);
-      page.drawText(sMoneda+' '+numeral(venta.total_igv).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-23, size:10, font });
+      page.drawText(sMoneda+' '+numeral(venta.total_igv).format('0,0.00'), { x:PAGE_W-MARGIN_R-tw-15, y:y-33, size:10, font });
 
       y -= montoH + 4;
 

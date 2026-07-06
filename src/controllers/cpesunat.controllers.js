@@ -134,15 +134,6 @@ const registrarCPESunat = async (req,res,next)=> {
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Genero el bloque de firma y lo añado al xml Original (xmlComprobante)
-        /*const signerManual = new XmlSignatureMod(certificadoBuffer, password, xmlComprobante);
-        if (dataVenta.venta.codigo === '07'){
-            signerManual.setSignNodeName('CreditNote');
-        }else{
-            signerManual.setSignNodeName('Invoice');
-        }
-        const xmlComprobanteFirmado = await signerManual.getSignedXML();
-        const sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);*/
-
         let xmlComprobanteFirmado;
         let sDigestInicial;
         const usaCertExterno = String(cert_externo) === '1';
@@ -426,7 +417,7 @@ async function enviarSOAPSunat(soapXml,urlEnvio,modo) {
 }
 
 // Función para procesar y guardar el CDR
-async function procesarRespuestaSunat(soapResponse, dataVenta) {
+/*async function procesarRespuestaSunat(soapResponse, dataVenta) {
   try {
     const { ruc, codigo, serie, numero } = {
       ruc: dataVenta.empresa.ruc,
@@ -516,6 +507,252 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
     console.error('❌ Error procesando respuesta SUNAT:', error.message);
     return { estado: false, descripcion: error.message };
   }
+}*/
+
+// ===========================================================
+// Procesa la respuesta SOAP de SUNAT.
+//
+// NUEVO FLUJO:
+//
+// 1. Si existe ApplicationResponse (CDR ZIP)
+//      -> El CDR es la fuente oficial.
+//      -> Extrae ResponseCode y Description.
+//      -> Guarda el XML CDR.
+//      -> Si ResponseCode == "0" => estado=true
+//      -> Caso contrario => estado=false
+//
+// 2. Si NO existe CDR
+//      -> Recién interpretar SOAP Fault.
+//
+// Esto evita problemas donde SUNAT devuelve mensajes SOAP
+// inconsistentes ("Certificado inválido", etc.) pero el CDR
+// contiene el resultado oficial.
+// ===========================================================
+
+async function procesarRespuestaSunat(soapResponse, dataVenta) {
+  try {
+
+    const { ruc, codigo, serie, numero } = {
+      ruc: dataVenta.empresa.ruc,
+      codigo: dataVenta.venta.codigo,
+      serie: dataVenta.venta.serie,
+      numero: dataVenta.venta.numero
+    };
+
+    //=========================================================
+    // Parsear SOAP
+    //=========================================================
+    const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
+
+    const select = xpath.useNamespaces({
+      soap: 'http://schemas.xmlsoap.org/soap/envelope/'
+    });
+
+    //=========================================================
+    // ⭐ PRIMERO BUSCAMOS EL CDR
+    // Si existe, SIEMPRE tendrá prioridad.
+    //=========================================================
+
+    const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
+
+    if (appRespNode) {
+
+      //---------------------------------------------
+      // Decodificar ZIP
+      //---------------------------------------------
+      const base64Zip = appRespNode.textContent.trim();
+      const zipBuffer = Buffer.from(base64Zip, 'base64');
+      const zip = new AdmZip(zipBuffer);
+      const entries = zip.getEntries();
+
+      if (entries.length === 0) {
+        throw new Error("El ZIP devuelto por SUNAT está vacío.");
+      }
+
+      const entry = entries.find(e => e.entryName.endsWith(".xml"));
+
+      if (!entry) {
+        throw new Error("No se encontró el XML del CDR dentro del ZIP.");
+      }
+
+      const contenidoCDR = entry.getData().toString("utf8");
+
+      //---------------------------------------------
+      // Guardar XML CDR en NGINX
+      //---------------------------------------------
+      await subirArchivoDesdeMemoria(
+        ruc,
+        codigo,
+        serie,
+        numero,
+        contenidoCDR,
+        "R"
+      );
+
+      //---------------------------------------------
+      // Leer XML CDR
+      //---------------------------------------------
+      const cdrDoc = new DOMParser().parseFromString(
+        contenidoCDR,
+        "text/xml"
+      );
+
+      const cdrSelect = xpath.useNamespaces({
+        cbc: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+      });
+
+      //---------------------------------------------
+      // ⭐ Código SUNAT
+      //---------------------------------------------
+      const codeNode = cdrSelect(
+        '//*[local-name()="ResponseCode"]',
+        cdrDoc
+      )[0];
+
+      const codigoSunat = codeNode
+        ? codeNode.textContent.trim()
+        : "";
+
+      //---------------------------------------------
+      // ⭐ Descripción SUNAT
+      //---------------------------------------------
+      const descNode = cdrSelect(
+        '//*[local-name()="Description"]',
+        cdrDoc
+      )[0];
+
+      const descripcion = descNode
+        ? descNode.textContent.trim()
+        : "Sin descripción SUNAT.";
+
+      //---------------------------------------------
+      // ⭐ Resultado oficial
+      //---------------------------------------------
+      return {
+        // TRUE únicamente cuando SUNAT aceptó el documento.
+        estado: codigoSunat === "0",
+        codigo: codigoSunat,
+        descripcion,
+        fuente: "CDR",
+        // Todo CDR significa que SUNAT procesó el XML.
+        consumioCorrelativo: true,
+        // Nunca reenviar el mismo correlativo.
+        permiteReintento: false,
+        nivel: codigoSunat === "0"
+          ? "ACEPTADO"
+          : "RECHAZADO"
+      };
+
+    }
+
+    //=========================================================
+    // ⭐ NO EXISTE CDR
+    // Interpretamos el SOAP Fault
+    //=========================================================
+    const faultNode = select('//*[local-name()="Fault"]', doc)[0];
+    if (faultNode) {
+
+      const faultCodeNode = select(
+        '//*[local-name()="faultcode"]',
+        doc
+      )[0];
+
+      const faultStringNode = select(
+        '//*[local-name()="faultstring"]',
+        doc
+      )[0];
+
+      const faultCode = faultCodeNode
+        ? faultCodeNode.textContent.trim()
+        : "UNKNOWN";
+
+      const faultMessage = faultStringNode
+        ? faultStringNode.textContent.trim()
+        : "Error SOAP desconocido.";
+
+      let userMessage = faultMessage;
+
+      let permiteReintento = false;
+
+      switch (true) {
+
+        // SUNAT fuera de servicio
+        case faultCode.includes("0100"):
+          userMessage = "SUNAT está fuera de servicio. Intente más tarde.";
+          permiteReintento = true;
+          break;
+
+        // Timeout
+        case faultCode.includes("0101"):
+          userMessage = "Tiempo de espera agotado con SUNAT.";
+          permiteReintento = true;
+          break;
+
+        // XML mal formado
+        case faultCode.includes("1020"):
+          userMessage = "El XML enviado no cumple el formato exigido.";
+          break;
+
+        // Usuario SOL
+        case faultCode.includes("1032"):
+          userMessage = "Credenciales SOL incorrectas.";
+          break;
+
+        // Certificado
+        case faultCode.includes("1033"):
+          userMessage = "El certificado digital no es válido o está vencido.";
+          break;
+
+        // ZIP
+        case faultCode.includes("1035"):
+          userMessage = "El archivo ZIP enviado está dañado.";
+          break;
+
+      }
+
+      return {
+        estado: false,
+        codigo: faultCode,
+        descripcion: userMessage,
+        detalleSunat: faultMessage,
+        fuente: "SOAP",
+        // Si no existe CDR asumimos que NO consumió correlativo.
+        consumioCorrelativo: false,
+        permiteReintento,
+        nivel: "ERROR_COMUNICACION"
+      };
+      
+    }
+
+    //---------------------------------------------------------
+    // No vino ni CDR ni Fault
+    //---------------------------------------------------------
+    return {
+      estado: false,
+      codigo: "SIN_RESPUESTA",
+      descripcion: "SUNAT no devolvió CDR ni SOAP Fault.",
+      fuente: "LOCAL",
+      consumioCorrelativo: false,
+      permiteReintento: true,
+      nivel: "ERROR_COMUNICACION"
+    };
+
+  }
+  catch (error) {
+
+    console.error("❌ Error procesando respuesta SUNAT:", error);
+    return {
+      estado: false,
+      codigo: "ERROR_LOCAL",
+      descripcion: error.message,
+      fuente: "LOCAL",
+      consumioCorrelativo: false,
+      permiteReintento: true,
+      nivel: "ERROR_LOCAL"
+    };    
+
+  }
+
 }
 
 function obtenerDigestValue(xmlFirmado) {

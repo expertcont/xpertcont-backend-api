@@ -218,166 +218,110 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
     const ruta_xml = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.xml`;
     const ruta_cdr = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/R-${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.xml`;
     const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.pdf`;
-
     const descripcion = resultadoSunat.descripcion || "";
-    const descripcionCorta = descripcion.substring(0, 200);
-    const codigoSunat = (resultadoSunat.codigo || "").trim();
-    const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
+
+    const modo = dataVenta?.empresa?.modo === "1" ? "Producción" : "Beta";
     console.log("resultadoSunat:", resultadoSunat);
 
-    //-------------------------------------------------------
-    // 1. CDR ACEPTADO
-    //-------------------------------------------------------
-    if (resultadoSunat.estado) {
+    //---------------------------------------------------------
+    // CDR ACEPTADO
+    //---------------------------------------------------------
+    if (resultadoSunat.nivel === "ACEPTADO") {
+
         return res.status(200).json({
             estado: true,
             codigo: resultadoSunat.codigo,
-            nivel: resultadoSunat.nivel,
-            consumioCorrelativo: resultadoSunat.consumioCorrelativo,
-            r_estado: "ACEPTADO",
+            nivel: "ACEPTADO",
+            consumioCorrelativo: true,
+            permiteReintento: false,
             cdr_pendiente: "0",
             respuesta_sunat_descripcion: descripcion,
             ruta_xml,
             ruta_cdr,
             ruta_pdf,
             codigo_hash: sDigestInicial,
-            mensaje:
-                sModoEnvio === "1"
-                    ? "CDR Recibido Producción"
-                    : "CDR Recibido Beta"
+            mensaje: `CDR recibido (${modo})`
         });
     }
 
-    //-------------------------------------------------------
-    // 2. CDR PENDIENTE
-    //-------------------------------------------------------
+    //---------------------------------------------------------
+    // CDR RECHAZADO
+    //---------------------------------------------------------
+    if (resultadoSunat.nivel === "RECHAZADO") {
+
+        return res.status(400).json({
+            estado: false,
+            codigo: resultadoSunat.codigo,
+            nivel: "RECHAZADO",
+            consumioCorrelativo: true,
+            permiteReintento: false,
+            cdr_pendiente: "0",
+            respuesta_sunat_descripcion: descripcion,
+            ruta_xml,
+            ruta_cdr,
+            ruta_pdf,
+            codigo_hash: null,
+            mensaje: "Documento rechazado por SUNAT"
+        });
+
+    }
+
+    //---------------------------------------------------------
+    // PENDIENTE (Facturas / NC / ND)
+    //---------------------------------------------------------
+
     if (["01", "07", "08"].includes(dataVenta.venta.codigo)) {
 
         const pendiente = esErrorCDRPendiente(
-            codigoSunat,
+            resultadoSunat.codigo,
             descripcion
         );
 
         if (pendiente.esPendiente) {
-
             registrarCdrPendienteDB({
                 documento_id: dataVenta.empresa.ruc,
                 codigo: dataVenta.venta.codigo,
                 serie: dataVenta.venta.serie,
                 numero: dataVenta.venta.numero
-            }).catch(err =>
-                console.error("Error registrando pendiente:", err)
-            );
+            }).catch(err => console.error(err));
 
             return res.status(200).json({
                 estado: true,
                 codigo: resultadoSunat.codigo,
-                nivel: resultadoSunat.nivel,
+                nivel: "PENDIENTE",
                 consumioCorrelativo: false,
-                r_estado: "PENDIENTE",
+                permiteReintento: true,
                 cdr_pendiente: "1",
                 respuesta_sunat_descripcion: pendiente.descripcion,
                 ruta_xml,
                 ruta_cdr,
                 ruta_pdf,
                 codigo_hash: sDigestInicial,
-                mensaje: "CDR pendiente en SUNAT"
+                mensaje: "SUNAT aún no devuelve el CDR"
             });
         }
+
     }
 
-    //-------------------------------------------------------
-    // 3. RECHAZO DEFINITIVO
-    //-------------------------------------------------------
+    //---------------------------------------------------------
+    // ERROR COMUNICACION / ERROR LOCAL
+    //---------------------------------------------------------
     return res.status(400).json({
         estado: false,
         codigo: resultadoSunat.codigo,
         nivel: resultadoSunat.nivel,
-        consumioCorrelativo: resultadoSunat.consumioCorrelativo,
-        r_estado: "RECHAZADO",
+        consumioCorrelativo: false,
+        permiteReintento: resultadoSunat.permiteReintento,
         cdr_pendiente: "0",
-        respuesta_sunat_descripcion: descripcionCorta,
-        ruta_xml,
-        ruta_cdr,
-        ruta_pdf,
+        respuesta_sunat_descripcion: descripcion,
+        ruta_xml: "error",
+        ruta_cdr: "error",
+        ruta_pdf: "error",
         codigo_hash: null,
-        mensaje: "CDR recibido con rechazo"
+        mensaje: "No fue posible procesar el comprobante"
     });
+
 }
-
-/*function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
-
-  const server_sftp = process.env.CPE_HOST;
-  const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
-  const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
-  const ruta_pdf = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.pdf'
-
-  const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
-  const codigoSunat = (resultadoSunat.codigo || '').trim();
-  const mensajeSunat = (resultadoSunat.descripcion || '');
-  const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
-          
-          //Formato de respuesta sunat//////////////////////////////////////////////////////////
-          //resultadoSunat: {
-          //  estado: false,
-          //  descripcion: userMessage,
-          //  detalleSunat: faultMessage, // 🔹 Mantener el mensaje oficial de SUNAT
-          //  codigo: faultCode
-          //};
-          /////////////////////////////////////////////////////////////////////////////////////
-  
-  console.log('resultadoSunat', resultadoSunat);
-  // Caso éxito normal
-  if (resultadoSunat.estado) {
-    return res.status(200).json({
-      estado: true,
-      cdr_pendiente: '0',
-      respuesta_sunat_descripcion: resultadoSunat.descripcion,
-      ruta_xml,
-      ruta_cdr,
-      ruta_pdf,
-      codigo_hash: sDigestInicial,
-      mensaje: (sModoEnvio=="1") ? 'CDR Recibido Produccion' : 'CDR Recibido Beta'
-    });
-  }
-
-  // Caso: CDR Pendiente (solo facturas, NC, ND)
-  if (['01','07','08'].includes(dataVenta.venta.codigo)) {
-    const { esPendiente, descripcion } = esErrorCDRPendiente(codigoSunat, mensajeSunat);
-
-    if (esPendiente){
-        registrarCdrPendienteDB({
-            documento_id: dataVenta.empresa.ruc,
-            codigo: dataVenta.venta.codigo,
-            serie: dataVenta.venta.serie,
-            numero: dataVenta.venta.numero
-        }).catch(error => console.error('Error al registrar pendiente', error));
-
-        return res.status(200).json({
-            estado: true,
-            cdr_pendiente: '1',
-            respuesta_sunat_descripcion: descripcion,
-            ruta_xml,
-            ruta_cdr,
-            ruta_pdf,
-            codigo_hash: sDigestInicial,
-            mensaje: 'CDR pendiente en SUNAT'
-        });
-    }
-  }
-
-  // Error real SUNAT
-  return res.status(400).json({
-    estado: false,
-    cdr_pendiente: '0',
-    respuesta_sunat_descripcion: 'error sunat: ' + descripcionCorta,
-    ruta_xml: 'error',
-    ruta_cdr: 'error',
-    ruta_pdf: 'error',
-    codigo_hash: null,
-    mensaje: 'CDR No recibido'
-  });
-}*/
 
 function canonicalizarManual(xmlStr) {
   return xmlStr
@@ -632,29 +576,34 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
       numero: dataVenta.venta.numero
     };
 
-    //=========================================================
+    //---------------------------------------------------------
     // Parsear SOAP
-    //=========================================================
-    const doc = new DOMParser().parseFromString(soapResponse, 'text/xml');
+    //---------------------------------------------------------
+
+    const doc = new DOMParser().parseFromString(
+      soapResponse,
+      "text/xml"
+    );
 
     const select = xpath.useNamespaces({
-      soap: 'http://schemas.xmlsoap.org/soap/envelope/'
+      soap: "http://schemas.xmlsoap.org/soap/envelope/"
     });
 
-    //=========================================================
-    // ⭐ PRIMERO BUSCAMOS EL CDR
-    // Si existe, SIEMPRE tendrá prioridad.
-    //=========================================================
+    //---------------------------------------------------------
+    // PRIMERO BUSCAMOS EL CDR
+    //---------------------------------------------------------
 
-    const appRespNode = select('//*[local-name()="applicationResponse"]', doc)[0];
+    const appRespNode =
+      select('//*[local-name()="applicationResponse"]', doc)[0];
 
     if (appRespNode) {
 
-      //---------------------------------------------
+      //-------------------------------------------------------
       // Decodificar ZIP
-      //---------------------------------------------
+      //-------------------------------------------------------
+
       const base64Zip = appRespNode.textContent.trim();
-      const zipBuffer = Buffer.from(base64Zip, 'base64');
+      const zipBuffer = Buffer.from(base64Zip, "base64");
       const zip = new AdmZip(zipBuffer);
       const entries = zip.getEntries();
 
@@ -665,14 +614,16 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
       const entry = entries.find(e => e.entryName.endsWith(".xml"));
 
       if (!entry) {
-        throw new Error("No se encontró el XML del CDR dentro del ZIP.");
+        throw new Error("No se encontró el XML del CDR.");
       }
 
-      const contenidoCDR = entry.getData().toString("utf8");
+      const contenidoCDR =
+        entry.getData().toString("utf8");
 
-      //---------------------------------------------
-      // Guardar XML CDR en NGINX
-      //---------------------------------------------
+      //-------------------------------------------------------
+      // Guardar CDR
+      //-------------------------------------------------------
+
       await subirArchivoDesdeMemoria(
         ruc,
         codigo,
@@ -682,86 +633,100 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
         "R"
       );
 
-      //---------------------------------------------
-      // Leer XML CDR
-      //---------------------------------------------
+      //-------------------------------------------------------
+      // Leer XML
+      //-------------------------------------------------------
+
       const cdrDoc = new DOMParser().parseFromString(
         contenidoCDR,
         "text/xml"
       );
 
       const cdrSelect = xpath.useNamespaces({
-        cbc: "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
+        cbc:
+          "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2"
       });
 
-      //---------------------------------------------
-      // ⭐ Código SUNAT
-      //---------------------------------------------
-      const codeNode = cdrSelect(
-        '//*[local-name()="ResponseCode"]',
-        cdrDoc
-      )[0];
+      //-------------------------------------------------------
+      // Código SUNAT
+      //-------------------------------------------------------
 
-      const codigoSunat = codeNode
-        ? codeNode.textContent.trim()
-        : "";
+      const codeNode =
+        cdrSelect(
+          '//*[local-name()="ResponseCode"]',
+          cdrDoc
+        )[0];
 
-      //---------------------------------------------
-      // ⭐ Descripción SUNAT
-      //---------------------------------------------
-      const descNode = cdrSelect(
-        '//*[local-name()="Description"]',
-        cdrDoc
-      )[0];
+      const codigoSunat =
+        codeNode
+          ? codeNode.textContent.trim()
+          : "";
 
-      const descripcion = descNode
-        ? descNode.textContent.trim()
-        : "Sin descripción SUNAT.";
+      //-------------------------------------------------------
+      // Descripción
+      //-------------------------------------------------------
 
-      //---------------------------------------------
-      // ⭐ Resultado oficial
-      //---------------------------------------------
+      const descNode =
+        cdrSelect(
+          '//*[local-name()="Description"]',
+          cdrDoc
+        )[0];
+
+      const descripcion =
+        descNode
+          ? descNode.textContent.trim()
+          : "Sin descripción SUNAT.";
+
+      //-------------------------------------------------------
+      // Resultado definitivo
+      //-------------------------------------------------------
+
       return {
-        // TRUE únicamente cuando SUNAT aceptó el documento.
         estado: codigoSunat === "0",
         codigo: codigoSunat,
         descripcion,
         fuente: "CDR",
-        // Todo CDR significa que SUNAT procesó el XML.
         consumioCorrelativo: true,
-        // Nunca reenviar el mismo correlativo.
         permiteReintento: false,
-        nivel: codigoSunat === "0"
-          ? "ACEPTADO"
-          : "RECHAZADO"
+        r_estado:
+          codigoSunat === "0"
+            ? "ACEPTADO"
+            : "RECHAZADO"
       };
 
     }
 
-    //=========================================================
-    // ⭐ NO EXISTE CDR
-    // Interpretamos el SOAP Fault
-    //=========================================================
-    const faultNode = select('//*[local-name()="Fault"]', doc)[0];
+    //---------------------------------------------------------
+    // NO EXISTE CDR
+    // Analizar SOAP Fault
+    //---------------------------------------------------------
+
+    const faultNode =
+      select('//*[local-name()="Fault"]', doc)[0];
+
     if (faultNode) {
 
-      const faultCodeNode = select(
-        '//*[local-name()="faultcode"]',
-        doc
-      )[0];
+      const faultCodeNode =
+        select(
+          '//*[local-name()="faultcode"]',
+          doc
+        )[0];
 
-      const faultStringNode = select(
-        '//*[local-name()="faultstring"]',
-        doc
-      )[0];
+      const faultStringNode =
+        select(
+          '//*[local-name()="faultstring"]',
+          doc
+        )[0];
 
-      const faultCode = faultCodeNode
-        ? faultCodeNode.textContent.trim()
-        : "UNKNOWN";
+      const faultCode =
+        faultCodeNode
+          ? faultCodeNode.textContent.trim()
+          : "UNKNOWN";
 
-      const faultMessage = faultStringNode
-        ? faultStringNode.textContent.trim()
-        : "Error SOAP desconocido.";
+      const faultMessage =
+        faultStringNode
+          ? faultStringNode.textContent.trim()
+          : "Error SOAP desconocido.";
 
       let userMessage = faultMessage;
 
@@ -769,36 +734,36 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
 
       switch (true) {
 
-        // SUNAT fuera de servicio
         case faultCode.includes("0100"):
-          userMessage = "SUNAT está fuera de servicio. Intente más tarde.";
+          userMessage =
+            "SUNAT está fuera de servicio. Intente más tarde.";
           permiteReintento = true;
           break;
 
-        // Timeout
         case faultCode.includes("0101"):
-          userMessage = "Tiempo de espera agotado con SUNAT.";
+          userMessage =
+            "Tiempo de espera agotado con SUNAT.";
           permiteReintento = true;
           break;
 
-        // XML mal formado
         case faultCode.includes("1020"):
-          userMessage = "El XML enviado no cumple el formato exigido.";
+          userMessage =
+            "El XML enviado no cumple el formato exigido.";
           break;
 
-        // Usuario SOL
         case faultCode.includes("1032"):
-          userMessage = "Credenciales SOL incorrectas.";
+          userMessage =
+            "Credenciales SOL incorrectas.";
           break;
 
-        // Certificado
         case faultCode.includes("1033"):
-          userMessage = "El certificado digital no es válido o está vencido.";
+          userMessage =
+            "El certificado digital no es válido o está vencido.";
           break;
 
-        // ZIP
         case faultCode.includes("1035"):
-          userMessage = "El archivo ZIP enviado está dañado.";
+          userMessage =
+            "El archivo ZIP enviado está dañado.";
           break;
 
       }
@@ -809,17 +774,17 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
         descripcion: userMessage,
         detalleSunat: faultMessage,
         fuente: "SOAP",
-        // Si no existe CDR asumimos que NO consumió correlativo.
         consumioCorrelativo: false,
         permiteReintento,
-        nivel: "ERROR_COMUNICACION"
+        r_estado: "PENDIENTE"
       };
-      
+
     }
 
     //---------------------------------------------------------
-    // No vino ni CDR ni Fault
+    // No vino nada
     //---------------------------------------------------------
+
     return {
       estado: false,
       codigo: "SIN_RESPUESTA",
@@ -827,13 +792,17 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
       fuente: "LOCAL",
       consumioCorrelativo: false,
       permiteReintento: true,
-      nivel: "ERROR_COMUNICACION"
+      r_estado: "PENDIENTE"
     };
 
   }
   catch (error) {
 
-    console.error("❌ Error procesando respuesta SUNAT:", error);
+    console.error(
+      "❌ Error procesando respuesta SUNAT:",
+      error
+    );
+
     return {
       estado: false,
       codigo: "ERROR_LOCAL",
@@ -841,8 +810,8 @@ async function procesarRespuestaSunat(soapResponse, dataVenta) {
       fuente: "LOCAL",
       consumioCorrelativo: false,
       permiteReintento: true,
-      nivel: "ERROR_LOCAL"
-    };    
+      r_estado: "PENDIENTE"
+    };
 
   }
 

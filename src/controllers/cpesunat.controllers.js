@@ -214,6 +214,99 @@ const registrarCPESunat = async (req,res,next)=> {
 
 function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
 
+    const server_sftp = process.env.CPE_HOST;
+    const ruta_xml = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.xml`;
+    const ruta_cdr = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/R-${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.xml`;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.pdf`;
+
+    const descripcion = resultadoSunat.descripcion || "";
+    const descripcionCorta = descripcion.substring(0, 200);
+    const codigoSunat = (resultadoSunat.codigo || "").trim();
+    const sModoEnvio = dataVenta?.empresa?.modo === "1" ? "1" : "0";
+    console.log("resultadoSunat:", resultadoSunat);
+
+    //-------------------------------------------------------
+    // 1. CDR ACEPTADO
+    //-------------------------------------------------------
+    if (resultadoSunat.estado) {
+        return res.status(200).json({
+            estado: true,
+            codigo: resultadoSunat.codigo,
+            nivel: resultadoSunat.nivel,
+            consumioCorrelativo: resultadoSunat.consumioCorrelativo,
+            r_estado: "ACEPTADO",
+            cdr_pendiente: "0",
+            respuesta_sunat_descripcion: descripcion,
+            ruta_xml,
+            ruta_cdr,
+            ruta_pdf,
+            codigo_hash: sDigestInicial,
+            mensaje:
+                sModoEnvio === "1"
+                    ? "CDR Recibido Producción"
+                    : "CDR Recibido Beta"
+        });
+    }
+
+    //-------------------------------------------------------
+    // 2. CDR PENDIENTE
+    //-------------------------------------------------------
+    if (["01", "07", "08"].includes(dataVenta.venta.codigo)) {
+
+        const pendiente = esErrorCDRPendiente(
+            codigoSunat,
+            descripcion
+        );
+
+        if (pendiente.esPendiente) {
+
+            registrarCdrPendienteDB({
+                documento_id: dataVenta.empresa.ruc,
+                codigo: dataVenta.venta.codigo,
+                serie: dataVenta.venta.serie,
+                numero: dataVenta.venta.numero
+            }).catch(err =>
+                console.error("Error registrando pendiente:", err)
+            );
+
+            return res.status(200).json({
+                estado: true,
+                codigo: resultadoSunat.codigo,
+                nivel: resultadoSunat.nivel,
+                consumioCorrelativo: false,
+                r_estado: "PENDIENTE",
+                cdr_pendiente: "1",
+                respuesta_sunat_descripcion: pendiente.descripcion,
+                ruta_xml,
+                ruta_cdr,
+                ruta_pdf,
+                codigo_hash: sDigestInicial,
+                mensaje: "CDR pendiente en SUNAT"
+            });
+        }
+    }
+
+    //-------------------------------------------------------
+    // 3. RECHAZO DEFINITIVO
+    //-------------------------------------------------------
+    return res.status(400).json({
+        estado: false,
+        codigo: resultadoSunat.codigo,
+        nivel: resultadoSunat.nivel,
+        consumioCorrelativo: resultadoSunat.consumioCorrelativo,
+        r_estado: "RECHAZADO",
+        cdr_pendiente: "0",
+        respuesta_sunat_descripcion: descripcionCorta,
+        ruta_xml,
+        ruta_cdr,
+        ruta_pdf,
+        codigo_hash: null,
+        mensaje: "CDR recibido con rechazo"
+    });
+}
+
+/*function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
+
   const server_sftp = process.env.CPE_HOST;
   const ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
   const ruta_cdr = 'http://' + server_sftp + ':8080/descargas/'+ dataVenta.empresa.ruc + '/R-' + dataVenta.empresa.ruc+ '-' + dataVenta.venta.codigo + '-' + dataVenta.venta.serie + '-' + dataVenta.venta.numero + '.xml'
@@ -284,7 +377,7 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
     codigo_hash: null,
     mensaje: 'CDR No recibido'
   });
-}
+}*/
 
 function canonicalizarManual(xmlStr) {
   return xmlStr

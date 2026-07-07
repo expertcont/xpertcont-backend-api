@@ -260,7 +260,7 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
             ruta_xml,
             ruta_cdr,
             ruta_pdf,
-            codigo_hash: null,
+            codigo_hash: sDigestInicial, //New
             mensaje: "Documento rechazado por SUNAT"
         });
 

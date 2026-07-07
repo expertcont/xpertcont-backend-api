@@ -249,7 +249,7 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
     //---------------------------------------------------------
     if (resultadoSunat.nivel === "RECHAZADO") {
 
-        return res.status(400).json({
+        return res.status(200).json({
             estado: false,
             codigo: resultadoSunat.codigo,
             nivel: "RECHAZADO",

@@ -190,7 +190,7 @@ const registrarCPESunat = async (req,res,next)=> {
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
         
         //05. Enviar SOAP y recepcionar respuesta SUNAT
-        console.log('requestSoap: ', contenidoSOAP);
+        //console.log('requestSoap: ', contenidoSOAP);
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
         //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
         

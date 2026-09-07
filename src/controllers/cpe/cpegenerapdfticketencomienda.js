@@ -7,9 +7,9 @@ const MARGIN = 12;
 const CONTENT_WIDTH = TICKET_WIDTH - (MARGIN * 2);
 const ACCENT = rgb(0.18, 0.2, 0.23);
 const INK = rgb(0.08, 0.09, 0.1);
-const MUTED = rgb(0.38, 0.41, 0.45);
-const SOFT = rgb(0.95, 0.96, 0.97);
-const LINE = rgb(0.78, 0.8, 0.83);
+const MUTED = rgb(0.32, 0.34, 0.38);
+const SOFT = rgb(0.9, 0.91, 0.93);
+const LINE = rgb(0.62, 0.64, 0.68);
 
 const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -109,13 +109,13 @@ const drawSection = (page, title, y, fonts, value = '') => {
     height: 14,
     color: SOFT,
     borderColor: LINE,
-    borderWidth: 0.4,
+    borderWidth: 0.55,
   });
-  page.drawText(title, { x: MARGIN + 7, y, size: 7.8, font: fonts.bold, color: ACCENT });
+  page.drawText(title, { x: MARGIN + 7, y, size: 8.2, font: fonts.bold, color: ACCENT });
   const valueText = cleanText(value);
   if (valueText) {
-    const fittedValue = fitText(valueText, fonts.regular, 7.2, CONTENT_WIDTH - 58);
-    drawRight(page, fittedValue, y, 7.2, fonts.regular, MUTED, TICKET_WIDTH - MARGIN - 7);
+    const fittedValue = fitText(valueText, fonts.bold, 8.1, CONTENT_WIDTH - 58);
+    drawRight(page, fittedValue, y, 8.1, fonts.bold, ACCENT, TICKET_WIDTH - MARGIN - 7);
   }
   return y - 17;
 };
@@ -189,10 +189,10 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   }
 
   drawCentered(page, cleanText(empresa.razon_social || empresa.nombre_comercial) || 'TRANSPORTE DE ENCOMIENDAS', y, 7.8, regular, MUTED);
-  y -= 10;
-  drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, y, 7.4, regular, MUTED);
-  y -= 13;
-  page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.7, color: LINE });
+  y -= 12;
+  drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, y, 9.2, bold, ACCENT);
+  y -= 14;
+  page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.85, color: LINE });
   y -= 17;
 
   drawCentered(page, comprobanteNombre(codigo), y, 9.3, bold);
@@ -229,9 +229,9 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
     y: y - 48,
     width: CONTENT_WIDTH,
     height: 48,
-    color: rgb(0.98, 0.99, 0.99),
+    color: rgb(0.94, 0.95, 0.96),
     borderColor: ACCENT,
-    borderWidth: 0.8,
+    borderWidth: 0.9,
   });
   page.drawImage(qrImage, { x: MARGIN + 7, y: y - 45, width: qrSize, height: qrSize });
   page.drawText('CONDICION', { x: MARGIN + 57, y: y - 15, size: 7, font: bold, color: MUTED });

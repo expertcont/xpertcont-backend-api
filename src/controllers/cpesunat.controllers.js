@@ -1,6 +1,7 @@
 const cpegeneraxml = require('./cpe/cpegeneraxml');
 const cpegenerapdf = require('./cpe/cpegenerapdf');
 const cpegenerapdfa4 = require('./cpe/cpegenerapdfa4');
+const cpegenerapdfticketencomienda = require('./cpe/cpegenerapdfticketencomienda');
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 
@@ -791,6 +792,66 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
   }
 }
 
+async function generarPDFTicketEncomienda(req, res) {
+  try {
+    const dataTicket = req.body;
+    const ruc = dataTicket?.empresa?.ruc;
+    const venta = dataTicket?.venta || {};
+
+    if (!ruc || !venta.codigo || !venta.serie || !venta.numero) {
+      return res.status(400).json({
+        respuesta_sunat_descripcion: 'Faltan datos requeridos para generar ticket de encomienda',
+        ruta_pdf: 'error',
+      });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT logo FROM api_usuariocertificado WHERE documento_id = $1`,
+      [ruc]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({
+        respuesta_sunat_descripcion: 'No se encontró logo para el RUC indicado',
+        ruta_pdf: 'error',
+      });
+    }
+
+    const { logo: logoBuffer } = rows[0];
+    const resultadoPdf = await cpegenerapdfticketencomienda(logoBuffer, dataTicket);
+
+    if (!resultadoPdf?.estado) {
+      return res.status(400).json({
+        respuesta_sunat_descripcion: 'PDF de ticket no generado',
+        ruta_pdf: 'error',
+      });
+    }
+
+    await subirArchivoDesdeMemoria(
+      ruc,
+      venta.codigo,
+      venta.serie,
+      venta.numero,
+      resultadoPdf.buffer_pdf,
+      'TICKET'
+    );
+
+    const server_sftp = process.env.CPE_HOST;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${ruc}/${ruc}-${venta.codigo}-${venta.serie}-${venta.numero}-TICKET.pdf`;
+
+    return res.status(200).json({
+      respuesta_sunat_descripcion: 'Ticket de encomienda generado correctamente',
+      ruta_pdf,
+    });
+  } catch (error) {
+    console.error('Error al generar ticket de encomienda:', error);
+    return res.status(400).json({
+      respuesta_sunat_descripcion: 'Ticket de encomienda no generado',
+      ruta_pdf: 'error',
+    });
+  }
+}
+
 const existeCDRPendiente = async ({ruc, codigo, serie, numero}) =>{
   try{
     const strSQL = `
@@ -847,8 +908,13 @@ const registrarCPESunatPrevioPDFA4 = async (req, res, next) => {
   await generarPDFPrevioSunat(req, res, 'A4');
 };
 
+const registrarCPETicketEncomiendaPDF = async (req, res, next) => {
+  await generarPDFTicketEncomienda(req, res);
+};
+
 module.exports = {
     registrarCPESunat,
     registrarCPESunatPrevioPDF,
-    registrarCPESunatPrevioPDFA4
+    registrarCPESunatPrevioPDFA4,
+    registrarCPETicketEncomiendaPDF
  }; 

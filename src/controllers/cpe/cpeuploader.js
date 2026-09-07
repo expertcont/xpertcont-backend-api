@@ -84,10 +84,14 @@ async function subirArchivoDesdeMemoria(ruc, codigo, serie, numero, contenido, r
   let rutaArchivo = (respuesta=='R') ?  `${rutaFactura}R-${ruc}-${codigo}-${serie}-${numero}.xml`
                                           :
                                           (
+                                            (respuesta=='TICKET') ?
+                                            `${rutaFactura}${ruc}-${codigo}-${serie}-${numero}-TICKET.pdf`
+                                              :
                                             (respuesta=='PDF') ? 
                                             `${rutaFactura}${ruc}-${codigo}-${serie}-${numero}.pdf`
                                               :
                                             `${rutaFactura}${ruc}-${codigo}-${serie}-${numero}.xml`
+                                          
                                           )
 
   try {

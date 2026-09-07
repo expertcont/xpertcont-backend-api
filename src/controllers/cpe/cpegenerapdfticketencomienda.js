@@ -61,6 +61,14 @@ const drawRight = (page, text, y, size, font, color = INK, right = TICKET_WIDTH 
   });
 };
 
+const drawCenteredLines = (page, lines, y, size, font, color = INK, gap = 8) => {
+  lines.forEach((line) => {
+    drawCentered(page, line, y, size, font, color);
+    y -= gap;
+  });
+  return y;
+};
+
 const wrapText = (text, font, size, maxWidth) => {
   const words = cleanText(text).split(' ').filter(Boolean);
   const lines = [];
@@ -114,7 +122,7 @@ const drawSection = (page, title, y, fonts, value = '') => {
   page.drawText(title, { x: MARGIN + 7, y, size: 8.2, font: fonts.bold, color: ACCENT });
   const valueText = cleanText(value);
   if (valueText) {
-    const fittedValue = fitText(valueText, fonts.bold, 8.1, CONTENT_WIDTH - 58);
+    const fittedValue = fitText(valueText.toUpperCase(), fonts.bold, 8.1, CONTENT_WIDTH - 58);
     drawRight(page, fittedValue, y, 8.1, fonts.bold, ACCENT, TICKET_WIDTH - MARGIN - 7);
   }
   return y - 17;
@@ -188,8 +196,16 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
     y -= 16;
   }
 
-  drawCentered(page, cleanText(empresa.razon_social || empresa.nombre_comercial) || 'TRANSPORTE DE ENCOMIENDAS', y, 7.8, regular, MUTED);
-  y -= 12;
+  y = drawCenteredLines(
+    page,
+    wrapText(cleanText(empresa.razon_social || empresa.nombre_comercial) || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.6, CONTENT_WIDTH).slice(0, 2),
+    y,
+    7.6,
+    regular,
+    MUTED,
+    8.5
+  );
+  y -= 3;
   drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, y, 9.2, bold, ACCENT);
   y -= 10;
   if (empresa.domicilio_fiscal) {
@@ -202,9 +218,9 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.85, color: LINE });
   y -= 17;
 
-  drawCentered(page, comprobanteNombre(codigo), y, 9.3, bold);
+  drawCentered(page, comprobanteNombre(codigo), y, 9.4, bold);
   y -= 12;
-  drawCentered(page, numero || 'MODELO', y, 11.5, bold, ACCENT);
+  drawCentered(page, numero || 'MODELO', y, 11.7, bold, ACCENT);
   y -= 13;
   drawCentered(page, `FECHA ${fecha(fechaEmision)}   HORA ${horaAmPm(horaEmision)}`, y, 7.4, regular, MUTED);
   y -= 18;

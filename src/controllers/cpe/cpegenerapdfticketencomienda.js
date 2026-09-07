@@ -171,8 +171,8 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   let y = TICKET_HEIGHT - 20;
 
   if (logoImage) {
-    const logoMaxWidth = 96;
-    const logoMaxHeight = 42;
+    const logoMaxWidth = 170;
+    const logoMaxHeight = 58;
     const scale = Math.min(logoMaxWidth / logoImage.width, logoMaxHeight / logoImage.height);
     const logoWidth = logoImage.width * scale;
     const logoHeight = logoImage.height * scale;
@@ -191,7 +191,14 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   drawCentered(page, cleanText(empresa.razon_social || empresa.nombre_comercial) || 'TRANSPORTE DE ENCOMIENDAS', y, 7.8, regular, MUTED);
   y -= 12;
   drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, y, 9.2, bold, ACCENT);
-  y -= 14;
+  y -= 10;
+  if (empresa.domicilio_fiscal) {
+    wrapText(empresa.domicilio_fiscal, regular, 6.5, CONTENT_WIDTH).slice(0, 2).forEach((line) => {
+      drawCentered(page, line, y, 6.5, regular, MUTED);
+      y -= 8;
+    });
+  }
+  y -= 4;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.85, color: LINE });
   y -= 17;
 
@@ -206,8 +213,8 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   y = drawLabelValue(page, 'REMITENTE', encomienda.cliente || jsonTicket.cliente?.razon_social_nombres, y, fonts);
   y = drawLabelValue(page, 'DNI / RUC', clienteDocumento, y, fonts);
   y = drawLabelValue(page, 'TELEFONO', encomienda.cliente_telefono, y, fonts);
-  if (encomienda.remitente_direccion || encomienda.cliente_direccion) {
-    y = drawLabelValue(page, 'DIRECCION', encomienda.remitente_direccion || encomienda.cliente_direccion, y, fonts);
+  if ((String(clienteDocumento || '').length === 11) && (encomienda.remitente_direccion || encomienda.cliente_direccion || jsonTicket.cliente?.cliente_direccion)) {
+    y = drawLabelValue(page, 'DIRECCION', encomienda.remitente_direccion || encomienda.cliente_direccion || jsonTicket.cliente?.cliente_direccion, y, fonts);
   }
 
   y = drawSection(page, 'DESTINO', y, fonts, agenciaDestino);
@@ -230,8 +237,8 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
     width: CONTENT_WIDTH,
     height: 48,
     color: rgb(0.94, 0.95, 0.96),
-    borderColor: ACCENT,
-    borderWidth: 0.9,
+    borderColor: LINE,
+    borderWidth: 0.55,
   });
   page.drawImage(qrImage, { x: MARGIN + 7, y: y - 45, width: qrSize, height: qrSize });
   page.drawText('CONDICION', { x: MARGIN + 57, y: y - 15, size: 7, font: bold, color: MUTED });

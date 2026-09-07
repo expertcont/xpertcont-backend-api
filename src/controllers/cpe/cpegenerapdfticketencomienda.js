@@ -10,6 +10,7 @@ const INK = rgb(0.08, 0.09, 0.1);
 const MUTED = rgb(0.32, 0.34, 0.38);
 const SOFT = rgb(0.9, 0.91, 0.93);
 const LINE = rgb(0.62, 0.64, 0.68);
+const PAPER = rgb(1, 1, 1);
 
 const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -68,13 +69,35 @@ const drawDottedLine = (page, y, x1 = MARGIN, x2 = TICKET_WIDTH - MARGIN, color 
 };
 
 const drawMiniVan = (page, x, y, color = INK) => {
-  page.drawRectangle({ x, y, width: 28, height: 10, borderColor: color, borderWidth: 1 });
-  page.drawRectangle({ x: x + 5, y: y + 10, width: 14, height: 6, borderColor: color, borderWidth: 1 });
-  page.drawLine({ start: { x: x + 10, y: y + 16 }, end: { x: x + 20, y: y + 10 }, thickness: 1, color });
-  page.drawCircle({ x: x + 6, y: y - 1, size: 2.8, borderColor: color, borderWidth: 1 });
-  page.drawCircle({ x: x + 23, y: y - 1, size: 2.8, borderColor: color, borderWidth: 1 });
-  page.drawLine({ start: { x: x - 12, y: y + 4 }, end: { x: x - 3, y: y + 4 }, thickness: 0.7, color });
-  page.drawLine({ start: { x: x - 8, y: y + 8 }, end: { x: x - 2, y: y + 8 }, thickness: 0.7, color });
+  page.drawLine({ start: { x: x - 18, y: y + 7 }, end: { x: x - 6, y: y + 7 }, thickness: 0.75, color });
+  page.drawLine({ start: { x: x - 14, y: y + 11 }, end: { x: x - 3, y: y + 11 }, thickness: 0.75, color });
+  page.drawLine({ start: { x: x - 9, y: y + 15 }, end: { x: x - 2, y: y + 15 }, thickness: 0.65, color });
+
+  page.drawSvgPath('M2 6 L6 15 C7.2 18.5 10.4 20.5 15 20.5 L26.5 20.5 C31.2 20.5 35.3 17.4 37.5 12.8 L42 11.6 C44 11 45.8 9.2 46.3 7.2 L47 4 L2 4 Z', {
+    x,
+    y,
+    scale: 0.72,
+    color,
+  });
+  page.drawSvgPath('M8 14.6 C9.1 17.1 11.6 18.4 15.2 18.4 L19.2 18.4 L19.2 11.6 L6.4 11.6 Z', {
+    x,
+    y,
+    scale: 0.72,
+    color: PAPER,
+  });
+  page.drawSvgPath('M21.5 18.4 L26.4 18.4 C29 18.4 31.2 17.1 32.7 14.6 L30.2 11.6 L21.5 11.6 Z', {
+    x,
+    y,
+    scale: 0.72,
+    color: PAPER,
+  });
+  page.drawLine({ start: { x: x + 14.1, y: y + 8.4 }, end: { x: x + 14.1, y: y + 13.1 }, thickness: 0.6, color });
+  page.drawRectangle({ x: x + 26.7, y: y + 6.2, width: 3.7, height: 1.5, color: PAPER });
+
+  page.drawCircle({ x: x + 9.5, y: y + 4.3, size: 3.3, color });
+  page.drawCircle({ x: x + 9.5, y: y + 4.3, size: 1.35, color: PAPER });
+  page.drawCircle({ x: x + 26.6, y: y + 4.3, size: 3.3, color });
+  page.drawCircle({ x: x + 26.6, y: y + 4.3, size: 1.35, color: PAPER });
 };
 
 const drawCenteredLines = (page, lines, y, size, font, color = INK, gap = 8) => {
@@ -277,8 +300,8 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   const origenTexto = fitText((agenciaOrigen || encomienda.id_punto_venta || 'ORIGEN').toUpperCase(), bold, 13.5, 76);
   const destinoTexto = fitText((agenciaDestino || encomienda.id_punto_venta_dest || 'DESTINO').toUpperCase(), bold, 13.5, 58);
   page.drawText(origenTexto, { x: MARGIN, y, size: 13.5, font: bold, color: INK });
-  drawMiniVan(page, MARGIN + 100, y + 2, INK);
-  page.drawLine({ start: { x: MARGIN + 137, y: y + 7 }, end: { x: TICKET_WIDTH - MARGIN - 51, y: y + 7 }, thickness: 0.8, color: INK, dashArray: [1, 3] });
+  drawMiniVan(page, MARGIN + 94, y + 1, INK);
+  page.drawLine({ start: { x: MARGIN + 132, y: y + 7 }, end: { x: TICKET_WIDTH - MARGIN - 51, y: y + 7 }, thickness: 0.8, color: INK, dashArray: [1, 3] });
   page.drawText('>', { x: TICKET_WIDTH - MARGIN - 47, y: y + 2, size: 12, font: bold, color: INK });
   drawRight(page, destinoTexto, y, 13.5, bold, INK, TICKET_WIDTH - MARGIN);
   y -= 25;

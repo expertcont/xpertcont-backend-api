@@ -5,11 +5,11 @@ const TICKET_WIDTH = 226.77;
 const TICKET_HEIGHT = 650;
 const MARGIN = 12;
 const CONTENT_WIDTH = TICKET_WIDTH - (MARGIN * 2);
-const ACCENT = rgb(0.09, 0.55, 0.52);
-const INK = rgb(0.1, 0.12, 0.14);
-const MUTED = rgb(0.36, 0.4, 0.44);
-const SOFT = rgb(0.94, 0.97, 0.96);
-const LINE = rgb(0.82, 0.86, 0.86);
+const ACCENT = rgb(0.18, 0.2, 0.23);
+const INK = rgb(0.08, 0.09, 0.1);
+const MUTED = rgb(0.38, 0.41, 0.45);
+const SOFT = rgb(0.95, 0.96, 0.97);
+const LINE = rgb(0.78, 0.8, 0.83);
 
 const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -80,6 +80,18 @@ const wrapText = (text, font, size, maxWidth) => {
   return lines.length ? lines : [''];
 };
 
+const fitText = (text, font, size, maxWidth) => {
+  const value = cleanText(text);
+  if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
+
+  let output = value;
+  while (output.length > 3 && font.widthOfTextAtSize(`${output}...`, size) > maxWidth) {
+    output = output.slice(0, -1);
+  }
+
+  return output.length > 3 ? `${output}...` : '';
+};
+
 const drawLabelValue = (page, label, value, y, fonts) => {
   page.drawText(label, { x: MARGIN, y, size: 6.8, font: fonts.bold, color: MUTED });
   const lines = wrapText(value || '-', fonts.regular, 8.2, CONTENT_WIDTH);
@@ -89,7 +101,7 @@ const drawLabelValue = (page, label, value, y, fonts) => {
   return y - 13 - (Math.max(lines.length, 1) * 9);
 };
 
-const drawSection = (page, title, y, fonts) => {
+const drawSection = (page, title, y, fonts, value = '') => {
   page.drawRectangle({
     x: MARGIN,
     y: y - 4,
@@ -100,6 +112,11 @@ const drawSection = (page, title, y, fonts) => {
     borderWidth: 0.4,
   });
   page.drawText(title, { x: MARGIN + 7, y, size: 7.8, font: fonts.bold, color: ACCENT });
+  const valueText = cleanText(value);
+  if (valueText) {
+    const fittedValue = fitText(valueText, fonts.regular, 7.2, CONTENT_WIDTH - 58);
+    drawRight(page, fittedValue, y, 7.2, fonts.regular, MUTED, TICKET_WIDTH - MARGIN - 7);
+  }
   return y - 17;
 };
 
@@ -135,6 +152,8 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   const total = venta.total || venta.r_monto_total || encomienda.r_monto_total || encomienda.precio_neto;
   const clienteDocumento = encomienda.cliente_documento || encomienda.cliente_documento_id || jsonTicket.cliente?.documento_identidad;
   const destinatarioDocumento = encomienda.destinatario_documento || encomienda.destinatario_documento_id;
+  const agenciaOrigen = encomienda.punto_venta_nombre || '';
+  const agenciaDestino = encomienda.punto_venta_dest_nombre || '';
   const qrText = [
     empresa.ruc,
     codigo,
@@ -183,7 +202,7 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   drawCentered(page, `FECHA ${fecha(fechaEmision)}   HORA ${horaAmPm(horaEmision)}`, y, 7.4, regular, MUTED);
   y -= 18;
 
-  y = drawSection(page, 'ORIGEN', y, fonts);
+  y = drawSection(page, 'ORIGEN', y, fonts, agenciaOrigen);
   y = drawLabelValue(page, 'REMITENTE', encomienda.cliente || jsonTicket.cliente?.razon_social_nombres, y, fonts);
   y = drawLabelValue(page, 'DNI / RUC', clienteDocumento, y, fonts);
   y = drawLabelValue(page, 'TELEFONO', encomienda.cliente_telefono, y, fonts);
@@ -191,11 +210,10 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
     y = drawLabelValue(page, 'DIRECCION', encomienda.remitente_direccion || encomienda.cliente_direccion, y, fonts);
   }
 
-  y = drawSection(page, 'DESTINO', y, fonts);
+  y = drawSection(page, 'DESTINO', y, fonts, agenciaDestino);
   y = drawLabelValue(page, 'DESTINATARIO', encomienda.destinatario, y, fonts);
   y = drawLabelValue(page, 'DNI', destinatarioDocumento, y, fonts);
   y = drawLabelValue(page, 'TELEFONO', encomienda.destinatario_telefono, y, fonts);
-  y = drawLabelValue(page, 'RUTA', `${cleanText(encomienda.id_ruta)}  ${cleanText(encomienda.id_punto_venta)} -> ${cleanText(encomienda.id_punto_venta_dest)}`, y, fonts);
   if (encomienda.destinatario_direccion) {
     y = drawLabelValue(page, 'DIRECCION ENTREGA', encomienda.destinatario_direccion, y, fonts);
   }
@@ -205,30 +223,31 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   y = drawLabelValue(page, 'UNIDAD', `${cleanText(encomienda.placa)}  ${cleanText(encomienda.licencia)}`, y, fonts);
 
   y -= 2;
+  const qrSize = 42;
   page.drawRectangle({
     x: MARGIN,
-    y: y - 38,
+    y: y - 48,
     width: CONTENT_WIDTH,
-    height: 38,
+    height: 48,
     color: rgb(0.98, 0.99, 0.99),
     borderColor: ACCENT,
     borderWidth: 0.8,
   });
-  page.drawText('CONDICION', { x: MARGIN + 8, y: y - 13, size: 7, font: bold, color: MUTED });
-  page.drawText(cleanText(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO'), { x: MARGIN + 8, y: y - 27, size: 10, font: bold, color: INK });
-  page.drawText('TOTAL S/', { x: TICKET_WIDTH - MARGIN - 78, y: y - 13, size: 7, font: bold, color: MUTED });
-  drawRight(page, money(total), y - 29, 15, bold, ACCENT);
-  y -= 51;
-
-  const qrSize = 52;
-  page.drawImage(qrImage, { x: (TICKET_WIDTH - qrSize) / 2, y: y - qrSize, width: qrSize, height: qrSize });
-  y -= qrSize + 10;
+  page.drawImage(qrImage, { x: MARGIN + 7, y: y - 45, width: qrSize, height: qrSize });
+  page.drawText('CONDICION', { x: MARGIN + 57, y: y - 15, size: 7, font: bold, color: MUTED });
+  page.drawText(cleanText(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO'), { x: MARGIN + 57, y: y - 31, size: 10, font: bold, color: INK });
+  page.drawText('TOTAL S/', { x: TICKET_WIDTH - MARGIN - 76, y: y - 15, size: 7, font: bold, color: MUTED });
+  drawRight(page, money(total), y - 33, 14, bold, ACCENT, TICKET_WIDTH - MARGIN - 8);
+  y -= 60;
 
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.7, color: LINE });
-  y -= 16;
-  drawCentered(page, 'Gracias por confiar tu envio con nosotros', y, 8, regular, MUTED);
-  y -= 11;
-  drawCentered(page, 'Conserva este ticket para seguimiento y entrega', y, 6.8, regular, MUTED);
+  y -= 13;
+  page.drawText('TERMINOS Y CONDICIONES', { x: MARGIN, y, size: 6.8, font: bold, color: ACCENT });
+  y -= 9;
+  wrapText('Conserva este ticket para seguimiento y entrega. La empresa no se responsabiliza por articulos no declarados o embalaje inadecuado.', regular, 6.5, CONTENT_WIDTH).slice(0, 3).forEach((line) => {
+    page.drawText(line, { x: MARGIN, y, size: 6.5, font: regular, color: MUTED });
+    y -= 8;
+  });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

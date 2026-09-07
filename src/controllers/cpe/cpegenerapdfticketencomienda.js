@@ -170,7 +170,9 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   }
 
   drawCentered(page, cleanText(empresa.razon_social || empresa.nombre_comercial) || 'TRANSPORTE DE ENCOMIENDAS', y, 7.8, regular, MUTED);
-  y -= 15;
+  y -= 10;
+  drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, y, 7.4, regular, MUTED);
+  y -= 13;
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.7, color: LINE });
   y -= 17;
 

@@ -837,7 +837,7 @@ async function generarPDFTicketEncomienda(req, res) {
     );
 
     const server_sftp = process.env.CPE_HOST;
-    const ruta_pdf = `http://${server_sftp}:8080/descargas/${ruc}/${ruc}-${venta.codigo}-${venta.serie}-${venta.numero}-TICKET.pdf`;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${ruc}/${ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
 
     return res.status(200).json({
       respuesta_sunat_descripcion: 'Ticket de encomienda generado correctamente',

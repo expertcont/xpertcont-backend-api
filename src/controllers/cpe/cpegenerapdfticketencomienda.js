@@ -109,6 +109,15 @@ const drawLabelValue = (page, label, value, y, fonts) => {
   return y - 13 - (Math.max(lines.length, 1) * 9);
 };
 
+const drawContentValue = (page, label, value, y, fonts) => {
+  page.drawText(label, { x: MARGIN, y, size: 6.8, font: fonts.bold, color: MUTED });
+  const lines = wrapText(value || '-', fonts.bold, 9.2, CONTENT_WIDTH).slice(0, 2);
+  lines.forEach((line, index) => {
+    page.drawText(line, { x: MARGIN, y: y - 10 - (index * 10), size: 9.2, font: fonts.bold, color: INK });
+  });
+  return y - 14 - (Math.max(lines.length, 1) * 10);
+};
+
 const drawSection = (page, title, y, fonts, value = '') => {
   page.drawRectangle({
     x: MARGIN,
@@ -122,8 +131,8 @@ const drawSection = (page, title, y, fonts, value = '') => {
   page.drawText(title, { x: MARGIN + 7, y, size: 8.2, font: fonts.bold, color: ACCENT });
   const valueText = cleanText(value);
   if (valueText) {
-    const fittedValue = fitText(valueText.toUpperCase(), fonts.bold, 8.1, CONTENT_WIDTH - 58);
-    drawRight(page, fittedValue, y, 8.1, fonts.bold, ACCENT, TICKET_WIDTH - MARGIN - 7);
+    const fittedValue = fitText(valueText.toUpperCase(), fonts.bold, 7.8, CONTENT_WIDTH - 66);
+    drawRight(page, fittedValue, y, 7.8, fonts.bold, ACCENT, TICKET_WIDTH - MARGIN - 7);
   }
   return y - 17;
 };
@@ -162,6 +171,7 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   const destinatarioDocumento = encomienda.destinatario_documento || encomienda.destinatario_documento_id;
   const agenciaOrigen = encomienda.punto_venta_nombre || '';
   const agenciaDestino = encomienda.punto_venta_dest_nombre || '';
+  const unidadTransporte = `${cleanText(encomienda.placa)} ${cleanText(encomienda.licencia)}`.trim();
   const qrText = [
     empresa.ruc,
     codigo,
@@ -241,9 +251,8 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
     y = drawLabelValue(page, 'DIRECCION ENTREGA', encomienda.destinatario_direccion, y, fonts);
   }
 
-  y = drawSection(page, 'ENCOMIENDA', y, fonts);
-  y = drawLabelValue(page, 'CONTENIDO', encomienda.descripcion || jsonTicket.items?.[0]?.producto, y, fonts);
-  y = drawLabelValue(page, 'UNIDAD', `${cleanText(encomienda.placa)}  ${cleanText(encomienda.licencia)}`, y, fonts);
+  y = drawSection(page, 'ENCOMIENDA', y, fonts, unidadTransporte);
+  y = drawContentValue(page, 'CONTENIDO', encomienda.descripcion || jsonTicket.items?.[0]?.producto, y, fonts);
 
   y -= 2;
   const qrSize = 42;

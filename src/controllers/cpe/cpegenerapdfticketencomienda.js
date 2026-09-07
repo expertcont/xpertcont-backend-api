@@ -2,7 +2,7 @@ const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
 const QRCode = require('qrcode');
 
 const TICKET_WIDTH = 226.77;
-const TICKET_HEIGHT = 650;
+const TICKET_HEIGHT = 690;
 const MARGIN = 12;
 const CONTENT_WIDTH = TICKET_WIDTH - (MARGIN * 2);
 const ACCENT = rgb(0.18, 0.2, 0.23);
@@ -11,6 +11,7 @@ const MUTED = rgb(0.32, 0.34, 0.38);
 const SOFT = rgb(0.9, 0.91, 0.93);
 const LINE = rgb(0.62, 0.64, 0.68);
 const PAPER = rgb(1, 1, 1);
+const PANEL = rgb(0.96, 0.965, 0.97);
 
 const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
@@ -68,6 +69,57 @@ const drawDottedLine = (page, y, x1 = MARGIN, x2 = TICKET_WIDTH - MARGIN, color 
   }
 };
 
+const drawRoundedRect = (page, x, y, width, height, radius, options = {}) => {
+  const r = Math.min(radius, width / 2, height / 2);
+  const path = [
+    `M ${r} 0`,
+    `L ${width - r} 0`,
+    `Q ${width} 0 ${width} ${r}`,
+    `L ${width} ${height - r}`,
+    `Q ${width} ${height} ${width - r} ${height}`,
+    `L ${r} ${height}`,
+    `Q 0 ${height} 0 ${height - r}`,
+    `L 0 ${r}`,
+    `Q 0 0 ${r} 0`,
+    'Z',
+  ].join(' ');
+
+  page.drawSvgPath(path, {
+    x,
+    y,
+    color: options.color,
+    borderColor: options.borderColor,
+    borderWidth: options.borderWidth,
+  });
+};
+
+const drawTextInBox = (page, text, x, y, width, size, font, color = INK) => {
+  const label = cleanText(text);
+  const textWidth = font.widthOfTextAtSize(label, size);
+  page.drawText(label, {
+    x: x + Math.max(0, (width - textWidth) / 2),
+    y,
+    size,
+    font,
+    color,
+  });
+};
+
+const drawPill = (page, text, x, y, width, height, fonts) => {
+  drawRoundedRect(page, x, y, width, height, 2.2, {
+    color: SOFT,
+    borderColor: rgb(0.82, 0.83, 0.85),
+    borderWidth: 0.3,
+  });
+  drawTextInBox(page, text, x, y + 3.6, width, 6.8, fonts.bold, ACCENT);
+};
+
+const drawTinyLines = (page, x, y, color = LINE) => {
+  page.drawLine({ start: { x, y: y + 7 }, end: { x: x + 13, y: y + 7 }, thickness: 0.45, color });
+  page.drawLine({ start: { x: x + 5, y: y + 4 }, end: { x: x + 18, y: y + 4 }, thickness: 0.45, color });
+  page.drawLine({ start: { x: x + 2, y: y + 1 }, end: { x: x + 11, y: y + 1 }, thickness: 0.45, color });
+};
+
 const drawMiniVan = (page, x, y, color = INK) => {
   page.drawLine({ start: { x: x - 18, y: y + 7 }, end: { x: x - 6, y: y + 7 }, thickness: 0.75, color });
   page.drawLine({ start: { x: x - 14, y: y + 11 }, end: { x: x - 3, y: y + 11 }, thickness: 0.75, color });
@@ -98,6 +150,83 @@ const drawMiniVan = (page, x, y, color = INK) => {
   page.drawCircle({ x: x + 9.5, y: y + 4.3, size: 1.35, color: PAPER });
   page.drawCircle({ x: x + 26.6, y: y + 4.3, size: 3.3, color });
   page.drawCircle({ x: x + 26.6, y: y + 4.3, size: 1.35, color: PAPER });
+};
+
+const drawCalendarIcon = (page, x, y, color = INK) => {
+  page.drawRectangle({ x, y, width: 8.4, height: 8.5, borderColor: color, borderWidth: 0.9 });
+  page.drawLine({ start: { x, y: y + 5.8 }, end: { x: x + 8.4, y: y + 5.8 }, thickness: 0.8, color });
+  page.drawLine({ start: { x: x + 2, y: y + 10 }, end: { x: x + 2, y: y + 7.2 }, thickness: 1, color });
+  page.drawLine({ start: { x: x + 6.4, y: y + 10 }, end: { x: x + 6.4, y: y + 7.2 }, thickness: 1, color });
+  [2.2, 4.3, 6.4].forEach((dotX) => page.drawCircle({ x: x + dotX, y: y + 3.5, size: 0.45, color }));
+  [2.2, 4.3, 6.4].forEach((dotX) => page.drawCircle({ x: x + dotX, y: y + 1.7, size: 0.45, color }));
+};
+
+const drawClockIcon = (page, x, y, color = INK) => {
+  page.drawCircle({ x: x + 4.7, y: y + 4.7, size: 4.5, borderColor: color, borderWidth: 0.9 });
+  page.drawLine({ start: { x: x + 4.7, y: y + 4.7 }, end: { x: x + 4.7, y: y + 7.5 }, thickness: 0.85, color });
+  page.drawLine({ start: { x: x + 4.7, y: y + 4.7 }, end: { x: x + 7, y: y + 3.5 }, thickness: 0.85, color });
+};
+
+const drawPersonIcon = (page, x, y, color = INK) => {
+  page.drawCircle({ x: x + 5.4, y: y + 5.4, size: 5.4, color });
+  page.drawCircle({ x: x + 5.4, y: y + 7.2, size: 1.7, color: PAPER });
+  page.drawSvgPath('M2.1 2.2 C2.8 4.1 4 5.1 5.4 5.1 C6.8 5.1 8.1 4.1 8.8 2.2 Z', {
+    x,
+    y,
+    color: PAPER,
+  });
+};
+
+const drawPackageIcon = (page, x, y, color = INK) => {
+  page.drawSvgPath('M5 1 L14 5.2 L14 15.8 L5 20 L-4 15.8 L-4 5.2 Z', { x, y, borderColor: color, borderWidth: 1 });
+  page.drawLine({ start: { x: x - 4, y: y + 5.2 }, end: { x: x + 5, y: y + 9.4 }, thickness: 0.9, color });
+  page.drawLine({ start: { x: x + 14, y: y + 5.2 }, end: { x: x + 5, y: y + 9.4 }, thickness: 0.9, color });
+  page.drawLine({ start: { x: x + 5, y: y + 9.4 }, end: { x: x + 5, y: y + 20 }, thickness: 0.9, color });
+  page.drawLine({ start: { x: x + 1.1, y: y + 3.6 }, end: { x: x + 10, y: y + 7.7 }, thickness: 0.9, color });
+};
+
+const drawCardIcon = (page, x, y, color = INK) => {
+  drawRoundedRect(page, x, y, 13.5, 9, 1.3, { borderColor: color, borderWidth: 0.9 });
+  page.drawLine({ start: { x: x + 1.4, y: y + 6 }, end: { x: x + 12.1, y: y + 6 }, thickness: 0.8, color });
+  page.drawCircle({ x: x + 3.7, y: y + 2.6, size: 0.7, color });
+  page.drawLine({ start: { x: x + 6, y: y + 2.6 }, end: { x: x + 10.2, y: y + 2.6 }, thickness: 0.75, color });
+};
+
+const drawClipboardIcon = (page, x, y, color = INK) => {
+  drawRoundedRect(page, x, y, 12, 17, 1.3, { borderColor: color, borderWidth: 0.9 });
+  drawRoundedRect(page, x + 3.2, y + 14.6, 5.6, 3.6, 1, { color: PAPER, borderColor: color, borderWidth: 0.8 });
+  page.drawLine({ start: { x: x + 3, y: y + 11 }, end: { x: x + 9, y: y + 11 }, thickness: 0.7, color });
+  page.drawLine({ start: { x: x + 3, y: y + 8 }, end: { x: x + 9, y: y + 8 }, thickness: 0.7, color });
+  page.drawLine({ start: { x: x + 3, y: y + 5 }, end: { x: x + 7.4, y: y + 5 }, thickness: 0.7, color });
+};
+
+const drawTicketPanel = (page, x, y, width, height) => {
+  drawRoundedRect(page, x, y, width, height, 4, {
+    color: rgb(0.985, 0.985, 0.985),
+    borderColor: INK,
+    borderWidth: 0.8,
+  });
+  page.drawCircle({ x, y: y + height / 2, size: 6, color: PAPER, borderColor: INK, borderWidth: 0.8 });
+  page.drawCircle({ x: x + width, y: y + height / 2, size: 6, color: PAPER, borderColor: INK, borderWidth: 0.8 });
+};
+
+const drawDateTimeRow = (page, dateText, timeText, y, fonts) => {
+  const dateLabel = `FECHA ${fecha(dateText)}`;
+  const timeLabel = `HORA ${horaAmPm(timeText)}`;
+  const dateWidth = fonts.regular.widthOfTextAtSize(dateLabel, 7.4);
+  const timeWidth = fonts.regular.widthOfTextAtSize(timeLabel, 7.4);
+  const totalWidth = 10 + dateWidth + 16 + 10 + timeWidth;
+  let x = (TICKET_WIDTH - totalWidth) / 2;
+
+  drawCalendarIcon(page, x, y - 2, INK);
+  x += 12;
+  page.drawText(dateLabel, { x, y, size: 7.4, font: fonts.regular, color: INK });
+  x += dateWidth + 8;
+  page.drawLine({ start: { x, y: y - 1 }, end: { x, y: y + 10 }, thickness: 0.45, color: LINE });
+  x += 8;
+  drawClockIcon(page, x, y - 2, INK);
+  x += 12;
+  page.drawText(timeLabel, { x, y, size: 7.4, font: fonts.regular, color: INK });
 };
 
 const drawCenteredLines = (page, lines, y, size, font, color = INK, gap = 8) => {
@@ -177,7 +306,8 @@ const drawSection = (page, title, y, fonts, value = '') => {
 };
 
 const drawInfoBlock = (page, title, name, documentLabel, documentValue, phoneValue, x, y, width, fonts) => {
-  page.drawText(title, { x, y, size: 7.2, font: fonts.bold, color: ACCENT });
+  drawPersonIcon(page, x, y - 2, INK);
+  page.drawText(title, { x: x + 15, y, size: 7.2, font: fonts.bold, color: ACCENT });
   const nameLines = wrapText(name || '-', fonts.bold, 7.6, width).slice(0, 2);
   nameLines.forEach((line, index) => {
     page.drawText(line, { x, y: y - 12 - (index * 9), size: 7.6, font: fonts.bold, color: INK });
@@ -226,6 +356,9 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   const agenciaOrigen = encomienda.punto_venta_nombre || '';
   const agenciaDestino = encomienda.punto_venta_dest_nombre || '';
   const unidadTransporte = `${cleanText(encomienda.placa)} ${cleanText(encomienda.licencia)}`.trim();
+  const condicionPago = cleanText(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
+  const medioPago = cleanText(venta.medio_pago || encomienda.medio_pago || 'EFECTIVO').toUpperCase();
+  const observaciones = cleanText(encomienda.observaciones || encomienda.observacion || (encomienda.numero_rdi ? `RDI: ${encomienda.numero_rdi}` : '-'));
   const qrText = [
     empresa.ruc,
     codigo,
@@ -282,28 +415,28 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.85, color: LINE });
   y -= 17;
 
+  drawTinyLines(page, MARGIN + 44, y - 1, LINE);
+  drawTinyLines(page, TICKET_WIDTH - MARGIN - 61, y - 1, LINE);
   drawCentered(page, comprobanteNombre(codigo), y, 9.4, bold);
   y -= 12;
-  drawCentered(page, numero || 'MODELO', y, 11.7, bold, ACCENT);
-  y -= 13;
-  drawCentered(page, `FECHA ${fecha(fechaEmision)}   HORA ${horaAmPm(horaEmision)}`, y, 7.4, regular, MUTED);
+  drawCentered(page, numero || 'MODELO', y, 13.2, bold, INK);
   y -= 16;
+  drawDateTimeRow(page, fechaEmision, horaEmision, y, fonts);
+  y -= 18;
   drawDottedLine(page, y, MARGIN + 4, TICKET_WIDTH - MARGIN - 4, rgb(0.66, 0.67, 0.7));
   y -= 18;
 
-  page.drawRectangle({ x: MARGIN + 11, y: y - 2, width: 45, height: 14, color: SOFT, borderColor: LINE, borderWidth: 0.35 });
-  page.drawRectangle({ x: TICKET_WIDTH - MARGIN - 56, y: y - 2, width: 45, height: 14, color: SOFT, borderColor: LINE, borderWidth: 0.35 });
-  drawCentered(page, 'ORIGEN', y + 2, 7.3, bold, ACCENT);
-  drawRight(page, 'DESTINO', y + 2, 7.3, bold, ACCENT, TICKET_WIDTH - MARGIN - 20);
+  drawPill(page, 'ORIGEN', MARGIN + 12, y - 2, 45, 14, fonts);
+  drawPill(page, 'DESTINO', TICKET_WIDTH - MARGIN - 57, y - 2, 45, 14, fonts);
   y -= 27;
 
-  const origenTexto = fitText((agenciaOrigen || encomienda.id_punto_venta || 'ORIGEN').toUpperCase(), bold, 13.5, 76);
-  const destinoTexto = fitText((agenciaDestino || encomienda.id_punto_venta_dest || 'DESTINO').toUpperCase(), bold, 13.5, 58);
-  page.drawText(origenTexto, { x: MARGIN, y, size: 13.5, font: bold, color: INK });
+  const origenTexto = fitText((agenciaOrigen || encomienda.id_punto_venta || 'ORIGEN').toUpperCase(), bold, 14.2, 82);
+  const destinoTexto = fitText((agenciaDestino || encomienda.id_punto_venta_dest || 'DESTINO').toUpperCase(), bold, 14.2, 64);
+  page.drawText(origenTexto, { x: MARGIN, y, size: 14.2, font: bold, color: INK });
   drawMiniVan(page, MARGIN + 94, y + 1, INK);
   page.drawLine({ start: { x: MARGIN + 132, y: y + 7 }, end: { x: TICKET_WIDTH - MARGIN - 51, y: y + 7 }, thickness: 0.8, color: INK, dashArray: [1, 3] });
   page.drawText('>', { x: TICKET_WIDTH - MARGIN - 47, y: y + 2, size: 12, font: bold, color: INK });
-  drawRight(page, destinoTexto, y, 13.5, bold, INK, TICKET_WIDTH - MARGIN);
+  drawRight(page, destinoTexto, y, 14.2, bold, INK, TICKET_WIDTH - MARGIN);
   y -= 25;
 
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.55, color: LINE });
@@ -323,53 +456,61 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
     y = drawLabelValue(page, 'DIRECCION ENTREGA', encomienda.destinatario_direccion, y, fonts);
   }
 
-  page.drawRectangle({
-    x: MARGIN,
-    y: y - 60,
-    width: CONTENT_WIDTH,
-    height: 60,
-    color: rgb(0.94, 0.95, 0.96),
-    borderColor: rgb(0.86, 0.87, 0.89),
-    borderWidth: 0.4,
-  });
+  drawRoundedRect(page,
+    MARGIN,
+    y - 68,
+    CONTENT_WIDTH,
+    68,
+    3.5,
+    {
+      color: PANEL,
+      borderColor: rgb(0.86, 0.87, 0.89),
+      borderWidth: 0.4,
+    }
+  );
   y -= 16;
-  page.drawText('ENCOMIENDA', { x: MARGIN + 10, y, size: 9, font: bold, color: ACCENT });
+  drawPackageIcon(page, MARGIN + 12, y - 10, INK);
+  page.drawText('ENCOMIENDA', { x: MARGIN + 28, y, size: 9, font: bold, color: ACCENT });
   page.drawText('PLACA / LICENCIA', { x: MARGIN + 128, y, size: 6.7, font: regular, color: INK });
   drawRight(page, fitText(unidadTransporte, bold, 8.1, 72), y - 11, 8.1, bold, INK, TICKET_WIDTH - MARGIN - 8);
-  page.drawLine({ start: { x: MARGIN + 10, y: y - 9 }, end: { x: MARGIN + 121, y: y - 9 }, thickness: 0.45, color: LINE });
+  page.drawLine({ start: { x: MARGIN + 28, y: y - 9 }, end: { x: MARGIN + 121, y: y - 9 }, thickness: 0.45, color: LINE });
   y -= 24;
   y = drawContentValue(page, 'CONTENIDO', encomienda.descripcion || jsonTicket.items?.[0]?.producto, y, fonts);
-  y -= 6;
+  page.drawLine({ start: { x: MARGIN + 10, y: y + 6 }, end: { x: TICKET_WIDTH - MARGIN - 10, y: y + 6 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  page.drawText('OBSERVACIONES', { x: MARGIN + 10, y, size: 6.8, font: regular, color: INK });
+  page.drawText(fitText(observaciones, regular, 7.3, CONTENT_WIDTH - 92), { x: MARGIN + 72, y, size: 7.3, font: regular, color: INK });
+  y -= 12;
 
   y -= 2;
   const qrSize = 46;
-  page.drawRectangle({
-    x: MARGIN,
-    y: y - 58,
-    width: CONTENT_WIDTH,
-    height: 58,
-    color: rgb(0.98, 0.98, 0.98),
-    borderColor: LINE,
-    borderWidth: 0.55,
-  });
+  drawTicketPanel(page, MARGIN, y - 60, CONTENT_WIDTH, 60);
   page.drawImage(qrImage, { x: MARGIN + 9, y: y - 52, width: qrSize, height: qrSize });
   page.drawLine({ start: { x: MARGIN + 63, y: y - 6 }, end: { x: MARGIN + 63, y: y - 52 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
   page.drawLine({ start: { x: MARGIN + 133, y: y - 6 }, end: { x: MARGIN + 133, y: y - 52 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
   page.drawText('CONDICION DE PAGO', { x: MARGIN + 75, y: y - 14, size: 6.7, font: regular, color: MUTED });
-  page.drawText(cleanText(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO'), { x: MARGIN + 75, y: y - 33, size: 11.4, font: bold, color: INK });
+  drawRoundedRect(page, MARGIN + 74, y - 39, 46, 16, 2, { color: PAPER, borderColor: INK, borderWidth: 0.5 });
+  drawTextInBox(page, fitText(condicionPago, bold, 11.4, 42), MARGIN + 74, y - 35.5, 46, 11.4, bold, INK);
+  drawCardIcon(page, MARGIN + 75, y - 53, INK);
+  page.drawText(fitText(medioPago, regular, 7.6, 42), { x: MARGIN + 93, y: y - 50, size: 7.6, font: regular, color: INK });
   page.drawText('TOTAL', { x: TICKET_WIDTH - MARGIN - 48, y: y - 14, size: 8.2, font: bold, color: ACCENT });
   page.drawText('S/', { x: MARGIN + 143, y: y - 35, size: 10, font: bold, color: INK });
   drawRight(page, money(total), y - 43, 20, bold, INK, TICKET_WIDTH - MARGIN - 8);
-  y -= 68;
+  y -= 72;
 
   page.drawLine({ start: { x: MARGIN, y }, end: { x: TICKET_WIDTH - MARGIN, y }, thickness: 0.7, color: LINE });
   y -= 13;
-  page.drawText('TERMINOS Y CONDICIONES', { x: MARGIN, y, size: 6.8, font: bold, color: ACCENT });
+  drawClipboardIcon(page, MARGIN + 2, y - 22, INK);
+  page.drawText('TERMINOS Y CONDICIONES', { x: MARGIN + 20, y, size: 6.8, font: bold, color: ACCENT });
   y -= 9;
-  wrapText('Conserva este ticket para seguimiento y entrega. La empresa no se responsabiliza por articulos no declarados o embalaje inadecuado.', regular, 6.5, CONTENT_WIDTH).slice(0, 3).forEach((line) => {
-    page.drawText(line, { x: MARGIN, y, size: 6.5, font: regular, color: MUTED });
+  wrapText('Conserva este ticket para seguimiento y entrega. La empresa no se responsabiliza por articulos no declarados o embalaje inadecuado.', regular, 6.5, 126).slice(0, 3).forEach((line) => {
+    page.drawText(line, { x: MARGIN + 20, y, size: 6.5, font: regular, color: MUTED });
     y -= 8;
   });
+  page.drawLine({ start: { x: TICKET_WIDTH - MARGIN - 65, y: y + 28 }, end: { x: TICKET_WIDTH - MARGIN - 65, y: y }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  drawPackageIcon(page, TICKET_WIDTH - MARGIN - 45, y + 7, INK);
+  page.drawText('GRACIAS POR', { x: TICKET_WIDTH - MARGIN - 34, y: y + 17, size: 6.4, font: regular, color: INK });
+  page.drawText('CONFIAR EN', { x: TICKET_WIDTH - MARGIN - 34, y: y + 9, size: 6.4, font: regular, color: INK });
+  page.drawText('NOSOTROS', { x: TICKET_WIDTH - MARGIN - 34, y: y + 1, size: 6.4, font: regular, color: INK });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

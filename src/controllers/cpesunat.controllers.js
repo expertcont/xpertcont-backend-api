@@ -833,7 +833,7 @@ async function generarPDFTicketEncomienda(req, res) {
       venta.serie,
       venta.numero,
       resultadoPdf.buffer_pdf,
-      'TICKET'
+      'PDF'
     );
 
     const server_sftp = process.env.CPE_HOST;

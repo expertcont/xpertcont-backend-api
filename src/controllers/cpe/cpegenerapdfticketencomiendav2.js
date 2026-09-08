@@ -227,17 +227,21 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const qrDataUrl = await QRCode.toDataURL(qrText || displayNumber || empresa.ruc || 'XPERTCONT');
   const qrImage = await pdfDoc.embedPng(base64ToBytes(qrDataUrl.split(',')[1]));
 
-  // Logo superior. La imagen ya llega preparada con su tamano final.
+  // Logo superior.
+  // La imagen puede venir en pixeles grandes, por ejemplo 380x130.
+  // pdf-lib interpreta width/height como puntos PDF, no como pixeles de pantalla.
+  // Por eso se escala proporcionalmente para que entre en el ticket.
   if (logoImage) {
-    // Se calcula desde el alto real del logo para que no se corte fuera de la hoja.
-    // Si se usa un y fijo muy alto, un logo grande puede quedar invisible arriba.
-    const logoX = (W - logoImage.width) / 2;
-    const logoY = H - logoImage.height - 12;
+    const scale = Math.min(152 / logoImage.width, 42 / logoImage.height);
+    const logoWidth = logoImage.width * scale;
+    const logoHeight = logoImage.height * scale;
+    const logoX = (W - logoWidth) / 2;
+    const logoY = H - logoHeight - 12;
     page.drawImage(logoImage, {
       x: logoX,
       y: logoY,
-      width: logoImage.width,
-      height: logoImage.height,
+      width: logoWidth,
+      height: logoHeight,
     });
   } else {
     centered(page, 'TRANSPORTE DE ENCOMIENDAS', 616, 10.5, bold);

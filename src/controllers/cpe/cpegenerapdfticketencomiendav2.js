@@ -149,8 +149,8 @@ const centeredIn = (page, value, x, y, width, size, font, color = INK) => {
 };
 
 const labelValue = (page, label, value, x, y, labelWidth, valueWidth, fonts, valueBold = true) => {
-  text(page, label, x, y, 5.9, fonts.bold, MUTED, labelWidth);
-  text(page, value || '-', x + labelWidth, y, 6.9, valueBold ? fonts.bold : fonts.regular, INK, valueWidth);
+  text(page, label, x, y, 6.3, fonts.regular, MUTED, labelWidth);
+  text(page, value || '-', x + labelWidth, y, 7.6, valueBold ? fonts.semibold : fonts.regular, INK, valueWidth);
 };
 
 const embedLogo = async (pdfDoc, logo) => {
@@ -231,57 +231,56 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
     centered(page, 'TRANSPORTE DE ENCOMIENDAS', 616, 10.5, bold);
   }
 
-  wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', bold, 7.1, CW, 2)
-    .forEach((item, index) => centered(page, item, 574 - (index * 8), 7.1, bold));
+  wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 8.2, CW, 2)
+    .forEach((item, index) => centered(page, item, 574 - (index * 7.4), 8.2, regular));
   centered(page, `RUC ${empresa.ruc || ''}`, 548, 15.8, bold);
-  wrap(empresa.domicilio_fiscal || '', regular, 5.8, CW, 2)
-    .forEach((item, index) => centered(page, item, 531 - (index * 6.8), 5.8, regular, MUTED));
+  wrap(empresa.domicilio_fiscal || '', regular, 6.5, CW, 2)
+    .forEach((item, index) => centered(page, item, 531 - (index * 6.2), 6.5, regular, MUTED));
 
   line(page, 510, M, W - M, 0.7);
   centered(page, documentName(code), 491, 9.5, regular);
   centeredTracking(page, displayNumber || 'MODELO', 465, 16.8, bold, INK, 0.55, CW - 8);
-  labelValue(page, 'FECHA', datePe(issueDate), 43, 445, 27, 45, fonts, false);
+  labelValue(page, 'FECHA', datePe(issueDate), 39, 445, 29, 52, fonts, false);
   line(page, 443, 113, 113, 0.45);
-  labelValue(page, 'HORA', timePe(issueTime), 129, 445, 24, 52, fonts, false);
+  labelValue(page, 'HORA', timePe(issueTime), 126, 445, 26, 58, fonts, false);
   dotted(page, 425);
 
-  box(page, M, 309, CW, 110, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, 394.5, 13, ICON_MUTED);
-  text(page, 'ORIGEN', M + 24, 400, 6.7, regular, MUTED, 38);
-  centeredTracking(page, String(origin).toUpperCase(), 381, 17.6, bold, INK, 0.28, CW - 18);
-  line(page, 370, M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'REMITENTE', M + 8, 358, 6.6, regular, MUTED, 44);
+  box(page, M, 312, CW, 107, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, 393.5, 14, ICON_MUTED);
+  text(page, 'ORIGEN', M + 25, 400, 8.1, semibold, MUTED, 46);
+  centeredTracking(page, String(origin).toUpperCase(), 382, 17.6, bold, INK, 0.22, CW - 18);
+  line(page, 372, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'REMITENTE', M + 8, 361, 7.2, regular, MUTED, 54);
   wrap(senderName, regular, 8.8, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, 346 - (index * 8.2), 8.8, regular, INK, CW - 16);
+    text(page, item, M + 8, 350 - (index * 7.4), 8.8, regular, INK, CW - 16);
   });
-  labelValue(page, 'DOC.', senderDoc, M + 8, 323, 24, 66, fonts, false);
-  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M + 109, 323, 20, 64, fonts, false);
+  labelValue(page, 'DOC.', senderDoc, M + 8, 325, 24, 66, fonts, false);
+  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M + 109, 325, 20, 64, fonts, false);
 
-  box(page, M, 196, CW, 104, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, 276.5, 13, ICON_MUTED);
-  text(page, 'DESTINO', M + 24, 282, 6.7, regular, MUTED, 44);
-  centeredTracking(page, String(destination).toUpperCase(), 263, 17.6, bold, INK, 0.28, CW - 18);
-  line(page, 252, M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, 240, 6.6, regular, MUTED, 54);
+  box(page, M, 207, CW, 96, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, 278.5, 14, ICON_MUTED);
+  text(page, 'DESTINO', M + 25, 285, 8.1, semibold, MUTED, 52);
+  centeredTracking(page, String(destination).toUpperCase(), 267, 17.6, bold, INK, 0.22, CW - 18);
+  line(page, 257, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO', M + 8, 246, 7.2, regular, MUTED, 64);
   wrap(receiverName, regular, 8.8, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, 228 - (index * 8.2), 8.8, regular, INK, CW - 16);
+    text(page, item, M + 8, 235 - (index * 7.4), 8.8, regular, INK, CW - 16);
   });
-  labelValue(page, 'DOC.', receiverDoc, M + 8, 205, 24, 66, fonts, false);
-  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + 109, 205, 20, 64, fonts, false);
+  labelValue(page, 'DOC.', receiverDoc, M + 8, 213, 24, 66, fonts, false);
+  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + 109, 213, 20, 64, fonts, false);
 
-  box(page, M, 148, CW, 38, SOFT, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.package, M + 8, 168, 14, ICON_MUTED);
-  text(page, 'ENCOMIENDA', M + 26, 173, 7.4, regular, MUTED, 58);
-  text(page, String(content).toUpperCase(), M + 26, 158, 11.2, regular, INK, 86);
-  labelValue(page, 'UNIDAD', unit, M + 126, 158, 26, 46, fonts, false);
+  box(page, M, 150, CW, 42, SOFT, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.package, M + 8, 172, 14, ICON_MUTED);
+  text(page, 'ENCOMIENDA', M + 26, 177, 7.8, regular, MUTED, 58);
+  labelValue(page, 'UNIDAD', unit, M + 112, 177, 26, 58, fonts, false);
+  text(page, String(content).toUpperCase(), M + 8, 158, 11.6, regular, INK, CW - 16);
 
   box(page, M, 63, CW, 76, WHITE, LIGHT_LINE, 0.75);
   page.drawImage(qrImage, { x: M + 8, y: 75, width: 53, height: 53 });
   page.drawLine({ start: { x: 75, y: 74 }, end: { x: 75, y: 128 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
   page.drawLine({ start: { x: 136, y: 74 }, end: { x: 136, y: 128 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  text(page, 'CONDICION', 84, 122, 6.1, regular, MUTED, 44);
-  box(page, 83, 98, 46, 18, WHITE, LIGHT_LINE, 0.55);
-  centeredIn(page, payment, 83, 103, 46, payment.length > 7 ? 7.1 : 9.1, semibold);
+  text(page, 'CONDICION', 84, 123, 6.5, regular, MUTED, 44);
+  centeredIn(page, payment, 80, 105, 53, payment.length > 7 ? 8.4 : 10.4, semibold);
   text(page, 'TOTAL', 166, 122, 8, regular);
   text(page, 'S/', 143, 99, 9.8, regular);
   right(page, money(total), 85, 21, bold, INK, W - M - 7, 67);

@@ -8,6 +8,7 @@ const CW = W - (M * 2);
 const INK = rgb(0.03, 0.035, 0.045);
 const MUTED = rgb(0.34, 0.35, 0.37);
 const LINE = rgb(0.7, 0.71, 0.73);
+const LIGHT_LINE = rgb(0.82, 0.83, 0.85);
 const SOFT = rgb(0.94, 0.945, 0.955);
 const WHITE = rgb(1, 1, 1);
 
@@ -135,8 +136,8 @@ const embedLogo = async (pdfDoc, logo) => {
 const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([W, H]);
-  const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const regular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
+  const bold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
   const fonts = { regular, bold };
 
   const empresa = jsonTicket.empresa || {};
@@ -195,49 +196,51 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   labelValue(page, 'HORA', timePe(issueTime), 129, 445, 24, 52, fonts, false);
   dotted(page, 425);
 
-  pill(page, 'SALIDA', M + 8, 398, 45, fonts);
-  pill(page, 'LLEGADA', W - M - 53, 398, 45, fonts);
-  text(page, String(origin).toUpperCase(), M, 369, 15.6, bold, INK, 82);
-  text(page, 'BUS', 102, 378, 6.8, bold, MUTED, 20);
-  page.drawLine({ start: { x: 96, y: 372 }, end: { x: 166, y: 372 }, thickness: 1, color: INK, dashArray: [2, 4] });
-  page.drawText('>', { x: 170, y: 365, size: 15, font: bold, color: INK });
-  right(page, String(destination).toUpperCase(), 369, 15.6, bold, INK, W - M, 66);
-  line(page, 348);
+  pill(page, 'SALIDA', M, 397, 45, fonts);
+  text(page, String(origin).toUpperCase(), M + 54, 397, 15.2, bold, INK, CW - 58);
+  line(page, 384, M + 54, W - M, 0.45, LIGHT_LINE);
+  text(page, 'RUTA DE ENCOMIENDA', M, 373, 6.2, bold, MUTED, 86);
+  page.drawLine({ start: { x: 94, y: 375 }, end: { x: 154, y: 375 }, thickness: 0.8, color: INK, dashArray: [2, 4] });
+  text(page, '>', 158, 369, 13, bold);
+  text(page, 'BUS', 174, 373, 6.2, bold, MUTED, 28);
+  pill(page, 'LLEGADA', M, 348, 45, fonts);
+  text(page, String(destination).toUpperCase(), M + 54, 348, 15.2, bold, INK, CW - 58);
+  line(page, 335);
 
   const half = (CW - 12) / 2;
-  text(page, 'REMITENTE', M, 326, 7.1, bold);
-  text(page, 'DESTINATARIO', M + half + 12, 326, 7.1, bold);
-  wrap(senderName, bold, 7.1, half, 2).forEach((item, index) => text(page, item, M, 310 - (index * 8), 7.1, bold, INK, half));
-  wrap(receiverName, bold, 7.1, half, 2).forEach((item, index) => text(page, item, M + half + 12, 310 - (index * 8), 7.1, bold, INK, half));
-  page.drawLine({ start: { x: M + half + 6, y: 330 }, end: { x: M + half + 6, y: 276 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  line(page, 287, M, M + half, 0.4);
-  line(page, 287, M + half + 12, W - M, 0.4);
-  labelValue(page, 'DOC.', senderDoc, M, 276, 25, half - 25, fonts);
-  labelValue(page, 'DOC.', receiverDoc, M + half + 12, 276, 25, half - 25, fonts);
-  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M, 264, 25, half - 25, fonts, false);
-  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + half + 12, 264, 25, half - 25, fonts, false);
+  text(page, 'REMITENTE', M, 315, 7.1, bold);
+  text(page, 'DESTINATARIO', M + half + 12, 315, 7.1, bold);
+  wrap(senderName, bold, 7, half, 2).forEach((item, index) => text(page, item, M, 300 - (index * 8), 7, bold, INK, half));
+  wrap(receiverName, bold, 7, half, 2).forEach((item, index) => text(page, item, M + half + 12, 300 - (index * 8), 7, bold, INK, half));
+  page.drawLine({ start: { x: M + half + 6, y: 319 }, end: { x: M + half + 6, y: 265 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  line(page, 277, M, M + half, 0.4);
+  line(page, 277, M + half + 12, W - M, 0.4);
+  labelValue(page, 'DOC.', senderDoc, M, 266, 25, half - 25, fonts);
+  labelValue(page, 'DOC.', receiverDoc, M + half + 12, 266, 25, half - 25, fonts);
+  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M, 254, 25, half - 25, fonts, false);
+  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + half + 12, 254, 25, half - 25, fonts, false);
 
-  box(page, M, 184, CW, 62, SOFT, LINE, 0.45);
-  text(page, 'ENCOMIENDA', M + 8, 228, 8.8, bold);
-  labelValue(page, 'UNIDAD', unit, 139, 228, 30, 43, fonts);
-  line(page, 216, M + 8, W - M - 8, 0.45);
-  text(page, 'CONTENIDO', M + 8, 203, 6.4, bold, MUTED);
-  text(page, String(content).toUpperCase(), M + 8, 190, 11.4, bold, INK, CW - 16);
-  labelValue(page, 'OBS.', observations || '-', M + 8, 172, 24, CW - 40, fonts, false);
+  box(page, M, 178, CW, 60, SOFT, LINE, 0.45);
+  text(page, 'ENCOMIENDA', M + 8, 221, 8.6, bold);
+  labelValue(page, 'UNIDAD', unit, M + 96, 221, 28, 72, fonts);
+  line(page, 209, M + 8, W - M - 8, 0.45);
+  text(page, 'CONTENIDO', M + 8, 196, 6.3, bold, MUTED);
+  text(page, String(content).toUpperCase(), M + 8, 184, 10.8, bold, INK, CW - 16);
+  labelValue(page, 'OBS.', observations || '-', M + 8, 166, 24, CW - 40, fonts, false);
 
-  box(page, M, 82, CW, 76, WHITE, INK, 0.75);
+  box(page, M, 78, CW, 76, WHITE, LIGHT_LINE, 0.75);
   page.drawCircle({ x: M, y: 120, size: 5, color: WHITE, borderColor: INK, borderWidth: 0.75 });
   page.drawCircle({ x: W - M, y: 120, size: 5, color: WHITE, borderColor: INK, borderWidth: 0.75 });
-  page.drawImage(qrImage, { x: M + 8, y: 94, width: 53, height: 53 });
-  page.drawLine({ start: { x: 75, y: 93 }, end: { x: 75, y: 147 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  page.drawLine({ start: { x: 137, y: 93 }, end: { x: 137, y: 147 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  text(page, 'PAGO', 87, 139, 6.4, bold, MUTED);
-  box(page, 86, 114, 42, 18, WHITE, INK, 0.55);
-  centeredIn(page, payment, 86, 119, 42, 10.2, bold);
-  text(page, paymentMethod, 88, 98, 7, regular, INK, 39);
-  text(page, 'TOTAL', 170, 139, 8, bold);
-  text(page, 'S/', 145, 116, 10, bold);
-  right(page, money(total), 101, 21, bold, INK, W - M - 7, 66);
+  page.drawImage(qrImage, { x: M + 8, y: 90, width: 53, height: 53 });
+  page.drawLine({ start: { x: 75, y: 89 }, end: { x: 75, y: 143 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  page.drawLine({ start: { x: 136, y: 89 }, end: { x: 136, y: 143 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  text(page, 'CONDICION', 84, 137, 6.1, bold, MUTED, 44);
+  box(page, 83, 113, 46, 18, WHITE, LIGHT_LINE, 0.55);
+  centeredIn(page, payment, 83, 118, 46, payment.length > 7 ? 7.2 : 9.2, bold);
+  text(page, paymentMethod, 85, 96, paymentMethod.length > 8 ? 6.2 : 6.8, regular, INK, 42);
+  text(page, 'TOTAL', 166, 137, 8, bold);
+  text(page, 'S/', 143, 114, 9.8, bold);
+  right(page, money(total), 100, 21, bold, INK, W - M - 7, 67);
 
   line(page, 64);
   text(page, 'TERMINOS Y CONDICIONES', M, 47, 6.7, bold);

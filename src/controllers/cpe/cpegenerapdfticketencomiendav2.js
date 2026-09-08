@@ -255,55 +255,59 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Ejemplo: -14 baja todo 14 puntos sin tocar el logo.
   const BODY_Y_OFFSET = -14;
   const bodyY = (value) => value + BODY_Y_OFFSET;
+  // Cabecera mas compacta: este valor sube todos los bloques debajo del emisor.
+  // Si reduces mas espacios entre razon social/RUC/direccion, aumenta este numero.
+  const HEADER_HEIGHT_REDUCTION = 10;
+  const afterHeaderY = (value) => bodyY(value + HEADER_HEIGHT_REDUCTION);
   // ORIGEN ocupa menos alto que antes para que DESTINO tenga mas protagonismo.
   // Si cambias ORIGIN_HEIGHT_REDUCTION, todo lo posterior sube/baja parejo.
   const ORIGIN_HEIGHT_REDUCTION = 24;
-  const afterOriginY = (value) => bodyY(value + ORIGIN_HEIGHT_REDUCTION);
+  const afterOriginY = (value) => afterHeaderY(value + ORIGIN_HEIGHT_REDUCTION);
 
   // Cabecera del emisor: razon social, RUC y direccion.
   // Espacio entre lineas: razon social usa "index * 5.8".
   // Direccion usa "index * 8.2" para no pisarse por tener letra 7.4.
-  // Posicion vertical de cada bloque: cambiar 576, 558 o 543.
+  // Posicion vertical de cada bloque: cambiar 576, 563 o 550.
   wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.8, CW, 2)
     .forEach((item, index) => centered(page, item, bodyY(576 - (index * 5.8)), 7.8, regular));
-  centered(page, `RUC ${empresa.ruc || ''}`, bodyY(558), 13.8, bold);
+  centered(page, `RUC ${empresa.ruc || ''}`, bodyY(563), 13.8, bold);
   wrap(empresa.domicilio_fiscal || '', regular, 7.4, CW, 2)
-    .forEach((item, index) => centered(page, item, bodyY(543 - (index * 8.2)), 7.4, regular, MUTED));
+    .forEach((item, index) => centered(page, item, bodyY(550 - (index * 8.2)), 7.4, regular, MUTED));
 
   // Datos del comprobante: tipo, numero, fecha y hora.
   // Altura del espacio de este bloque: esta entre line(page, 525) y dotted(page, 466).
   // Para compactar mas, acercar esos Y y las lineas internas: 514, 496 y 480.
-  line(page, bodyY(525), M, W - M, 0.7);
-  centered(page, documentName(code), bodyY(514), 9.5, regular);
-  centeredTracking(page, displayNumber || 'MODELO', bodyY(496), 16.8, bold, INK, 0.55, CW - 8);
-  text(page, 'FECHA', 39, bodyY(480), 6.3, regular, MUTED, 29);
-  text(page, datePe(issueDate), 68, bodyY(477), 11.4, regular, INK, 52);
-  line(page, bodyY(478), 113, 113, 0.45);
-  text(page, 'HORA', 126, bodyY(480), 6.3, regular, MUTED, 26);
-  text(page, timePe(issueTime), 152, bodyY(477), 11.4, regular, INK, 58);
-  dotted(page, bodyY(466));
+  line(page, afterHeaderY(525), M, W - M, 0.7);
+  centered(page, documentName(code), afterHeaderY(514), 9.5, regular);
+  centeredTracking(page, displayNumber || 'MODELO', afterHeaderY(496), 16.8, bold, INK, 0.55, CW - 8);
+  text(page, 'FECHA', 39, afterHeaderY(487), 6.3, regular, MUTED, 29);
+  text(page, datePe(issueDate), 68, afterHeaderY(484), 11.4, regular, INK, 52);
+  line(page, afterHeaderY(485), 113, 113, 0.45);
+  text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
+  text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
+  dotted(page, afterHeaderY(475));
 
   // Seccion ORIGEN.
   // Altura del espacio: box(page, M, 390, CW, 70, ...).
   // 390 es la base/inicio inferior de la caja; 70 es el alto total.
   // Espacio interno: ajustar 454, 439, 432, 426, 417, 399 y 391.
   // Interlineado del remitente: cambiar "index * 5.8".
-  box(page, M, bodyY(390), CW, 70, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, bodyY(448), 11, ICON_MUTED);
-  centered(page, 'ORIGEN', bodyY(454), 7.2, semibold, MUTED, CW - 16);
-  centeredTracking(page, String(origin).toUpperCase(), bodyY(439), 13.2, semibold, INK, 0.12, CW - 18);
-  line(page, bodyY(432), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'REMITENTE', M + 8, bodyY(426), 6.6, regular, MUTED, 54);
-  wrap(senderName, regular, 8.6, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, bodyY(417 - (index * 6.4)), 8.6, regular, INK, CW - 16);
+  box(page, M, afterHeaderY(390), CW, 70, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, afterHeaderY(448), 11, ICON_MUTED);
+  centered(page, 'ORIGEN', afterHeaderY(454), 8.1, semibold, MUTED, CW - 16);
+  centeredTracking(page, String(origin).toUpperCase(), afterHeaderY(439), 13.2, regular, INK, 0.12, CW - 18);
+  line(page, afterHeaderY(432), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'REMITENTE', M + 8, afterHeaderY(426), 7.2, regular, MUTED, 54);
+  wrap(senderName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
+    text(page, item, M + 8, afterHeaderY(417 - (index * 6.4)), 10.2, regular, INK, CW - 16);
   });
-  text(page, 'DOC.', M + 8, bodyY(399), 5.8, regular, MUTED, 24);
-  text(page, senderDoc, M + 32, bodyY(398), 8.6, regular, INK, 66);
-  text(page, 'TEL.', M + 109, bodyY(399), 5.8, regular, MUTED, 20);
-  text(page, encomienda.cliente_telefono || '-', M + 129, bodyY(398), 8.6, regular, INK, 64);
+  text(page, 'DOC.', M + 8, afterHeaderY(399), 6.3, regular, MUTED, 24);
+  text(page, senderDoc, M + 32, afterHeaderY(398), 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, afterHeaderY(399), 6.3, regular, MUTED, 20);
+  text(page, encomienda.cliente_telefono || '-', M + 129, afterHeaderY(398), 10.2, regular, INK, 64);
   if (senderAddress) {
-    text(page, 'DIR.', M + 8, bodyY(391), 5.6, regular, MUTED, 20);
-    text(page, senderAddress, M + 30, bodyY(390.5), 6.6, regular, INK, CW - 42);
+    text(page, 'DIR.', M + 8, afterHeaderY(391), 5.6, regular, MUTED, 20);
+    text(page, senderAddress, M + 30, afterHeaderY(390.5), 6.6, regular, INK, CW - 42);
   }
 
   // Seccion DESTINO. Mantiene la misma estructura visual que ORIGEN.
@@ -341,32 +345,32 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   });
 
   // Resumen inferior: QR a la izquierda, condicion al centro y total a la derecha.
-  // Altura del espacio: box(page, M, 104, CW, 76, ...).
-  // 104 es la base/inicio inferior; 76 es el alto total. Top = 180.
+  // Altura del espacio: box(page, M, 114, CW, 62, ...).
+  // 114 es la base/inicio inferior; 62 es el alto total. Top = 176.
   // Como encomienda empieza en y=190, el espacio entre ambos queda en 10 puntos.
-  // QR: y=116 y alto=53. Estado de pago: ajustar 143.
-  box(page, M, afterOriginY(104), CW, 76, WHITE, LIGHT_LINE, 0.75);
-  page.drawImage(qrImage, { x: M + 8, y: afterOriginY(116), width: 53, height: 53 });
-  page.drawLine({ start: { x: 75, y: afterOriginY(115) }, end: { x: 75, y: afterOriginY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  page.drawLine({ start: { x: 136, y: afterOriginY(115) }, end: { x: 136, y: afterOriginY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  // QR: y=119 y alto=53. Estado de pago: ajustar 145.
+  box(page, M, afterOriginY(114), CW, 62, WHITE, LIGHT_LINE, 0.75);
+  page.drawImage(qrImage, { x: M + 8, y: afterOriginY(119), width: 53, height: 53 });
+  page.drawLine({ start: { x: 75, y: afterOriginY(118) }, end: { x: 75, y: afterOriginY(173) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  page.drawLine({ start: { x: 136, y: afterOriginY(118) }, end: { x: 136, y: afterOriginY(173) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
   if (payment.includes('COBRAR')) {
-    centeredIn(page, 'POR', 77, afterOriginY(148), 58, 15.2, semibold, ALERT);
-    centeredIn(page, 'PAGAR', 77, afterOriginY(131), 58, 15.2, semibold, ALERT);
+    centeredIn(page, 'POR', 77, afterOriginY(149), 58, 17.6, bold, ALERT);
+    centeredIn(page, 'PAGAR', 77, afterOriginY(130), 58, 17.6, bold, ALERT);
   } else {
-    centeredIn(page, paymentLabel, 77, afterOriginY(139), 58, 14.8, semibold, INK);
+    centeredIn(page, paymentLabel, 77, afterOriginY(140), 58, 14.8, semibold, INK);
   }
-  text(page, 'TOTAL', 166, afterOriginY(163), 8, regular);
-  text(page, 'S/', 166, afterOriginY(148), 9.8, regular);
-  right(page, money(total), afterOriginY(126), 21, bold, INK, W - M - 7, 67);
+  centeredIn(page, 'TOTAL', 145, afterOriginY(164), 67, 8, regular);
+  centeredIn(page, 'S/', 145, afterOriginY(149), 67, 9.8, regular);
+  right(page, money(total), afterOriginY(127), 21, bold, INK, W - M - 7, 67);
 
-  line(page, afterOriginY(92));
-  text(page, 'TERMINOS Y CONDICIONES', M, afterOriginY(78), 6.5, regular);
+  line(page, afterOriginY(102));
+  text(page, 'TERMINOS Y CONDICIONES', M, afterOriginY(88), 6.5, regular);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
-    .forEach((item, index) => text(page, item, M, afterOriginY(68 - (index * 6.8)), 6.1, regular, MUTED, 138));
-  page.drawLine({ start: { x: 160, y: afterOriginY(51) }, end: { x: 160, y: afterOriginY(81) }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  text(page, 'GRACIAS', 176, afterOriginY(75), 7, semibold, INK, 42);
-  text(page, 'POR CONFIAR', 176, afterOriginY(64), 6, regular, INK, 42);
-  text(page, 'EN NOSOTROS', 176, afterOriginY(56), 6, regular, INK, 42);
+    .forEach((item, index) => text(page, item, M, afterOriginY(78 - (index * 6.8)), 6.1, regular, MUTED, 138));
+  page.drawLine({ start: { x: 160, y: afterOriginY(61) }, end: { x: 160, y: afterOriginY(91) }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  text(page, 'GRACIAS', 176, afterOriginY(85), 7, semibold, INK, 42);
+  text(page, 'POR CONFIAR', 176, afterOriginY(74), 6, regular, INK, 42);
+  text(page, 'EN NOSOTROS', 176, afterOriginY(66), 6, regular, INK, 42);
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

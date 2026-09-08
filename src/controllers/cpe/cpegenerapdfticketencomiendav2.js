@@ -332,32 +332,32 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   text(page, 'ENCOMIENDA', M + 25, bodyY(249), 7.8, regular, MUTED, 58);
   text(page, 'UNIDAD', M + 100, bodyY(249), 6.3, regular, MUTED, 26);
   text(page, unit, M + 128, bodyY(247.5), 10.2, regular, INK, 74);
-  wrap(String(content).toUpperCase(), regular, 8.8, CW - 16, 4).forEach((item, index) => {
-    text(page, item, M + 8, bodyY(232 - (index * 8.8)), 8.8, regular, INK, CW - 16);
+  wrap(String(content).toUpperCase(), regular, 10.2, CW - 16, 4).forEach((item, index) => {
+    text(page, item, M + 8, bodyY(232 - (index * 10)), 10.2, regular, INK, CW - 16);
   });
 
   // Resumen inferior: QR a la izquierda, condicion al centro y total a la derecha.
-  // Altura del espacio: box(page, M, 92, CW, 88, ...).
-  // 92 es la base/inicio inferior; 88 es el alto total. Top = 180.
+  // Altura del espacio: box(page, M, 104, CW, 76, ...).
+  // 104 es la base/inicio inferior; 76 es el alto total. Top = 180.
   // Como encomienda empieza en y=190, el espacio entre ambos queda en 10 puntos.
   // QR: y=116 y alto=53. Estado de pago: ajustar 143.
-  box(page, M, bodyY(92), CW, 88, WHITE, LIGHT_LINE, 0.75);
+  box(page, M, bodyY(104), CW, 76, WHITE, LIGHT_LINE, 0.75);
   page.drawImage(qrImage, { x: M + 8, y: bodyY(116), width: 53, height: 53 });
   page.drawLine({ start: { x: 75, y: bodyY(115) }, end: { x: 75, y: bodyY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
   page.drawLine({ start: { x: 136, y: bodyY(115) }, end: { x: 136, y: bodyY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  centeredIn(page, paymentLabel, 77, bodyY(143), 58, paymentLabel.length > 7 ? 12.2 : 13.4, semibold, payment.includes('COBRAR') ? ALERT : INK);
+  centeredIn(page, paymentLabel, 77, bodyY(139), 58, paymentLabel.length > 7 ? 14.2 : 14.8, semibold, payment.includes('COBRAR') ? ALERT : INK);
   text(page, 'TOTAL', 166, bodyY(163), 8, regular);
   text(page, 'S/', 143, bodyY(140), 9.8, regular);
   right(page, money(total), bodyY(126), 21, bold, INK, W - M - 7, 67);
 
-  line(page, bodyY(80));
-  text(page, 'TERMINOS Y CONDICIONES', M, bodyY(66), 6.5, regular);
+  line(page, bodyY(92));
+  text(page, 'TERMINOS Y CONDICIONES', M, bodyY(78), 6.5, regular);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
-    .forEach((item, index) => text(page, item, M, bodyY(56 - (index * 6.8)), 6.1, regular, MUTED, 138));
-  page.drawLine({ start: { x: 160, y: bodyY(39) }, end: { x: 160, y: bodyY(69) }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  text(page, 'GRACIAS', 176, bodyY(63), 7, semibold, INK, 42);
-  text(page, 'POR CONFIAR', 176, bodyY(52), 6, regular, INK, 42);
-  text(page, 'EN NOSOTROS', 176, bodyY(44), 6, regular, INK, 42);
+    .forEach((item, index) => text(page, item, M, bodyY(68 - (index * 6.8)), 6.1, regular, MUTED, 138));
+  page.drawLine({ start: { x: 160, y: bodyY(51) }, end: { x: 160, y: bodyY(81) }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  text(page, 'GRACIAS', 176, bodyY(75), 7, semibold, INK, 42);
+  text(page, 'POR CONFIAR', 176, bodyY(64), 6, regular, INK, 42);
+  text(page, 'EN NOSOTROS', 176, bodyY(56), 6, regular, INK, 42);
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

@@ -230,30 +230,33 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const destination = encomienda.punto_venta_dest_nombre || encomienda.id_punto_venta_dest || 'DESTINO';
   const senderName = encomienda.cliente || cliente.razon_social_nombres || '-';
   const senderDoc = encomienda.cliente_documento || encomienda.cliente_documento_id || cliente.documento_identidad || '-';
-  const senderAddress = clean(encomienda.remitente_direccion || encomienda.cliente_direccion || cliente.cliente_direccion || cliente.cliente_direccion_fact || cliente.direccion || '');
-  const senderArrivalAddress = clean(
-    encomienda.remitente_direccion_llegada ||
-    encomienda.cliente_direccion_llegada ||
-    encomienda.remitente_zona ||
-    encomienda.cliente_zona
-  );
+  const senderOriginZone = clean(encomienda.remitente_zona || encomienda.cliente_zona);
+  const senderPickupAddress = clean(encomienda.remitente_direccion || encomienda.cliente_direccion || cliente.cliente_direccion || cliente.cliente_direccion_fact || cliente.direccion || '');
   const receiverName = encomienda.destinatario || '-';
   const receiverDoc = encomienda.destinatario_documento || encomienda.destinatario_documento_id || '-';
+  const receiverArrivalZone = clean(encomienda.destinatario_zona);
   const receiverAddress = clean(encomienda.destinatario_direccion);
   const unit = `${clean(encomienda.placa)} ${clean(encomienda.licencia)}`.trim() || '-';
   const payment = clean(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
   const paymentLabel = payment.includes('COBRAR') ? 'POR PAGAR' : payment;
   const content = encomienda.descripcion || jsonTicket.items?.[0]?.producto || 'SERVICIO DE TRANSPORTE DE ENCOMIENDA';
-  const senderAddressLines = senderAddress ? wrap(senderAddress, regular, 7.2, CW - 39, 2) : [];
-  const senderArrivalAddressLines = senderArrivalAddress ? wrap(senderArrivalAddress, regular, 7.2, CW - 65, 2) : [];
+  const originOptionalLineHeight = 6.6;
+  const senderZoneLines = senderOriginZone ? wrap(senderOriginZone, regular, 7.1, CW - 65, 2) : [];
+  const senderPickupAddressLines = senderPickupAddress ? wrap(senderPickupAddress, regular, 7.1, CW - 65, 2) : [];
+  const originOptionalLines = senderZoneLines.length + senderPickupAddressLines.length;
   const originTopY = 460;
-  const originBaseY = 399
-    - (senderAddressLines.length ? (senderAddressLines.length - 1) * 7.2 : 0)
-    - (senderArrivalAddressLines.length ? 10 + ((senderArrivalAddressLines.length - 1) * 7.2) : 0);
+  const originBaseY = originOptionalLines
+    ? 391 - ((originOptionalLines - 1) * originOptionalLineHeight)
+    : 400;
   const originHeight = originTopY - originBaseY;
-  const receiverAddressLines = receiverAddress ? wrap(receiverAddress, regular, 7.2, CW - 24, 2) : [];
+  const destinationOptionalLineHeight = 6.6;
+  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone, regular, 7.1, CW - 65, 2) : [];
+  const receiverAddressLines = receiverAddress ? wrap(receiverAddress, regular, 7.1, CW - 65, 2) : [];
+  const destinationOptionalLines = receiverZoneLines.length + receiverAddressLines.length;
   const destinationTopY = 365;
-  const destinationBaseY = receiverAddressLines.length ? 283 - ((receiverAddressLines.length - 1) * 7.2) : 300;
+  const destinationBaseY = destinationOptionalLines
+    ? 294 - ((destinationOptionalLines - 1) * destinationOptionalLineHeight)
+    : 302;
   const destinationHeight = destinationTopY - destinationBaseY;
   const descriptionFontSize = 10.2;
   const descriptionLineHeight = 10;
@@ -335,7 +338,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
 
-  // Seccion ORIGEN. La caja cierra segun existan direccion y direccion de llegada.
+  // Seccion ORIGEN. La caja cierra segun existan zona de origen y direccion de recojo.
   box(page, M, originY(originBaseY), CW, originHeight, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, originY(448), 14, ICON_MUTED);
   text(page, 'ORIGEN', M + 24, originY(440), 8.1, semibold, MUTED, 44);
@@ -347,14 +350,15 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   text(page, senderDoc, M + 32, originY(408), 9.6, regular, INK, 65);
   text(page, 'TEL:', M + 109, originY(409), 7.2, semibold, MUTED, 20);
   text(page, encomienda.cliente_telefono || '-', M + 132, originY(408), 9.6, regular, INK, 61);
-  senderAddressLines.forEach((item, index) => {
-    text(page, index === 0 ? 'DIR.' : '', M + 8, originY(396 - (index * 7.2)), 6.5, semibold, MUTED, 20);
-    text(page, item, M + 29, originY(395.5 - (index * 7.2)), 7.2, regular, INK, CW - 39);
+  senderZoneLines.forEach((item, index) => {
+    const y = 398 - (index * originOptionalLineHeight);
+    text(page, index === 0 ? 'ZONA ORIGEN:' : '', M + 8, originY(y), 6.3, semibold, MUTED, 46);
+    text(page, item, M + 59, originY(y - 0.4), 7.1, regular, INK, CW - 67);
   });
-  senderArrivalAddressLines.forEach((item, index) => {
-    const startY = 386 - ((Math.max(senderAddressLines.length, 1) - 1) * 7.2);
-    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, originY(startY - (index * 7.2)), 6.5, semibold, MUTED, 45);
-    text(page, item, M + 57, originY(startY - 0.5 - (index * 7.2)), 7.2, regular, INK, CW - 65);
+  senderPickupAddressLines.forEach((item, index) => {
+    const y = 398 - ((senderZoneLines.length + index) * originOptionalLineHeight);
+    text(page, index === 0 ? 'DIR RECOJO:' : '', M + 8, originY(y), 6.3, semibold, MUTED, 40);
+    text(page, item, M + 53, originY(y - 0.4), 7.1, regular, INK, CW - 61);
   });
 
   // Seccion DESTINO. La altura baja solo cuando existe direccion de llegada.
@@ -364,15 +368,21 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   text(page, 'DESTINO', M + 25, afterOriginY(346), 8.1, semibold, MUTED, 52);
   centeredTracking(page, String(destination).toUpperCase(), afterOriginY(342), 17.6, bold, INK, 0.22, CW - 18);
   line(page, afterOriginY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO:', M + 8, afterOriginY(322), 7.2, semibold, MUTED, 52);
-  text(page, receiverName, M + 63, afterOriginY(321), 9.6, regular, INK, CW - 71);
-  text(page, 'DNI:', M + 8, afterOriginY(309), 7.2, semibold, MUTED, 20);
-  text(page, receiverDoc, M + 32, afterOriginY(308), 9.6, regular, INK, 65);
-  text(page, 'TEL:', M + 109, afterOriginY(309), 7.2, semibold, MUTED, 20);
-  text(page, encomienda.destinatario_telefono || '-', M + 132, afterOriginY(308), 9.6, regular, INK, 61);
+  text(page, 'DESTINATARIO:', M + 8, afterOriginY(322), 7.1, semibold, MUTED, 52);
+  text(page, receiverName, M + 63, afterOriginY(321.4), 9.2, regular, INK, CW - 71);
+  text(page, 'DNI:', M + 8, afterOriginY(311), 7.1, semibold, MUTED, 20);
+  text(page, receiverDoc, M + 32, afterOriginY(310.4), 9.2, regular, INK, 65);
+  text(page, 'TEL:', M + 109, afterOriginY(311), 7.1, semibold, MUTED, 20);
+  text(page, encomienda.destinatario_telefono || '-', M + 132, afterOriginY(310.4), 9.2, regular, INK, 61);
+  receiverZoneLines.forEach((item, index) => {
+    const y = 300 - (index * destinationOptionalLineHeight);
+    text(page, index === 0 ? 'ZONA LLEGADA:' : '', M + 8, afterOriginY(y), 6.3, semibold, MUTED, 46);
+    text(page, item, M + 59, afterOriginY(y - 0.4), 7.1, regular, INK, CW - 67);
+  });
   receiverAddressLines.forEach((item, index) => {
-    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, afterOriginY(296 - (index * 7.2)), 6.5, semibold, MUTED, 45);
-    text(page, item, M + 57, afterOriginY(295.5 - (index * 7.2)), 7.2, regular, INK, CW - 65);
+    const y = 300 - ((receiverZoneLines.length + index) * destinationOptionalLineHeight);
+    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, afterOriginY(y), 6.3, semibold, MUTED, 45);
+    text(page, item, M + 57, afterOriginY(y - 0.4), 7.1, regular, INK, CW - 65);
   });
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.

@@ -13,6 +13,7 @@ const MUTED = rgb(0.34, 0.35, 0.37);
 const LINE = rgb(0.7, 0.71, 0.73);
 const LIGHT_LINE = rgb(0.82, 0.83, 0.85);
 const SOFT = rgb(0.94, 0.945, 0.955);
+const ICON_MUTED = rgb(0.48, 0.5, 0.53);
 const WHITE = rgb(1, 1, 1);
 
 const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
@@ -108,10 +109,13 @@ const box = (page, x, y, width, height, fill = WHITE, border = LINE, borderWidth
   page.drawRectangle({ x, y, width, height, color: fill, borderColor: border, borderWidth });
 };
 
-const routeBlock = (page, label, value, x, y, width, fonts) => {
-  text(page, label, x, y + 19, 6.3, fonts.semibold, MUTED, width);
-  text(page, String(value).toUpperCase(), x, y, 16.4, fonts.bold, INK, width);
-  line(page, y - 5, x, x + width, 0.45, LIGHT_LINE);
+const drawIcon = (page, pathData, x, y, size = 12, color = ICON_MUTED) => {
+  page.drawSvgPath(pathData, { x, y, scale: size / 24, color });
+};
+
+const ICONS = {
+  place: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
+  package: 'M20 8.69V18c0 .72-.38 1.38-1 1.73l-6 3.46c-.62.36-1.38.36-2 0l-6-3.46A2 2 0 0 1 4 18V8.69c0-.72.38-1.38 1-1.73l6-3.46c.62-.36 1.38-.36 2 0l6 3.46c.62.35 1 1.01 1 1.73zM12 5.23 6.74 8.26 12 11.29l5.26-3.03L12 5.23zm-6 4.76V18l5 2.88v-7.86L6 9.99zm12 0-5 3.03v7.86L18 18V9.99z',
 };
 
 const drawTrackingText = (page, value, x, y, size, font, color = INK, tracking = 0.5, maxWidth = null) => {
@@ -194,6 +198,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const serie = venta.serie || encomienda.r_serie || '';
   const number = venta.numero || encomienda.r_numero || '';
   const fullNumber = [code, serie, number].filter(Boolean).join('-');
+  const displayNumber = [serie, number].filter(Boolean).join('-') || fullNumber;
   const issueDate = venta.fecha_emision || encomienda.r_fecemi;
   const issueTime = venta.hora_emision || encomienda.ctrl_crea || encomienda.hora_grabacion;
   const total = venta.total || venta.r_monto_total || encomienda.r_monto_total || encomienda.precio_neto;
@@ -209,7 +214,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const qrText = [empresa.ruc, code, serie, number, issueDate, senderDoc, total].map(clean).join('|');
 
   const logoImage = await embedLogo(pdfDoc, logo);
-  const qrDataUrl = await QRCode.toDataURL(qrText || fullNumber || empresa.ruc || 'XPERTCONT');
+  const qrDataUrl = await QRCode.toDataURL(qrText || displayNumber || empresa.ruc || 'XPERTCONT');
   const qrImage = await pdfDoc.embedPng(base64ToBytes(qrDataUrl.split(',')[1]));
 
   if (logoImage) {
@@ -233,67 +238,62 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
     .forEach((item, index) => centered(page, item, 531 - (index * 6.8), 5.8, regular, MUTED));
 
   line(page, 510, M, W - M, 0.7);
-  centered(page, documentName(code), 491, 9.5, semibold);
-  centeredTracking(page, fullNumber || 'MODELO', 465, 16.6, bold, INK, 0.7, CW - 8);
+  centered(page, documentName(code), 491, 9.5, regular);
+  centeredTracking(page, displayNumber || 'MODELO', 465, 16.8, bold, INK, 0.55, CW - 8);
   labelValue(page, 'FECHA', datePe(issueDate), 43, 445, 27, 45, fonts, false);
   line(page, 443, 113, 113, 0.45);
   labelValue(page, 'HORA', timePe(issueTime), 129, 445, 24, 52, fonts, false);
   dotted(page, 425);
 
-  box(page, M, 324, CW, 95, WHITE, LIGHT_LINE, 0.45);
-  page.drawRectangle({ x: M, y: 399, width: CW, height: 20, color: SOFT });
-  text(page, 'TRAMO DE ENCOMIENDA', M + 8, 406, 7.2, semibold, MUTED, 90);
+  box(page, M, 309, CW, 110, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, 394.5, 13, ICON_MUTED);
+  text(page, 'ORIGEN', M + 24, 400, 6.7, regular, MUTED, 38);
+  centeredTracking(page, String(origin).toUpperCase(), 381, 17.6, bold, INK, 0.28, CW - 18);
+  line(page, 370, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'REMITENTE', M + 8, 358, 6.6, regular, MUTED, 44);
+  wrap(senderName, regular, 8.8, CW - 16, 2).forEach((item, index) => {
+    text(page, item, M + 8, 346 - (index * 8.2), 8.8, regular, INK, CW - 16);
+  });
+  labelValue(page, 'DOC.', senderDoc, M + 8, 323, 24, 66, fonts, false);
+  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M + 109, 323, 20, 64, fonts, false);
 
-  text(page, 'ORIGEN', M + 8, 382, 6.8, semibold, MUTED, 38);
-  centeredTracking(page, String(origin).toUpperCase(), 365, 18.4, bold, INK, 0.35, CW - 20);
+  box(page, M, 196, CW, 104, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, 276.5, 13, ICON_MUTED);
+  text(page, 'DESTINO', M + 24, 282, 6.7, regular, MUTED, 44);
+  centeredTracking(page, String(destination).toUpperCase(), 263, 17.6, bold, INK, 0.28, CW - 18);
+  line(page, 252, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO', M + 8, 240, 6.6, regular, MUTED, 54);
+  wrap(receiverName, regular, 8.8, CW - 16, 2).forEach((item, index) => {
+    text(page, item, M + 8, 228 - (index * 8.2), 8.8, regular, INK, CW - 16);
+  });
+  labelValue(page, 'DOC.', receiverDoc, M + 8, 205, 24, 66, fonts, false);
+  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + 109, 205, 20, 64, fonts, false);
 
-  page.drawLine({ start: { x: M + 36, y: 352 }, end: { x: W - M - 36, y: 352 }, thickness: 0.5, color: LIGHT_LINE });
-  page.drawCircle({ x: M + 29, y: 352, size: 2.2, color: LIGHT_LINE });
-  page.drawCircle({ x: W - M - 29, y: 352, size: 2.2, color: LIGHT_LINE });
+  box(page, M, 148, CW, 38, SOFT, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.package, M + 8, 168, 14, ICON_MUTED);
+  text(page, 'ENCOMIENDA', M + 26, 173, 7.4, regular, MUTED, 58);
+  text(page, String(content).toUpperCase(), M + 26, 158, 11.2, regular, INK, 86);
+  labelValue(page, 'UNIDAD', unit, M + 126, 158, 26, 46, fonts, false);
 
-  text(page, 'DESTINO', M + 8, 339, 6.8, semibold, MUTED, 38);
-  centeredTracking(page, String(destination).toUpperCase(), 322, 18.4, bold, INK, 0.35, CW - 20);
-  line(page, 306);
+  box(page, M, 63, CW, 76, WHITE, LIGHT_LINE, 0.75);
+  page.drawImage(qrImage, { x: M + 8, y: 75, width: 53, height: 53 });
+  page.drawLine({ start: { x: 75, y: 74 }, end: { x: 75, y: 128 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  page.drawLine({ start: { x: 136, y: 74 }, end: { x: 136, y: 128 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  text(page, 'CONDICION', 84, 122, 6.1, regular, MUTED, 44);
+  box(page, 83, 98, 46, 18, WHITE, LIGHT_LINE, 0.55);
+  centeredIn(page, payment, 83, 103, 46, payment.length > 7 ? 7.1 : 9.1, semibold);
+  text(page, 'TOTAL', 166, 122, 8, regular);
+  text(page, 'S/', 143, 99, 9.8, regular);
+  right(page, money(total), 85, 21, bold, INK, W - M - 7, 67);
 
-  const half = (CW - 12) / 2;
-  text(page, 'REMITENTE', M, 288, 7.1, bold);
-  text(page, 'DESTINATARIO', M + half + 12, 288, 7.1, bold);
-  wrap(senderName, bold, 7, half, 2).forEach((item, index) => text(page, item, M, 273 - (index * 8), 7, bold, INK, half));
-  wrap(receiverName, bold, 7, half, 2).forEach((item, index) => text(page, item, M + half + 12, 273 - (index * 8), 7, bold, INK, half));
-  page.drawLine({ start: { x: M + half + 6, y: 292 }, end: { x: M + half + 6, y: 238 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  line(page, 250, M, M + half, 0.4);
-  line(page, 250, M + half + 12, W - M, 0.4);
-  labelValue(page, 'DOC.', senderDoc, M, 239, 25, half - 25, fonts);
-  labelValue(page, 'DOC.', receiverDoc, M + half + 12, 239, 25, half - 25, fonts);
-  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M, 227, 25, half - 25, fonts, false);
-  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + half + 12, 227, 25, half - 25, fonts, false);
-
-  box(page, M, 158, CW, 54, SOFT, LINE, 0.45);
-  text(page, 'ENCOMIENDA', M + 8, 196, 8.6, bold);
-  labelValue(page, 'UNIDAD', unit, M + 96, 196, 28, 72, fonts);
-  line(page, 184, M + 8, W - M - 8, 0.45);
-  text(page, 'CONTENIDO', M + 8, 172, 6.3, bold, MUTED);
-  text(page, String(content).toUpperCase(), M + 8, 160, 10.8, bold, INK, CW - 16);
-
-  box(page, M, 70, CW, 76, WHITE, LIGHT_LINE, 0.75);
-  page.drawImage(qrImage, { x: M + 8, y: 82, width: 53, height: 53 });
-  page.drawLine({ start: { x: 75, y: 81 }, end: { x: 75, y: 135 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  page.drawLine({ start: { x: 136, y: 81 }, end: { x: 136, y: 135 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  text(page, 'CONDICION', 84, 129, 6.1, bold, MUTED, 44);
-  box(page, 83, 105, 46, 18, WHITE, LIGHT_LINE, 0.55);
-  centeredIn(page, payment, 83, 110, 46, payment.length > 7 ? 7.2 : 9.2, bold);
-  text(page, 'TOTAL', 166, 129, 8, bold);
-  text(page, 'S/', 143, 106, 9.8, bold);
-  right(page, money(total), 92, 21, bold, INK, W - M - 7, 67);
-
-  line(page, 56);
-  text(page, 'TERMINOS Y CONDICIONES', M, 41, 6.7, bold);
+  line(page, 51);
+  text(page, 'TERMINOS Y CONDICIONES', M, 37, 6.5, regular);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
-    .forEach((item, index) => text(page, item, M, 30 - (index * 7.2), 6.1, regular, MUTED, 138));
-  page.drawLine({ start: { x: 160, y: 13 }, end: { x: 160, y: 44 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  text(page, 'GRACIAS', 176, 37, 7, bold, INK, 42);
-  text(page, 'POR CONFIAR', 176, 26, 6, regular, INK, 42);
-  text(page, 'EN NOSOTROS', 176, 18, 6, regular, INK, 42);
+    .forEach((item, index) => text(page, item, M, 27 - (index * 6.8), 6.1, regular, MUTED, 138));
+  page.drawLine({ start: { x: 160, y: 10 }, end: { x: 160, y: 40 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  text(page, 'GRACIAS', 176, 34, 7, semibold, INK, 42);
+  text(page, 'POR CONFIAR', 176, 23, 6, regular, INK, 42);
+  text(page, 'EN NOSOTROS', 176, 15, 6, regular, INK, 42);
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

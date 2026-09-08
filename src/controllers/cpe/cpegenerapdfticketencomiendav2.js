@@ -114,6 +114,25 @@ const routeBlock = (page, label, value, x, y, width, fonts) => {
   line(page, y - 5, x, x + width, 0.45, LIGHT_LINE);
 };
 
+const drawTrackingText = (page, value, x, y, size, font, color = INK, tracking = 0.5, maxWidth = null) => {
+  const label = maxWidth ? fit(value, font, size, maxWidth) : clean(value);
+  let cursor = x;
+
+  for (const character of label) {
+    page.drawText(character, { x: cursor, y, size, font, color });
+    cursor += font.widthOfTextAtSize(character, size) + tracking;
+  }
+};
+
+const centeredTracking = (page, value, y, size, font, color = INK, tracking = 0.5, maxWidth = CW) => {
+  const label = fit(value, font, size, maxWidth);
+  const width = label
+    .split('')
+    .reduce((total, character) => total + font.widthOfTextAtSize(character, size) + tracking, 0) - tracking;
+
+  drawTrackingText(page, label, (W - width) / 2, y, size, font, color, tracking);
+};
+
 const pill = (page, label, x, y, width, fonts) => {
   box(page, x, y, width, 12, SOFT, LINE, 0.35);
   centeredIn(page, label, x, y + 3.2, width, 6.2, fonts.bold);
@@ -214,59 +233,67 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
     .forEach((item, index) => centered(page, item, 531 - (index * 6.8), 5.8, regular, MUTED));
 
   line(page, 510, M, W - M, 0.7);
-  centered(page, documentName(code), 491, 9.5, bold);
-  centered(page, fullNumber || 'MODELO', 466, 18.2, semibold);
+  centered(page, documentName(code), 491, 9.5, semibold);
+  centeredTracking(page, fullNumber || 'MODELO', 465, 16.6, bold, INK, 0.7, CW - 8);
   labelValue(page, 'FECHA', datePe(issueDate), 43, 445, 27, 45, fonts, false);
   line(page, 443, 113, 113, 0.45);
   labelValue(page, 'HORA', timePe(issueTime), 129, 445, 24, 52, fonts, false);
   dotted(page, 425);
 
-  box(page, M, 343, CW, 68, WHITE, LIGHT_LINE, 0.45);
-  routeBlock(page, 'ORIGEN', origin, M + 8, 382, CW - 16, fonts);
-  page.drawRectangle({ x: M + 8, y: 359, width: 36, height: 11, color: SOFT, borderColor: LIGHT_LINE, borderWidth: 0.35 });
-  centeredIn(page, 'ENCOMIENDA', M + 8, 362, 36, 5.4, semibold, MUTED);
-  routeBlock(page, 'DESTINO', destination, M + 52, 349, CW - 60, fonts);
-  line(page, 331);
+  box(page, M, 324, CW, 95, WHITE, LIGHT_LINE, 0.45);
+  page.drawRectangle({ x: M, y: 399, width: CW, height: 20, color: SOFT });
+  text(page, 'TRAMO DE ENCOMIENDA', M + 8, 406, 7.2, semibold, MUTED, 90);
+
+  text(page, 'ORIGEN', M + 8, 382, 6.8, semibold, MUTED, 38);
+  centeredTracking(page, String(origin).toUpperCase(), 365, 18.4, bold, INK, 0.35, CW - 20);
+
+  page.drawLine({ start: { x: M + 36, y: 352 }, end: { x: W - M - 36, y: 352 }, thickness: 0.5, color: LIGHT_LINE });
+  page.drawCircle({ x: M + 29, y: 352, size: 2.2, color: LIGHT_LINE });
+  page.drawCircle({ x: W - M - 29, y: 352, size: 2.2, color: LIGHT_LINE });
+
+  text(page, 'DESTINO', M + 8, 339, 6.8, semibold, MUTED, 38);
+  centeredTracking(page, String(destination).toUpperCase(), 322, 18.4, bold, INK, 0.35, CW - 20);
+  line(page, 306);
 
   const half = (CW - 12) / 2;
-  text(page, 'REMITENTE', M, 315, 7.1, bold);
-  text(page, 'DESTINATARIO', M + half + 12, 315, 7.1, bold);
-  wrap(senderName, bold, 7, half, 2).forEach((item, index) => text(page, item, M, 300 - (index * 8), 7, bold, INK, half));
-  wrap(receiverName, bold, 7, half, 2).forEach((item, index) => text(page, item, M + half + 12, 300 - (index * 8), 7, bold, INK, half));
-  page.drawLine({ start: { x: M + half + 6, y: 319 }, end: { x: M + half + 6, y: 265 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  line(page, 277, M, M + half, 0.4);
-  line(page, 277, M + half + 12, W - M, 0.4);
-  labelValue(page, 'DOC.', senderDoc, M, 266, 25, half - 25, fonts);
-  labelValue(page, 'DOC.', receiverDoc, M + half + 12, 266, 25, half - 25, fonts);
-  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M, 254, 25, half - 25, fonts, false);
-  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + half + 12, 254, 25, half - 25, fonts, false);
+  text(page, 'REMITENTE', M, 288, 7.1, bold);
+  text(page, 'DESTINATARIO', M + half + 12, 288, 7.1, bold);
+  wrap(senderName, bold, 7, half, 2).forEach((item, index) => text(page, item, M, 273 - (index * 8), 7, bold, INK, half));
+  wrap(receiverName, bold, 7, half, 2).forEach((item, index) => text(page, item, M + half + 12, 273 - (index * 8), 7, bold, INK, half));
+  page.drawLine({ start: { x: M + half + 6, y: 292 }, end: { x: M + half + 6, y: 238 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  line(page, 250, M, M + half, 0.4);
+  line(page, 250, M + half + 12, W - M, 0.4);
+  labelValue(page, 'DOC.', senderDoc, M, 239, 25, half - 25, fonts);
+  labelValue(page, 'DOC.', receiverDoc, M + half + 12, 239, 25, half - 25, fonts);
+  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M, 227, 25, half - 25, fonts, false);
+  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + half + 12, 227, 25, half - 25, fonts, false);
 
-  box(page, M, 178, CW, 60, SOFT, LINE, 0.45);
-  text(page, 'ENCOMIENDA', M + 8, 221, 8.6, bold);
-  labelValue(page, 'UNIDAD', unit, M + 96, 221, 28, 72, fonts);
-  line(page, 209, M + 8, W - M - 8, 0.45);
-  text(page, 'CONTENIDO', M + 8, 196, 6.3, bold, MUTED);
-  text(page, String(content).toUpperCase(), M + 8, 184, 10.8, bold, INK, CW - 16);
+  box(page, M, 158, CW, 54, SOFT, LINE, 0.45);
+  text(page, 'ENCOMIENDA', M + 8, 196, 8.6, bold);
+  labelValue(page, 'UNIDAD', unit, M + 96, 196, 28, 72, fonts);
+  line(page, 184, M + 8, W - M - 8, 0.45);
+  text(page, 'CONTENIDO', M + 8, 172, 6.3, bold, MUTED);
+  text(page, String(content).toUpperCase(), M + 8, 160, 10.8, bold, INK, CW - 16);
 
-  box(page, M, 78, CW, 76, WHITE, LIGHT_LINE, 0.75);
-  page.drawImage(qrImage, { x: M + 8, y: 90, width: 53, height: 53 });
-  page.drawLine({ start: { x: 75, y: 89 }, end: { x: 75, y: 143 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  page.drawLine({ start: { x: 136, y: 89 }, end: { x: 136, y: 143 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  text(page, 'CONDICION', 84, 137, 6.1, bold, MUTED, 44);
-  box(page, 83, 113, 46, 18, WHITE, LIGHT_LINE, 0.55);
-  centeredIn(page, payment, 83, 118, 46, payment.length > 7 ? 7.2 : 9.2, bold);
-  text(page, 'TOTAL', 166, 137, 8, bold);
-  text(page, 'S/', 143, 114, 9.8, bold);
-  right(page, money(total), 100, 21, bold, INK, W - M - 7, 67);
+  box(page, M, 70, CW, 76, WHITE, LIGHT_LINE, 0.75);
+  page.drawImage(qrImage, { x: M + 8, y: 82, width: 53, height: 53 });
+  page.drawLine({ start: { x: 75, y: 81 }, end: { x: 75, y: 135 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  page.drawLine({ start: { x: 136, y: 81 }, end: { x: 136, y: 135 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  text(page, 'CONDICION', 84, 129, 6.1, bold, MUTED, 44);
+  box(page, 83, 105, 46, 18, WHITE, LIGHT_LINE, 0.55);
+  centeredIn(page, payment, 83, 110, 46, payment.length > 7 ? 7.2 : 9.2, bold);
+  text(page, 'TOTAL', 166, 129, 8, bold);
+  text(page, 'S/', 143, 106, 9.8, bold);
+  right(page, money(total), 92, 21, bold, INK, W - M - 7, 67);
 
-  line(page, 64);
-  text(page, 'TERMINOS Y CONDICIONES', M, 47, 6.7, bold);
+  line(page, 56);
+  text(page, 'TERMINOS Y CONDICIONES', M, 41, 6.7, bold);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
-    .forEach((item, index) => text(page, item, M, 36 - (index * 7.2), 6.1, regular, MUTED, 138));
-  page.drawLine({ start: { x: 160, y: 17 }, end: { x: 160, y: 50 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  text(page, 'GRACIAS', 176, 43, 7, bold, INK, 42);
-  text(page, 'POR CONFIAR', 176, 32, 6, regular, INK, 42);
-  text(page, 'EN NOSOTROS', 176, 24, 6, regular, INK, 42);
+    .forEach((item, index) => text(page, item, M, 30 - (index * 7.2), 6.1, regular, MUTED, 138));
+  page.drawLine({ start: { x: 160, y: 13 }, end: { x: 160, y: 44 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  text(page, 'GRACIAS', 176, 37, 7, bold, INK, 42);
+  text(page, 'POR CONFIAR', 176, 26, 6, regular, INK, 42);
+  text(page, 'EN NOSOTROS', 176, 18, 6, regular, INK, 42);
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

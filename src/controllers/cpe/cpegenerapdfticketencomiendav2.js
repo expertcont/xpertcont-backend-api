@@ -353,7 +353,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   senderZoneLines.forEach((item, index) => {
     const y = 398 - (index * originOptionalLineHeight);
     text(page, index === 0 ? 'ZONA ORIGEN:' : '', M + 8, originY(y), 6.3, semibold, MUTED, 46);
-    text(page, item, M + 59, originY(y - 0.4), 7.1, regular, INK, CW - 67);
+    text(page, item, M + 59, originY(y - 0.4), 7.1, regular, INK, CW - 61);
   });
   senderPickupAddressLines.forEach((item, index) => {
     const y = 398 - ((senderZoneLines.length + index) * originOptionalLineHeight);
@@ -369,20 +369,20 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   centeredTracking(page, String(destination).toUpperCase(), afterOriginY(342), 17.6, bold, INK, 0.22, CW - 18);
   line(page, afterOriginY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
   text(page, 'DESTINATARIO:', M + 8, afterOriginY(322), 7.1, semibold, MUTED, 52);
-  text(page, receiverName, M + 63, afterOriginY(321.4), 9.2, regular, INK, CW - 71);
+  text(page, receiverName, M + 63, afterOriginY(321.4), 9.5, regular, INK, CW - 71);
   text(page, 'DNI:', M + 8, afterOriginY(311), 7.1, semibold, MUTED, 20);
   text(page, receiverDoc, M + 32, afterOriginY(310.4), 9.2, regular, INK, 65);
   text(page, 'TEL:', M + 109, afterOriginY(311), 7.1, semibold, MUTED, 20);
-  text(page, encomienda.destinatario_telefono || '-', M + 132, afterOriginY(310.4), 9.2, regular, INK, 61);
+  text(page, encomienda.destinatario_telefono || '-', M + 132, afterOriginY(310.4), 11.2, regular, INK, 61);
   receiverZoneLines.forEach((item, index) => {
     const y = 300 - (index * destinationOptionalLineHeight);
     text(page, index === 0 ? 'ZONA LLEGADA:' : '', M + 8, afterOriginY(y), 6.3, semibold, MUTED, 46);
-    text(page, item, M + 59, afterOriginY(y - 0.4), 7.1, regular, INK, CW - 67);
+    text(page, item, M + 59, afterOriginY(y - 0.4), 7.1, regular, INK, CW - 61);
   });
   receiverAddressLines.forEach((item, index) => {
     const y = 300 - ((receiverZoneLines.length + index) * destinationOptionalLineHeight);
     text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, afterOriginY(y), 6.3, semibold, MUTED, 45);
-    text(page, item, M + 57, afterOriginY(y - 0.4), 7.1, regular, INK, CW - 65);
+    text(page, item, M + 57, afterOriginY(y - 0.4), 7.1, regular, INK, CW - 61);
   });
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.

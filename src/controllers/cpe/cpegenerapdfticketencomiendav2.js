@@ -283,11 +283,15 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // ORIGEN ocupa menos alto que antes para que DESTINO tenga mas protagonismo.
   // Si cambias ORIGIN_HEIGHT_REDUCTION, todo lo posterior sube/baja parejo.
   const ORIGIN_HEIGHT_REDUCTION = 34;
-  const afterOriginY = (value) => afterHeaderY(value + ORIGIN_HEIGHT_REDUCTION);
+  // ORIGIN_TO_DATE_SHIFT acerca ORIGEN a la linea punteada debajo de fecha/hora.
+  // Tambien mueve todo lo posterior para no abrir huecos nuevos.
+  const ORIGIN_TO_DATE_SHIFT = 11;
+  const originY = (value) => afterHeaderY(value + ORIGIN_TO_DATE_SHIFT);
+  const afterOriginY = (value) => afterHeaderY(value + ORIGIN_HEIGHT_REDUCTION + ORIGIN_TO_DATE_SHIFT);
   // Ajustes de separacion entre los ultimos bloques.
   // ENCOMIENDA_Y_SHIFT sube/baja encomienda sin tocar destino.
   // SUMMARY_Y_SHIFT sube/baja QR/total y el pie en conjunto.
-  const ENCOMIENDA_Y_SHIFT = 12;
+  const ENCOMIENDA_Y_SHIFT = 22;
   const SUMMARY_Y_SHIFT = dynamicSummaryShift;
   const encomiendaY = (value) => afterOriginY(value + ENCOMIENDA_Y_SHIFT);
   const summaryY = (value) => afterOriginY(value + SUMMARY_Y_SHIFT);
@@ -321,22 +325,22 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Label ORIGEN va junto al icono para no gastar una linea completa.
   // Espacio interno: ajustar 450, 440, 433, 427, 418, 407 y 401.
   // Interlineado del remitente: cambiar "index * 5.8".
-  box(page, M, afterHeaderY(400), CW, 60, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, afterHeaderY(448), 11, ICON_MUTED);
-  text(page, 'ORIGEN', M + 24, afterHeaderY(450), 7.2, semibold, MUTED, 44);
-  centeredTracking(page, String(origin).toUpperCase(), afterHeaderY(440), 13.2, regular, INK, 0.12, CW - 18);
-  line(page, afterHeaderY(433), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'REMITENTE', M + 8, afterHeaderY(427), 7.2, regular, MUTED, 54);
+  box(page, M, originY(400), CW, 60, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, originY(448), 11, ICON_MUTED);
+  text(page, 'ORIGEN', M + 24, originY(450), 7.2, semibold, MUTED, 44);
+  centeredTracking(page, String(origin).toUpperCase(), originY(440), 13.2, regular, INK, 0.12, CW - 18);
+  line(page, originY(433), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'REMITENTE', M + 8, originY(427), 7.2, regular, MUTED, 54);
   wrap(senderName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, afterHeaderY(418 - (index * 6.4)), 10.2, regular, INK, CW - 16);
+    text(page, item, M + 8, originY(418 - (index * 6.4)), 10.2, regular, INK, CW - 16);
   });
-  text(page, 'DOC.', M + 8, afterHeaderY(407), 6.3, regular, MUTED, 24);
-  text(page, senderDoc, M + 32, afterHeaderY(406), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, afterHeaderY(407), 6.3, regular, MUTED, 20);
-  text(page, encomienda.cliente_telefono || '-', M + 129, afterHeaderY(406), 10.2, regular, INK, 64);
+  text(page, 'DOC.', M + 8, originY(407), 6.3, regular, MUTED, 24);
+  text(page, senderDoc, M + 32, originY(406), 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, originY(407), 6.3, regular, MUTED, 20);
+  text(page, encomienda.cliente_telefono || '-', M + 129, originY(406), 10.2, regular, INK, 64);
   if (senderAddress) {
-    text(page, 'DIR.', M + 8, afterHeaderY(401), 5.6, regular, MUTED, 20);
-    text(page, senderAddress, M + 30, afterHeaderY(400.5), 6.6, regular, INK, CW - 42);
+    text(page, 'DIR.', M + 8, originY(401), 5.6, regular, MUTED, 20);
+    text(page, senderAddress, M + 30, originY(400.5), 6.6, regular, INK, CW - 42);
   }
 
   // Seccion DESTINO. Mantiene la misma estructura visual que ORIGEN.

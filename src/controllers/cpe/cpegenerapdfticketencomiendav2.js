@@ -282,7 +282,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const afterHeaderY = (value) => bodyY(value + HEADER_HEIGHT_REDUCTION);
   // ORIGEN ocupa menos alto que antes para que DESTINO tenga mas protagonismo.
   // Si cambias ORIGIN_HEIGHT_REDUCTION, todo lo posterior sube/baja parejo.
-  const ORIGIN_HEIGHT_REDUCTION = 24;
+  const ORIGIN_HEIGHT_REDUCTION = 34;
   const afterOriginY = (value) => afterHeaderY(value + ORIGIN_HEIGHT_REDUCTION);
   // Ajustes de separacion entre los ultimos bloques.
   // ENCOMIENDA_Y_SHIFT sube/baja encomienda sin tocar destino.
@@ -316,46 +316,48 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   dotted(page, afterHeaderY(475));
 
   // Seccion ORIGEN.
-  // Altura del espacio: box(page, M, 390, CW, 70, ...).
-  // 390 es la base/inicio inferior de la caja; 70 es el alto total.
-  // Espacio interno: ajustar 454, 439, 432, 426, 417, 399 y 391.
+  // Altura del espacio: box(page, M, 400, CW, 60, ...).
+  // 400 es la base/inicio inferior de la caja; 60 es el alto total.
+  // Label ORIGEN va junto al icono para no gastar una linea completa.
+  // Espacio interno: ajustar 450, 440, 433, 427, 418, 407 y 401.
   // Interlineado del remitente: cambiar "index * 5.8".
-  box(page, M, afterHeaderY(390), CW, 70, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, afterHeaderY(448), 14, ICON_MUTED);
-  centered(page, 'ORIGEN', afterHeaderY(454), 8.1, semibold, MUTED, CW - 16);
-  centeredTracking(page, String(origin).toUpperCase(), afterHeaderY(439), 13.2, regular, INK, 0.12, CW - 18);
-  line(page, afterHeaderY(432), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'REMITENTE', M + 8, afterHeaderY(426), 7.2, regular, MUTED, 54);
+  box(page, M, afterHeaderY(400), CW, 60, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, afterHeaderY(448), 11, ICON_MUTED);
+  text(page, 'ORIGEN', M + 24, afterHeaderY(450), 7.2, semibold, MUTED, 44);
+  centeredTracking(page, String(origin).toUpperCase(), afterHeaderY(440), 13.2, regular, INK, 0.12, CW - 18);
+  line(page, afterHeaderY(433), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'REMITENTE', M + 8, afterHeaderY(427), 7.2, regular, MUTED, 54);
   wrap(senderName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, afterHeaderY(417 - (index * 6.4)), 10.2, regular, INK, CW - 16);
+    text(page, item, M + 8, afterHeaderY(418 - (index * 6.4)), 10.2, regular, INK, CW - 16);
   });
-  text(page, 'DOC.', M + 8, afterHeaderY(399), 6.3, regular, MUTED, 24);
-  text(page, senderDoc, M + 32, afterHeaderY(398), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, afterHeaderY(399), 6.3, regular, MUTED, 20);
-  text(page, encomienda.cliente_telefono || '-', M + 129, afterHeaderY(398), 10.2, regular, INK, 64);
+  text(page, 'DOC.', M + 8, afterHeaderY(407), 6.3, regular, MUTED, 24);
+  text(page, senderDoc, M + 32, afterHeaderY(406), 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, afterHeaderY(407), 6.3, regular, MUTED, 20);
+  text(page, encomienda.cliente_telefono || '-', M + 129, afterHeaderY(406), 10.2, regular, INK, 64);
   if (senderAddress) {
-    text(page, 'DIR.', M + 8, afterHeaderY(391), 5.6, regular, MUTED, 20);
-    text(page, senderAddress, M + 30, afterHeaderY(390.5), 6.6, regular, INK, CW - 42);
+    text(page, 'DIR.', M + 8, afterHeaderY(401), 5.6, regular, MUTED, 20);
+    text(page, senderAddress, M + 30, afterHeaderY(400.5), 6.6, regular, INK, CW - 42);
   }
 
   // Seccion DESTINO. Mantiene la misma estructura visual que ORIGEN.
-  // Altura del espacio: box(page, M, 281, CW, 84, ...).
-  // 281 es la base/inicio inferior de la caja; 84 es el alto total.
-  // Espacio interno: ajustar 349, 335, 326, 319, 310 y 289.
+  // Altura del espacio: box(page, M, 291, CW, 74, ...).
+  // 291 es la base/inicio inferior de la caja; 74 es el alto total.
+  // Label DESTINO va junto al icono para no gastar una linea completa.
+  // Espacio interno: ajustar 346, 342, 333, 326, 316 y 299.
   // Interlineado del destinatario: cambiar "index * 5.8".
-  box(page, M, afterOriginY(281), CW, 84, WHITE, LIGHT_LINE, 0.45);
+  box(page, M, afterOriginY(291), CW, 74, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, afterOriginY(343), 14, ICON_MUTED);
-  centered(page, 'DESTINO', afterOriginY(355), 8.1, semibold, MUTED, CW - 16);
-  centeredTracking(page, String(destination).toUpperCase(), afterOriginY(335), 17.6, bold, INK, 0.22, CW - 18);
-  line(page, afterOriginY(326), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, afterOriginY(319), 7.2, regular, MUTED, 64);
+  text(page, 'DESTINO', M + 25, afterOriginY(346), 8.1, semibold, MUTED, 52);
+  centeredTracking(page, String(destination).toUpperCase(), afterOriginY(342), 17.6, bold, INK, 0.22, CW - 18);
+  line(page, afterOriginY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO', M + 8, afterOriginY(326), 7.2, regular, MUTED, 64);
   wrap(receiverName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, afterOriginY(309 - (index * 7.4)), 10.2, regular, INK, CW - 16);
+    text(page, item, M + 8, afterOriginY(316 - (index * 7.4)), 10.2, regular, INK, CW - 16);
   });
-  text(page, 'DOC.', M + 8, afterOriginY(289), 6.3, regular, MUTED, 24);
-  text(page, receiverDoc, M + 32, afterOriginY(287.5), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, afterOriginY(289), 6.3, regular, MUTED, 20);
-  text(page, encomienda.destinatario_telefono || '-', M + 129, afterOriginY(287.5), 10.2, regular, INK, 64);
+  text(page, 'DOC.', M + 8, afterOriginY(299), 6.3, regular, MUTED, 24);
+  text(page, receiverDoc, M + 32, afterOriginY(297.5), 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, afterOriginY(299), 6.3, regular, MUTED, 20);
+  text(page, encomienda.destinatario_telefono || '-', M + 129, afterOriginY(297.5), 10.2, regular, INK, 64);
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.
   // Altura dinamica: encomiendaBaseY es la base inferior y encomiendaHeight el alto.

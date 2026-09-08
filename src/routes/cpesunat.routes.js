@@ -8,6 +8,7 @@ router.post('/cpesunatresumen', registrarCPEResumenSunat);
 router.post('/cpesunatresumen/ticket', consultarCPEResumenSunat);
 router.post('/cpesunatpdfprevio', registrarCPESunatPrevioPDF);
 router.post('/cpesunatpdfprevioa4', registrarCPESunatPrevioPDFA4);
+router.post('/cpesunatticketencomienda', registrarCPETicketEncomiendaPDFV2);
 router.post('/cpesunatticketencomienda/v2', registrarCPETicketEncomiendaPDFV2);
 
 module.exports = router;

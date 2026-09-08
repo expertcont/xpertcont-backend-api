@@ -255,6 +255,10 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Ejemplo: -14 baja todo 14 puntos sin tocar el logo.
   const BODY_Y_OFFSET = -14;
   const bodyY = (value) => value + BODY_Y_OFFSET;
+  // ORIGEN ocupa menos alto que antes para que DESTINO tenga mas protagonismo.
+  // Si cambias ORIGIN_HEIGHT_REDUCTION, todo lo posterior sube/baja parejo.
+  const ORIGIN_HEIGHT_REDUCTION = 24;
+  const afterOriginY = (value) => bodyY(value + ORIGIN_HEIGHT_REDUCTION);
 
   // Cabecera del emisor: razon social, RUC y direccion.
   // Espacio entre lineas: razon social usa "index * 5.8".
@@ -280,26 +284,26 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   dotted(page, bodyY(466));
 
   // Seccion ORIGEN.
-  // Altura del espacio: box(page, M, 366, CW, 94, ...).
-  // 366 es la base/inicio inferior de la caja; 94 es el alto total.
-  // Espacio interno: ajustar 444, 430, 421, 414, 405, 384 y 374.
+  // Altura del espacio: box(page, M, 390, CW, 70, ...).
+  // 390 es la base/inicio inferior de la caja; 70 es el alto total.
+  // Espacio interno: ajustar 454, 439, 432, 426, 417, 399 y 391.
   // Interlineado del remitente: cambiar "index * 5.8".
-  box(page, M, bodyY(366), CW, 94, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, bodyY(438), 14, ICON_MUTED);
-  centered(page, 'ORIGEN', bodyY(450), 8.1, semibold, MUTED, CW - 16);
-  centeredTracking(page, String(origin).toUpperCase(), bodyY(430), 17.6, bold, INK, 0.22, CW - 18);
-  line(page, bodyY(421), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'REMITENTE', M + 8, bodyY(414), 7.2, regular, MUTED, 54);
-  wrap(senderName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, bodyY(404 - (index * 7.4)), 10.2, regular, INK, CW - 16);
+  box(page, M, bodyY(390), CW, 70, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, bodyY(448), 11, ICON_MUTED);
+  centered(page, 'ORIGEN', bodyY(454), 7.2, semibold, MUTED, CW - 16);
+  centeredTracking(page, String(origin).toUpperCase(), bodyY(439), 13.2, semibold, INK, 0.12, CW - 18);
+  line(page, bodyY(432), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'REMITENTE', M + 8, bodyY(426), 6.6, regular, MUTED, 54);
+  wrap(senderName, regular, 8.6, CW - 16, 2).forEach((item, index) => {
+    text(page, item, M + 8, bodyY(417 - (index * 6.4)), 8.6, regular, INK, CW - 16);
   });
-  text(page, 'DOC.', M + 8, bodyY(384), 6.3, regular, MUTED, 24);
-  text(page, senderDoc, M + 32, bodyY(382.5), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, bodyY(384), 6.3, regular, MUTED, 20);
-  text(page, encomienda.cliente_telefono || '-', M + 129, bodyY(382.5), 10.2, regular, INK, 64);
+  text(page, 'DOC.', M + 8, bodyY(399), 5.8, regular, MUTED, 24);
+  text(page, senderDoc, M + 32, bodyY(398), 8.6, regular, INK, 66);
+  text(page, 'TEL.', M + 109, bodyY(399), 5.8, regular, MUTED, 20);
+  text(page, encomienda.cliente_telefono || '-', M + 129, bodyY(398), 8.6, regular, INK, 64);
   if (senderAddress) {
-    text(page, 'DIR.', M + 8, bodyY(374), 6.1, regular, MUTED, 20);
-    text(page, senderAddress, M + 30, bodyY(373.5), 7.2, regular, INK, CW - 42);
+    text(page, 'DIR.', M + 8, bodyY(391), 5.6, regular, MUTED, 20);
+    text(page, senderAddress, M + 30, bodyY(390.5), 6.6, regular, INK, CW - 42);
   }
 
   // Seccion DESTINO. Mantiene la misma estructura visual que ORIGEN.
@@ -307,19 +311,19 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // 281 es la base/inicio inferior de la caja; 84 es el alto total.
   // Espacio interno: ajustar 349, 335, 326, 319, 310 y 289.
   // Interlineado del destinatario: cambiar "index * 5.8".
-  box(page, M, bodyY(281), CW, 84, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, bodyY(343), 14, ICON_MUTED);
-  centered(page, 'DESTINO', bodyY(355), 8.1, semibold, MUTED, CW - 16);
-  centeredTracking(page, String(destination).toUpperCase(), bodyY(335), 17.6, bold, INK, 0.22, CW - 18);
-  line(page, bodyY(326), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, bodyY(319), 7.2, regular, MUTED, 64);
+  box(page, M, afterOriginY(281), CW, 84, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, afterOriginY(343), 14, ICON_MUTED);
+  centered(page, 'DESTINO', afterOriginY(355), 8.1, semibold, MUTED, CW - 16);
+  centeredTracking(page, String(destination).toUpperCase(), afterOriginY(335), 17.6, bold, INK, 0.22, CW - 18);
+  line(page, afterOriginY(326), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO', M + 8, afterOriginY(319), 7.2, regular, MUTED, 64);
   wrap(receiverName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, bodyY(309 - (index * 7.4)), 10.2, regular, INK, CW - 16);
+    text(page, item, M + 8, afterOriginY(309 - (index * 7.4)), 10.2, regular, INK, CW - 16);
   });
-  text(page, 'DOC.', M + 8, bodyY(289), 6.3, regular, MUTED, 24);
-  text(page, receiverDoc, M + 32, bodyY(287.5), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, bodyY(289), 6.3, regular, MUTED, 20);
-  text(page, encomienda.destinatario_telefono || '-', M + 129, bodyY(287.5), 10.2, regular, INK, 64);
+  text(page, 'DOC.', M + 8, afterOriginY(289), 6.3, regular, MUTED, 24);
+  text(page, receiverDoc, M + 32, afterOriginY(287.5), 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, afterOriginY(289), 6.3, regular, MUTED, 20);
+  text(page, encomienda.destinatario_telefono || '-', M + 129, afterOriginY(287.5), 10.2, regular, INK, 64);
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.
   // Altura del espacio: box(page, M, 190, CW, 74, ...).
@@ -327,13 +331,13 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // El SVG del icono usa la Y como base del dibujo completo.
   // Icono ENCOMIENDA: ajustar 253 si se ve arriba/abajo del label.
   // Descripcion multilinea: ajustar 232, maxLines=4 e interlineado 8.8.
-  box(page, M, bodyY(190), CW, 74, SOFT, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.package, M + 8, bodyY(263), 14, ICON_MUTED);
-  text(page, 'ENCOMIENDA', M + 25, bodyY(249), 7.8, regular, MUTED, 58);
-  text(page, 'UNIDAD', M + 100, bodyY(249), 6.3, regular, MUTED, 26);
-  text(page, unit, M + 128, bodyY(247.5), 10.2, regular, INK, 74);
+  box(page, M, afterOriginY(190), CW, 74, SOFT, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.package, M + 8, afterOriginY(263), 14, ICON_MUTED);
+  text(page, 'ENCOMIENDA', M + 25, afterOriginY(249), 7.8, regular, MUTED, 58);
+  text(page, 'UNIDAD', M + 100, afterOriginY(249), 6.3, regular, MUTED, 26);
+  text(page, unit, M + 128, afterOriginY(247.5), 10.2, regular, INK, 74);
   wrap(String(content).toUpperCase(), regular, 10.2, CW - 16, 4).forEach((item, index) => {
-    text(page, item, M + 8, bodyY(232 - (index * 10)), 10.2, regular, INK, CW - 16);
+    text(page, item, M + 8, afterOriginY(232 - (index * 10)), 10.2, regular, INK, CW - 16);
   });
 
   // Resumen inferior: QR a la izquierda, condicion al centro y total a la derecha.
@@ -341,23 +345,28 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // 104 es la base/inicio inferior; 76 es el alto total. Top = 180.
   // Como encomienda empieza en y=190, el espacio entre ambos queda en 10 puntos.
   // QR: y=116 y alto=53. Estado de pago: ajustar 143.
-  box(page, M, bodyY(104), CW, 76, WHITE, LIGHT_LINE, 0.75);
-  page.drawImage(qrImage, { x: M + 8, y: bodyY(116), width: 53, height: 53 });
-  page.drawLine({ start: { x: 75, y: bodyY(115) }, end: { x: 75, y: bodyY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  page.drawLine({ start: { x: 136, y: bodyY(115) }, end: { x: 136, y: bodyY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  centeredIn(page, paymentLabel, 77, bodyY(139), 58, paymentLabel.length > 7 ? 14.2 : 14.8, semibold, payment.includes('COBRAR') ? ALERT : INK);
-  text(page, 'TOTAL', 166, bodyY(163), 8, regular);
-  text(page, 'S/', 143, bodyY(140), 9.8, regular);
-  right(page, money(total), bodyY(126), 21, bold, INK, W - M - 7, 67);
+  box(page, M, afterOriginY(104), CW, 76, WHITE, LIGHT_LINE, 0.75);
+  page.drawImage(qrImage, { x: M + 8, y: afterOriginY(116), width: 53, height: 53 });
+  page.drawLine({ start: { x: 75, y: afterOriginY(115) }, end: { x: 75, y: afterOriginY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  page.drawLine({ start: { x: 136, y: afterOriginY(115) }, end: { x: 136, y: afterOriginY(169) }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
+  if (payment.includes('COBRAR')) {
+    centeredIn(page, 'POR', 77, afterOriginY(148), 58, 15.2, semibold, ALERT);
+    centeredIn(page, 'PAGAR', 77, afterOriginY(131), 58, 15.2, semibold, ALERT);
+  } else {
+    centeredIn(page, paymentLabel, 77, afterOriginY(139), 58, 14.8, semibold, INK);
+  }
+  text(page, 'TOTAL', 166, afterOriginY(163), 8, regular);
+  text(page, 'S/', 166, afterOriginY(148), 9.8, regular);
+  right(page, money(total), afterOriginY(126), 21, bold, INK, W - M - 7, 67);
 
-  line(page, bodyY(92));
-  text(page, 'TERMINOS Y CONDICIONES', M, bodyY(78), 6.5, regular);
+  line(page, afterOriginY(92));
+  text(page, 'TERMINOS Y CONDICIONES', M, afterOriginY(78), 6.5, regular);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
-    .forEach((item, index) => text(page, item, M, bodyY(68 - (index * 6.8)), 6.1, regular, MUTED, 138));
-  page.drawLine({ start: { x: 160, y: bodyY(51) }, end: { x: 160, y: bodyY(81) }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  text(page, 'GRACIAS', 176, bodyY(75), 7, semibold, INK, 42);
-  text(page, 'POR CONFIAR', 176, bodyY(64), 6, regular, INK, 42);
-  text(page, 'EN NOSOTROS', 176, bodyY(56), 6, regular, INK, 42);
+    .forEach((item, index) => text(page, item, M, afterOriginY(68 - (index * 6.8)), 6.1, regular, MUTED, 138));
+  page.drawLine({ start: { x: 160, y: afterOriginY(51) }, end: { x: 160, y: afterOriginY(81) }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
+  text(page, 'GRACIAS', 176, afterOriginY(75), 7, semibold, INK, 42);
+  text(page, 'POR CONFIAR', 176, afterOriginY(64), 6, regular, INK, 42);
+  text(page, 'EN NOSOTROS', 176, afterOriginY(56), 6, regular, INK, 42);
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

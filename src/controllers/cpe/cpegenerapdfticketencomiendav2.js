@@ -19,6 +19,7 @@ const MUTED = rgb(0.34, 0.35, 0.37);
 const LINE = rgb(0.7, 0.71, 0.73);
 const LIGHT_LINE = rgb(0.82, 0.83, 0.85);
 const SOFT = rgb(0.94, 0.945, 0.955);
+const ALERT = rgb(0.82, 0.12, 0.12);
 const ICON_MUTED = rgb(0.48, 0.5, 0.53);
 const WHITE = rgb(1, 1, 1);
 
@@ -232,7 +233,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // pdf-lib interpreta width/height como puntos PDF, no como pixeles de pantalla.
   // Por eso se escala proporcionalmente para que entre en el ticket.
   if (logoImage) {
-    const scale = Math.min(152 / logoImage.width, 42 / logoImage.height);
+    const scale = Math.min(190 / logoImage.width, 65 / logoImage.height);
     const logoWidth = logoImage.width * scale;
     const logoHeight = logoImage.height * scale;
     const logoX = (W - logoWidth) / 2;
@@ -273,7 +274,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Seccion ORIGEN.
   // Altura del espacio: box(page, M, 376, CW, 84, ...).
   // 376 es la base/inicio inferior de la caja; 84 es el alto total.
-  // Espacio interno: ajustar 444, 430, 421, 414, 405 y 386.
+  // Espacio interno: ajustar 444, 430, 421, 414, 405 y 384.
   // Interlineado del remitente: cambiar "index * 5.8".
   box(page, M, 376, CW, 84, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, 438, 14, ICON_MUTED);
@@ -281,16 +282,18 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   centeredTracking(page, String(origin).toUpperCase(), 430, 17.6, bold, INK, 0.22, CW - 18);
   line(page, 421, M + 8, W - M - 8, 0.45, LIGHT_LINE);
   text(page, 'REMITENTE', M + 8, 414, 7.2, regular, MUTED, 54);
-  wrap(senderName, regular, 8.8, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, 405 - (index * 5.8), 8.8, regular, INK, CW - 16);
+  wrap(senderName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
+    text(page, item, M + 8, 404 - (index * 7.4), 10.2, regular, INK, CW - 16);
   });
-  labelValue(page, 'DOC.', senderDoc, M + 8, 386, 24, 66, fonts, false);
-  labelValue(page, 'TEL.', encomienda.cliente_telefono || '-', M + 109, 386, 20, 64, fonts, false);
+  text(page, 'DOC.', M + 8, 384, 6.3, regular, MUTED, 24);
+  text(page, senderDoc, M + 32, 382.5, 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, 384, 6.3, regular, MUTED, 20);
+  text(page, encomienda.cliente_telefono || '-', M + 129, 382.5, 10.2, regular, INK, 64);
 
   // Seccion DESTINO. Mantiene la misma estructura visual que ORIGEN.
   // Altura del espacio: box(page, M, 281, CW, 84, ...).
   // 281 es la base/inicio inferior de la caja; 84 es el alto total.
-  // Espacio interno: ajustar 349, 335, 326, 319, 310 y 291.
+  // Espacio interno: ajustar 349, 335, 326, 319, 310 y 289.
   // Interlineado del destinatario: cambiar "index * 5.8".
   box(page, M, 281, CW, 84, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, 343, 14, ICON_MUTED);
@@ -298,35 +301,38 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   centeredTracking(page, String(destination).toUpperCase(), 335, 17.6, bold, INK, 0.22, CW - 18);
   line(page, 326, M + 8, W - M - 8, 0.45, LIGHT_LINE);
   text(page, 'DESTINATARIO', M + 8, 319, 7.2, regular, MUTED, 64);
-  wrap(receiverName, regular, 8.8, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, 310 - (index * 5.8), 8.8, regular, INK, CW - 16);
+  wrap(receiverName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
+    text(page, item, M + 8, 309 - (index * 7.4), 10.2, regular, INK, CW - 16);
   });
-  labelValue(page, 'DOC.', receiverDoc, M + 8, 291, 24, 66, fonts, false);
-  labelValue(page, 'TEL.', encomienda.destinatario_telefono || '-', M + 109, 291, 20, 64, fonts, false);
+  text(page, 'DOC.', M + 8, 289, 6.3, regular, MUTED, 24);
+  text(page, receiverDoc, M + 32, 287.5, 10.2, regular, INK, 66);
+  text(page, 'TEL.', M + 109, 289, 6.3, regular, MUTED, 20);
+  text(page, encomienda.destinatario_telefono || '-', M + 129, 287.5, 10.2, regular, INK, 64);
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.
   // Altura del espacio: box(page, M, 222, CW, 42, ...).
   // 222 es la base/inicio inferior; 42 es el alto total.
-  // Icono y label ENCOMIENDA comparten y=249 para quedar a la misma altura.
-  // Espacio interno: ajustar 249 y 230.
+  // El SVG del icono usa la Y como base del dibujo completo.
+  // El texto usa la Y como base de la letra, por eso el icono se baja a 245.5
+  // para quedar visualmente centrado con el label ENCOMIENDA en y=249.
+  // Espacio interno: ajustar 249, 245.5 y 230.
   box(page, M, 222, CW, 42, SOFT, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.package, M + 8, 249, 14, ICON_MUTED);
+  drawIcon(page, ICONS.package, M + 8, 245.5, 14, ICON_MUTED);
   text(page, 'ENCOMIENDA', M + 25, 249, 7.8, regular, MUTED, 58);
   text(page, 'UNIDAD', M + 112, 249, 6.3, regular, MUTED, 26);
-  text(page, unit, M + 138, 247, 11.4, regular, INK, 58);
+  text(page, unit, M + 128, 247.5, 10.2, regular, INK, 74);
   text(page, String(content).toUpperCase(), M + 8, 230, 11.6, regular, INK, CW - 16);
 
   // Resumen inferior: QR a la izquierda, condicion al centro y total a la derecha.
   // Altura del espacio: box(page, M, 140, CW, 76, ...).
   // 140 es la base/inicio inferior; 76 es el alto total. Top = 216.
   // Como encomienda empieza en y=222, el espacio entre ambos queda en 6 puntos.
-  // QR: y=152 y alto=53. Condicion: ajustar 193 y 171.
+  // QR: y=152 y alto=53. Condicion: ajustar 173.
   box(page, M, 140, CW, 76, WHITE, LIGHT_LINE, 0.75);
   page.drawImage(qrImage, { x: M + 8, y: 152, width: 53, height: 53 });
   page.drawLine({ start: { x: 75, y: 151 }, end: { x: 75, y: 205 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
   page.drawLine({ start: { x: 136, y: 151 }, end: { x: 136, y: 205 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
-  text(page, 'CONDICION', 84, 193, 6.5, regular, MUTED, 44);
-  centeredIn(page, payment, 80, 171, 53, payment.length > 7 ? 8.4 : 10.4, semibold);
+  centeredIn(page, payment, 77, 173, 58, payment.length > 7 ? 10.2 : 12.2, semibold, payment.includes('COBRAR') ? ALERT : INK);
   text(page, 'TOTAL', 166, 199, 8, regular);
   text(page, 'S/', 143, 176, 9.8, regular);
   right(page, money(total), 162, 21, bold, INK, W - M - 7, 67);

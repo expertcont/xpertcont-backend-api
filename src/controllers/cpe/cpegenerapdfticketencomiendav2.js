@@ -282,7 +282,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const afterHeaderY = (value) => bodyY(value + HEADER_HEIGHT_REDUCTION);
   // ORIGEN ocupa menos alto que antes para que DESTINO tenga mas protagonismo.
   // Si cambias ORIGIN_HEIGHT_REDUCTION, todo lo posterior sube/baja parejo.
-  const ORIGIN_HEIGHT_REDUCTION = 34;
+  const ORIGIN_HEIGHT_REDUCTION = 24;
   // ORIGIN_TO_DATE_SHIFT acerca ORIGEN a la linea punteada debajo de fecha/hora.
   // Tambien mueve todo lo posterior para no abrir huecos nuevos.
   const ORIGIN_TO_DATE_SHIFT = 11;
@@ -307,9 +307,9 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
     .forEach((item, index) => centered(page, item, bodyY(550 - (index * 8.2)), 7.4, regular, MUTED));
 
   // Datos del comprobante: tipo, numero, fecha y hora.
-  // Altura del espacio de este bloque: esta entre line(page, 525) y dotted(page, 466).
+  // Altura del espacio de este bloque: esta debajo del separador punteado de cabecera.
   // Para compactar mas, acercar esos Y y las lineas internas: 514, 496 y 480.
-  line(page, afterHeaderY(525), M, W - M, 0.7);
+  dotted(page, afterHeaderY(525));
   centered(page, documentName(code), afterHeaderY(514), 9.5, regular);
   centeredTracking(page, displayNumber || 'MODELO', afterHeaderY(496), 16.8, bold, INK, 0.55, CW - 8);
   text(page, 'FECHA', 39, afterHeaderY(487), 6.3, regular, MUTED, 29);
@@ -317,7 +317,6 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   line(page, afterHeaderY(485), 113, 113, 0.45);
   text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
-  dotted(page, afterHeaderY(475));
 
   // Seccion ORIGEN.
   // Altura del espacio: box(page, M, 394, CW, 66, ...).
@@ -373,7 +372,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   drawIcon(page, ICONS.package, M + 8, encomiendaY(263), 14, ICON_MUTED);
   text(page, 'ENCOMIENDA', M + 25, encomiendaY(249), 10.2, regular, MUTED, 58);
   text(page, 'UNIDAD', M + 95, encomiendaY(249), 10.2, regular, MUTED, 26);
-  text(page, unit, M + 128, encomiendaY(247.5), 10.2, regular, INK, 74);
+  text(page, unit, M + 128, encomiendaY(249), 10.2, regular, INK, 74);
   descriptionLines.forEach((item, index) => {
     text(page, item, M + 8, encomiendaY(232 - (index * descriptionLineHeight)), descriptionFontSize, regular, INK, CW - 16);
   });
@@ -398,7 +397,6 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   centeredIn(page, 'S/', W - M - 7 - 67, summaryY(149), 67, 9.8, regular);
   right(page, money(total), summaryY(127), 21, bold, INK, W - M - 7, 67);
 
-  line(page, summaryY(102));
   text(page, 'TERMINOS Y CONDICIONES', M, summaryY(88), 6.5, regular);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
     .forEach((item, index) => text(page, item, M, summaryY(78 - (index * 6.8)), 6.1, regular, MUTED, 138));

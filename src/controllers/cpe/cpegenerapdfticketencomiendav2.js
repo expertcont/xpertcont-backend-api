@@ -230,13 +230,31 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const destination = encomienda.punto_venta_dest_nombre || encomienda.id_punto_venta_dest || 'DESTINO';
   const senderName = encomienda.cliente || cliente.razon_social_nombres || '-';
   const senderDoc = encomienda.cliente_documento || encomienda.cliente_documento_id || cliente.documento_identidad || '-';
-  const senderAddress = encomienda.remitente_direccion || encomienda.cliente_direccion || cliente.cliente_direccion || cliente.cliente_direccion_fact || cliente.direccion || '';
+  const senderAddress = clean(encomienda.remitente_direccion || encomienda.cliente_direccion || cliente.cliente_direccion || cliente.cliente_direccion_fact || cliente.direccion || '');
+  const senderArrivalAddress = clean(
+    encomienda.remitente_direccion_llegada ||
+    encomienda.cliente_direccion_llegada ||
+    encomienda.remitente_zona ||
+    encomienda.cliente_zona
+  );
   const receiverName = encomienda.destinatario || '-';
   const receiverDoc = encomienda.destinatario_documento || encomienda.destinatario_documento_id || '-';
+  const receiverAddress = clean(encomienda.destinatario_direccion);
   const unit = `${clean(encomienda.placa)} ${clean(encomienda.licencia)}`.trim() || '-';
   const payment = clean(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
   const paymentLabel = payment.includes('COBRAR') ? 'POR PAGAR' : payment;
   const content = encomienda.descripcion || jsonTicket.items?.[0]?.producto || 'SERVICIO DE TRANSPORTE DE ENCOMIENDA';
+  const senderAddressLines = senderAddress ? wrap(senderAddress, regular, 7.2, CW - 39, 2) : [];
+  const senderArrivalAddressLines = senderArrivalAddress ? wrap(senderArrivalAddress, regular, 7.2, CW - 65, 2) : [];
+  const originTopY = 460;
+  const originBaseY = 399
+    - (senderAddressLines.length ? (senderAddressLines.length - 1) * 7.2 : 0)
+    - (senderArrivalAddressLines.length ? 10 + ((senderArrivalAddressLines.length - 1) * 7.2) : 0);
+  const originHeight = originTopY - originBaseY;
+  const receiverAddressLines = receiverAddress ? wrap(receiverAddress, regular, 7.2, CW - 24, 2) : [];
+  const destinationTopY = 365;
+  const destinationBaseY = receiverAddressLines.length ? 283 - ((receiverAddressLines.length - 1) * 7.2) : 300;
+  const destinationHeight = destinationTopY - destinationBaseY;
   const descriptionFontSize = 10.2;
   const descriptionLineHeight = 10;
   const descriptionLines = wrapPreservingBreaks(String(content).toUpperCase(), regular, descriptionFontSize, CW - 16, 8);
@@ -280,9 +298,8 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Si reduces mas espacios entre razon social/RUC/direccion, aumenta este numero.
   const HEADER_HEIGHT_REDUCTION = 10;
   const afterHeaderY = (value) => bodyY(value + HEADER_HEIGHT_REDUCTION);
-  // ORIGEN ocupa menos alto que antes para que DESTINO tenga mas protagonismo.
-  // Si cambias ORIGIN_HEIGHT_REDUCTION, todo lo posterior sube/baja parejo.
-  const ORIGIN_HEIGHT_REDUCTION = 24;
+  // ORIGEN solo empuja secciones posteriores cuando crece debajo de su base original.
+  const ORIGIN_HEIGHT_REDUCTION = 24 + Math.min(0, originBaseY - 394);
   // ORIGIN_TO_DATE_SHIFT acerca ORIGEN a la linea punteada debajo de fecha/hora.
   // Tambien mueve todo lo posterior para no abrir huecos nuevos.
   const ORIGIN_TO_DATE_SHIFT = 11;
@@ -291,8 +308,8 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Ajustes de separacion entre los ultimos bloques.
   // ENCOMIENDA_Y_SHIFT sube/baja encomienda sin tocar destino.
   // SUMMARY_Y_SHIFT sube/baja QR/total y el pie en conjunto.
-  const ENCOMIENDA_Y_SHIFT = 31;
-  const SUMMARY_Y_SHIFT = dynamicSummaryShift;
+  const ENCOMIENDA_Y_SHIFT = destinationBaseY - encomiendaTopY - 12;
+  const SUMMARY_Y_SHIFT = dynamicSummaryShift + ENCOMIENDA_Y_SHIFT - 31;
   const encomiendaY = (value) => afterOriginY(value + ENCOMIENDA_Y_SHIFT);
   const summaryY = (value) => afterOriginY(value + SUMMARY_Y_SHIFT);
 
@@ -318,49 +335,45 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
 
-  // Seccion ORIGEN.
-  // Altura del espacio: box(page, M, 394, CW, 66, ...).
-  // 394 es la base/inicio inferior de la caja; 66 es el alto total.
-  // Label ORIGEN va junto al icono para no gastar una linea completa.
-  // Espacio interno: ajustar 450, 440, 433, 427, 418, 407 y 401.
-  // Interlineado del remitente: cambiar "index * 5.8".
-  box(page, M, originY(394), CW, 66, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, originY(448), 11, ICON_MUTED);
-  text(page, 'ORIGEN', M + 24, originY(440), 7.2, semibold, MUTED, 44);
+  // Seccion ORIGEN. La caja cierra segun existan direccion y direccion de llegada.
+  box(page, M, originY(originBaseY), CW, originHeight, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, originY(448), 14, ICON_MUTED);
+  text(page, 'ORIGEN', M + 24, originY(440), 8.1, semibold, MUTED, 44);
   centeredTracking(page, String(origin).toUpperCase(), originY(440), 13.2, regular, INK, 0.12, CW - 18);
   line(page, originY(433), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'REMITENTE', M + 8, originY(427), 7.2, regular, MUTED, 54);
-  wrap(senderName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, originY(418 - (index * 6.4)), 10.2, regular, INK, CW - 16);
+  text(page, 'REMITENTE:', M + 8, originY(422), 7.2, semibold, MUTED, 43);
+  text(page, senderName, M + 54, originY(421), 9.6, regular, INK, CW - 62);
+  text(page, 'DOC:', M + 8, originY(409), 7.2, semibold, MUTED, 20);
+  text(page, senderDoc, M + 32, originY(408), 9.6, regular, INK, 65);
+  text(page, 'TEL:', M + 109, originY(409), 7.2, semibold, MUTED, 20);
+  text(page, encomienda.cliente_telefono || '-', M + 132, originY(408), 9.6, regular, INK, 61);
+  senderAddressLines.forEach((item, index) => {
+    text(page, index === 0 ? 'DIR.' : '', M + 8, originY(396 - (index * 7.2)), 6.5, semibold, MUTED, 20);
+    text(page, item, M + 29, originY(395.5 - (index * 7.2)), 7.2, regular, INK, CW - 39);
   });
-  text(page, 'DOC.', M + 8, originY(407), 6.3, regular, MUTED, 24);
-  text(page, senderDoc, M + 32, originY(406), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, originY(407), 6.3, regular, MUTED, 20);
-  text(page, encomienda.cliente_telefono || '-', M + 129, originY(406), 10.2, regular, INK, 64);
-  if (senderAddress) {
-    text(page, 'DIR.', M + 8, originY(399), 5.8, regular, MUTED, 20);
-    text(page, senderAddress, M + 29, originY(398.5), 7.4, regular, INK, CW - 39);
-  }
+  senderArrivalAddressLines.forEach((item, index) => {
+    const startY = 386 - ((Math.max(senderAddressLines.length, 1) - 1) * 7.2);
+    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, originY(startY - (index * 7.2)), 6.5, semibold, MUTED, 45);
+    text(page, item, M + 57, originY(startY - 0.5 - (index * 7.2)), 7.2, regular, INK, CW - 65);
+  });
 
-  // Seccion DESTINO. Mantiene la misma estructura visual que ORIGEN.
-  // Altura del espacio: box(page, M, 299, CW, 66, ...).
-  // 299 es la base/inicio inferior de la caja; 66 es el alto total.
-  // Label DESTINO va junto al icono para no gastar una linea completa.
-  // Espacio interno: ajustar 346, 342, 333, 326, 316 y 299.
-  // Interlineado del destinatario: cambiar "index * 5.8".
-  box(page, M, afterOriginY(299), CW, 66, WHITE, LIGHT_LINE, 0.45);
+  // Seccion DESTINO. La altura baja solo cuando existe direccion de llegada.
+  // destinationBaseY es la base inferior dinamica; destinationTopY mantiene fijo el encabezado.
+  box(page, M, afterOriginY(destinationBaseY), CW, destinationHeight, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, afterOriginY(353), 14, ICON_MUTED);
   text(page, 'DESTINO', M + 25, afterOriginY(346), 8.1, semibold, MUTED, 52);
   centeredTracking(page, String(destination).toUpperCase(), afterOriginY(342), 17.6, bold, INK, 0.22, CW - 18);
   line(page, afterOriginY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, afterOriginY(326), 7.2, regular, MUTED, 64);
-  wrap(receiverName, regular, 10.2, CW - 16, 2).forEach((item, index) => {
-    text(page, item, M + 8, afterOriginY(316 - (index * 7.4)), 10.2, regular, INK, CW - 16);
+  text(page, 'DESTINATARIO:', M + 8, afterOriginY(322), 7.2, semibold, MUTED, 52);
+  text(page, receiverName, M + 63, afterOriginY(321), 9.6, regular, INK, CW - 71);
+  text(page, 'DNI:', M + 8, afterOriginY(309), 7.2, semibold, MUTED, 20);
+  text(page, receiverDoc, M + 32, afterOriginY(308), 9.6, regular, INK, 65);
+  text(page, 'TEL:', M + 109, afterOriginY(309), 7.2, semibold, MUTED, 20);
+  text(page, encomienda.destinatario_telefono || '-', M + 132, afterOriginY(308), 9.6, regular, INK, 61);
+  receiverAddressLines.forEach((item, index) => {
+    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, afterOriginY(296 - (index * 7.2)), 6.5, semibold, MUTED, 45);
+    text(page, item, M + 57, afterOriginY(295.5 - (index * 7.2)), 7.2, regular, INK, CW - 65);
   });
-  text(page, 'DOC.', M + 8, afterOriginY(299), 6.3, regular, MUTED, 24);
-  text(page, receiverDoc, M + 32, afterOriginY(297.5), 10.2, regular, INK, 66);
-  text(page, 'TEL.', M + 109, afterOriginY(299), 6.3, regular, MUTED, 20);
-  text(page, encomienda.destinatario_telefono || '-', M + 129, afterOriginY(297.5), 10.2, regular, INK, 64);
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.
   // Altura dinamica: encomiendaBaseY es la base inferior y encomiendaHeight el alto.

@@ -108,6 +108,12 @@ const box = (page, x, y, width, height, fill = WHITE, border = LINE, borderWidth
   page.drawRectangle({ x, y, width, height, color: fill, borderColor: border, borderWidth });
 };
 
+const routeBlock = (page, label, value, x, y, width, fonts) => {
+  text(page, label, x, y + 19, 6.3, fonts.semibold, MUTED, width);
+  text(page, String(value).toUpperCase(), x, y, 16.4, fonts.bold, INK, width);
+  line(page, y - 5, x, x + width, 0.45, LIGHT_LINE);
+};
+
 const pill = (page, label, x, y, width, fonts) => {
   box(page, x, y, width, 12, SOFT, LINE, 0.35);
   centeredIn(page, label, x, y + 3.2, width, 6.2, fonts.bold);
@@ -141,17 +147,17 @@ const embedTicketFonts = async (pdfDoc) => {
   pdfDoc.registerFontkit(fontkit);
 
   try {
-    const regular = await pdfDoc.embedFont(fs.readFileSync(fontPath('RobotoCondensed-Regular.ttf')));
-    const bold = await pdfDoc.embedFont(fs.readFileSync(fontPath('RobotoCondensed-Bold.ttf')));
-    const mono = await pdfDoc.embedFont(fs.readFileSync(fontPath('RobotoMono-wght.ttf')));
+    const regular = await pdfDoc.embedFont(fs.readFileSync(fontPath('BarlowCondensed-Regular.ttf')));
+    const semibold = await pdfDoc.embedFont(fs.readFileSync(fontPath('BarlowCondensed-SemiBold.ttf')));
+    const bold = await pdfDoc.embedFont(fs.readFileSync(fontPath('BarlowCondensed-Bold.ttf')));
 
-    return { regular, bold, mono };
+    return { regular, semibold, bold };
   } catch (error) {
     const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const semibold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
     const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-    const mono = await pdfDoc.embedFont(StandardFonts.CourierBold);
 
-    return { regular, bold, mono };
+    return { regular, semibold, bold };
   }
 };
 
@@ -159,7 +165,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([W, H]);
   const fonts = await embedTicketFonts(pdfDoc);
-  const { regular, bold, mono } = fonts;
+  const { regular, semibold, bold } = fonts;
 
   const empresa = jsonTicket.empresa || {};
   const venta = jsonTicket.venta || {};
@@ -209,19 +215,18 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
 
   line(page, 510, M, W - M, 0.7);
   centered(page, documentName(code), 491, 9.5, bold);
-  centered(page, fullNumber || 'MODELO', 466, 16.8, mono);
+  centered(page, fullNumber || 'MODELO', 466, 18.2, semibold);
   labelValue(page, 'FECHA', datePe(issueDate), 43, 445, 27, 45, fonts, false);
   line(page, 443, 113, 113, 0.45);
   labelValue(page, 'HORA', timePe(issueTime), 129, 445, 24, 52, fonts, false);
   dotted(page, 425);
 
-  pill(page, 'ORIGEN', M, 397, 45, fonts);
-  text(page, String(origin).toUpperCase(), M + 54, 397, 15.2, bold, INK, CW - 58);
-  line(page, 384, M + 54, W - M, 0.45, LIGHT_LINE);
-  text(page, '>', 101, 367, 13, bold);
-  pill(page, 'DESTINO', M, 348, 45, fonts);
-  text(page, String(destination).toUpperCase(), M + 54, 348, 15.2, bold, INK, CW - 58);
-  line(page, 335);
+  box(page, M, 343, CW, 68, WHITE, LIGHT_LINE, 0.45);
+  routeBlock(page, 'ORIGEN', origin, M + 8, 382, CW - 16, fonts);
+  page.drawRectangle({ x: M + 8, y: 359, width: 36, height: 11, color: SOFT, borderColor: LIGHT_LINE, borderWidth: 0.35 });
+  centeredIn(page, 'ENCOMIENDA', M + 8, 362, 36, 5.4, semibold, MUTED);
+  routeBlock(page, 'DESTINO', destination, M + 52, 349, CW - 60, fonts);
+  line(page, 331);
 
   const half = (CW - 12) / 2;
   text(page, 'REMITENTE', M, 315, 7.1, bold);

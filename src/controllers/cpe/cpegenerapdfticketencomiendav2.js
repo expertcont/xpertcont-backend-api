@@ -1,4 +1,7 @@
+const fs = require('fs');
+const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
@@ -39,6 +42,7 @@ const timePe = (value) => {
 const documentName = (code) => (code === '01' ? 'FACTURA ELECTRONICA' : 'BOLETA ELECTRONICA');
 
 const base64ToBytes = (base64) => Uint8Array.from(Buffer.from(base64, 'base64'));
+const fontPath = (name) => path.join(__dirname, 'fonts', name);
 
 const fit = (text, font, size, maxWidth) => {
   const value = clean(text);
@@ -133,12 +137,29 @@ const embedLogo = async (pdfDoc, logo) => {
   }
 };
 
+const embedTicketFonts = async (pdfDoc) => {
+  pdfDoc.registerFontkit(fontkit);
+
+  try {
+    const regular = await pdfDoc.embedFont(fs.readFileSync(fontPath('RobotoCondensed-Regular.ttf')));
+    const bold = await pdfDoc.embedFont(fs.readFileSync(fontPath('RobotoCondensed-Bold.ttf')));
+    const mono = await pdfDoc.embedFont(fs.readFileSync(fontPath('RobotoMono-wght.ttf')));
+
+    return { regular, bold, mono };
+  } catch (error) {
+    const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const mono = await pdfDoc.embedFont(StandardFonts.CourierBold);
+
+    return { regular, bold, mono };
+  }
+};
+
 const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([W, H]);
-  const regular = await pdfDoc.embedFont(StandardFonts.TimesRoman);
-  const bold = await pdfDoc.embedFont(StandardFonts.TimesRomanBold);
-  const fonts = { regular, bold };
+  const fonts = await embedTicketFonts(pdfDoc);
+  const { regular, bold, mono } = fonts;
 
   const empresa = jsonTicket.empresa || {};
   const venta = jsonTicket.venta || {};
@@ -159,9 +180,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const receiverDoc = encomienda.destinatario_documento || encomienda.destinatario_documento_id || '-';
   const unit = `${clean(encomienda.placa)} ${clean(encomienda.licencia)}`.trim() || '-';
   const payment = clean(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
-  const paymentMethod = clean(venta.medio_pago || encomienda.medio_pago || 'EFECTIVO').toUpperCase();
   const content = encomienda.descripcion || jsonTicket.items?.[0]?.producto || 'SERVICIO DE TRANSPORTE DE ENCOMIENDA';
-  const observations = clean(encomienda.observaciones || encomienda.observacion || (encomienda.numero_rdi ? `RDI: ${encomienda.numero_rdi}` : '-'));
   const qrText = [empresa.ruc, code, serie, number, issueDate, senderDoc, total].map(clean).join('|');
 
   const logoImage = await embedLogo(pdfDoc, logo);
@@ -190,20 +209,17 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
 
   line(page, 510, M, W - M, 0.7);
   centered(page, documentName(code), 491, 9.5, bold);
-  centered(page, fullNumber || 'MODELO', 466, 18.5, bold);
+  centered(page, fullNumber || 'MODELO', 466, 16.8, mono);
   labelValue(page, 'FECHA', datePe(issueDate), 43, 445, 27, 45, fonts, false);
   line(page, 443, 113, 113, 0.45);
   labelValue(page, 'HORA', timePe(issueTime), 129, 445, 24, 52, fonts, false);
   dotted(page, 425);
 
-  pill(page, 'SALIDA', M, 397, 45, fonts);
+  pill(page, 'ORIGEN', M, 397, 45, fonts);
   text(page, String(origin).toUpperCase(), M + 54, 397, 15.2, bold, INK, CW - 58);
   line(page, 384, M + 54, W - M, 0.45, LIGHT_LINE);
-  text(page, 'RUTA DE ENCOMIENDA', M, 373, 6.2, bold, MUTED, 86);
-  page.drawLine({ start: { x: 94, y: 375 }, end: { x: 154, y: 375 }, thickness: 0.8, color: INK, dashArray: [2, 4] });
-  text(page, '>', 158, 369, 13, bold);
-  text(page, 'BUS', 174, 373, 6.2, bold, MUTED, 28);
-  pill(page, 'LLEGADA', M, 348, 45, fonts);
+  text(page, '>', 101, 367, 13, bold);
+  pill(page, 'DESTINO', M, 348, 45, fonts);
   text(page, String(destination).toUpperCase(), M + 54, 348, 15.2, bold, INK, CW - 58);
   line(page, 335);
 
@@ -226,18 +242,14 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   line(page, 209, M + 8, W - M - 8, 0.45);
   text(page, 'CONTENIDO', M + 8, 196, 6.3, bold, MUTED);
   text(page, String(content).toUpperCase(), M + 8, 184, 10.8, bold, INK, CW - 16);
-  labelValue(page, 'OBS.', observations || '-', M + 8, 166, 24, CW - 40, fonts, false);
 
   box(page, M, 78, CW, 76, WHITE, LIGHT_LINE, 0.75);
-  page.drawCircle({ x: M, y: 120, size: 5, color: WHITE, borderColor: INK, borderWidth: 0.75 });
-  page.drawCircle({ x: W - M, y: 120, size: 5, color: WHITE, borderColor: INK, borderWidth: 0.75 });
   page.drawImage(qrImage, { x: M + 8, y: 90, width: 53, height: 53 });
   page.drawLine({ start: { x: 75, y: 89 }, end: { x: 75, y: 143 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
   page.drawLine({ start: { x: 136, y: 89 }, end: { x: 136, y: 143 }, thickness: 0.45, color: LIGHT_LINE, dashArray: [2, 3] });
   text(page, 'CONDICION', 84, 137, 6.1, bold, MUTED, 44);
   box(page, 83, 113, 46, 18, WHITE, LIGHT_LINE, 0.55);
   centeredIn(page, payment, 83, 118, 46, payment.length > 7 ? 7.2 : 9.2, bold);
-  text(page, paymentMethod, 85, 96, paymentMethod.length > 8 ? 6.2 : 6.8, regular, INK, 42);
   text(page, 'TOTAL', 166, 137, 8, bold);
   text(page, 'S/', 143, 114, 9.8, bold);
   right(page, money(total), 100, 21, bold, INK, W - M - 7, 67);
@@ -247,7 +259,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)
     .forEach((item, index) => text(page, item, M, 36 - (index * 7.2), 6.1, regular, MUTED, 138));
   page.drawLine({ start: { x: 160, y: 17 }, end: { x: 160, y: 50 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  centered(page, 'GRACIAS', 43, 7, bold, INK, 48);
+  text(page, 'GRACIAS', 176, 43, 7, bold, INK, 42);
   text(page, 'POR CONFIAR', 176, 32, 6, regular, INK, 42);
   text(page, 'EN NOSOTROS', 176, 24, 6, regular, INK, 42);
 

@@ -110,17 +110,30 @@ const drawCenteredInBox = (page, text, x, y, width, size, font, color = INK) => 
   page.drawText(label, { x: x + Math.max(2, (width - textWidth) / 2), y, size, font, color });
 };
 
+const drawMaterialIcon = (page, path, x, y, size = 12, color = INK) => {
+  page.drawSvgPath(path, {
+    x,
+    y,
+    scale: size / 24,
+    color,
+  });
+};
+
+const ICONS = {
+  calendar: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM19 19H5V8h14v11z',
+  clock: 'M12 20c4.41 0 8-3.59 8-8s-3.59-8-8-8-8 3.59-8 8 3.59 8 8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
+  person: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+  package: 'M20 8.69V18c0 .72-.38 1.38-1 1.73l-6 3.46c-.62.36-1.38.36-2 0l-6-3.46A2 2 0 0 1 4 18V8.69c0-.72.38-1.38 1-1.73l6-3.46c.62-.36 1.38-.36 2 0l6 3.46c.62.35 1 1.01 1 1.73zM12 5.23 6.74 8.26 12 11.29l5.26-3.03L12 5.23zm-6 4.76V18l5 2.88v-7.86L6 9.99zm12 0-5 3.03v7.86L18 18V9.99z',
+  card: 'M20 4H4c-1.11 0-1.99.89-1.99 2L2 18c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
+  truck: 'M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
+};
+
 const drawCalendarIcon = (page, x, y, color = INK) => {
-  page.drawRectangle({ x, y, width: 8.5, height: 8.5, borderColor: color, borderWidth: 0.8 });
-  page.drawLine({ start: { x, y: y + 5.8 }, end: { x: x + 8.5, y: y + 5.8 }, thickness: 0.65, color });
-  page.drawLine({ start: { x: x + 2, y: y + 10 }, end: { x: x + 2, y: y + 7.2 }, thickness: 0.9, color });
-  page.drawLine({ start: { x: x + 6.4, y: y + 10 }, end: { x: x + 6.4, y: y + 7.2 }, thickness: 0.9, color });
+  drawMaterialIcon(page, ICONS.calendar, x, y, 10, color);
 };
 
 const drawClockIcon = (page, x, y, color = INK) => {
-  page.drawCircle({ x: x + 4.7, y: y + 4.7, size: 4.5, borderColor: color, borderWidth: 0.8 });
-  page.drawLine({ start: { x: x + 4.7, y: y + 4.7 }, end: { x: x + 4.7, y: y + 7.5 }, thickness: 0.75, color });
-  page.drawLine({ start: { x: x + 4.7, y: y + 4.7 }, end: { x: x + 6.8, y: y + 3.6 }, thickness: 0.75, color });
+  drawMaterialIcon(page, ICONS.clock, x, y, 10, color);
 };
 
 const drawDateTimeRow = (page, dateText, timeText, y, fonts) => {
@@ -143,35 +156,21 @@ const drawDateTimeRow = (page, dateText, timeText, y, fonts) => {
 };
 
 const drawVanRight = (page, x, y, color = INK) => {
-  page.drawLine({ start: { x: x - 14, y: y + 11 }, end: { x: x - 3, y: y + 11 }, thickness: 0.7, color });
-  page.drawLine({ start: { x: x - 10, y: y + 15 }, end: { x: x - 2, y: y + 15 }, thickness: 0.6, color });
-  page.drawRectangle({ x, y: y + 5, width: 31, height: 11, color });
-  page.drawRectangle({ x: x + 7, y: y + 14, width: 13, height: 7, color });
-  page.drawRectangle({ x: x + 3.5, y: y + 10, width: 8, height: 5, color: PAPER });
-  page.drawRectangle({ x: x + 13.5, y: y + 10, width: 7, height: 5, color: PAPER });
-  page.drawRectangle({ x: x + 27, y: y + 8, width: 6, height: 5, color });
-  page.drawCircle({ x: x + 8, y: y + 4.7, size: 3.2, color });
-  page.drawCircle({ x: x + 8, y: y + 4.7, size: 1.35, color: PAPER });
-  page.drawCircle({ x: x + 25, y: y + 4.7, size: 3.2, color });
-  page.drawCircle({ x: x + 25, y: y + 4.7, size: 1.35, color: PAPER });
+  page.drawLine({ start: { x: x - 15, y: y + 9 }, end: { x: x - 4, y: y + 9 }, thickness: 0.7, color });
+  page.drawLine({ start: { x: x - 10, y: y + 13 }, end: { x: x - 2, y: y + 13 }, thickness: 0.6, color });
+  drawMaterialIcon(page, ICONS.truck, x, y, 33, color);
 };
 
 const drawPersonIcon = (page, x, y, color = INK) => {
-  page.drawCircle({ x: x + 5, y: y + 5, size: 5, color });
-  page.drawCircle({ x: x + 5, y: y + 6.8, size: 1.5, color: PAPER });
-  page.drawSvgPath('M1.8 2 C2.6 3.9 3.8 4.8 5 4.8 C6.2 4.8 7.4 3.9 8.2 2 Z', { x, y, color: PAPER });
+  drawMaterialIcon(page, ICONS.person, x, y, 11, color);
 };
 
 const drawPackageIcon = (page, x, y, color = INK) => {
-  page.drawRectangle({ x, y, width: 12, height: 12, borderColor: color, borderWidth: 0.9 });
-  page.drawLine({ start: { x, y: y + 8 }, end: { x: x + 6, y: y + 12 }, thickness: 0.8, color });
-  page.drawLine({ start: { x: x + 12, y: y + 8 }, end: { x: x + 6, y: y + 12 }, thickness: 0.8, color });
-  page.drawLine({ start: { x: x + 6, y: y + 12 }, end: { x: x + 6, y }, thickness: 0.8, color });
+  drawMaterialIcon(page, ICONS.package, x, y, 13, color);
 };
 
 const drawCardIcon = (page, x, y, color = INK) => {
-  page.drawRectangle({ x, y, width: 13, height: 9, borderColor: color, borderWidth: 0.8 });
-  page.drawLine({ start: { x: x + 1.2, y: y + 6 }, end: { x: x + 11.8, y: y + 6 }, thickness: 0.7, color });
+  drawMaterialIcon(page, ICONS.card, x, y, 14, color);
 };
 
 const drawInfoBlock = (page, title, name, documentLabel, documentValue, phoneValue, x, y, width, fonts) => {
@@ -253,7 +252,7 @@ const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
   wrapText(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', bold, 7.7, CONTENT_WIDTH, 2).forEach((line, index) => {
     drawCentered(page, line, 604 - (index * 8.5), 7.7, bold, INK);
   });
-  drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, 581, 11.4, bold, INK);
+  drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, 579, 15.2, bold, INK);
   wrapText(empresa.domicilio_fiscal || '', regular, 6.4, CONTENT_WIDTH, 2).forEach((line, index) => {
     drawCentered(page, line, 566 - (index * 7.4), 6.4, regular, MUTED);
   });

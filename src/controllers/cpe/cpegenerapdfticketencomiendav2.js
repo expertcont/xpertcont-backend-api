@@ -86,6 +86,19 @@ const wrap = (text, font, size, maxWidth, maxLines = 2) => {
   return lines;
 };
 
+const wrapPreservingBreaks = (value, font, size, maxWidth, maxLines = 8) => {
+  const sourceLines = String(value || '').replace(/\r\n/g, '\n').split('\n');
+  const lines = [];
+
+  for (const sourceLine of sourceLines) {
+    if (lines.length >= maxLines) break;
+    const wrapped = wrap(sourceLine, font, size, maxWidth, maxLines - lines.length);
+    lines.push(...(wrapped.length ? wrapped : ['']));
+  }
+
+  return lines.slice(0, maxLines);
+};
+
 const text = (page, value, x, y, size, font, color = INK, maxWidth = null) => {
   page.drawText(maxWidth ? fit(value, font, size, maxWidth) : clean(value), { x, y, size, font, color });
 };
@@ -224,6 +237,14 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const payment = clean(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
   const paymentLabel = payment.includes('COBRAR') ? 'POR PAGAR' : payment;
   const content = encomienda.descripcion || jsonTicket.items?.[0]?.producto || 'SERVICIO DE TRANSPORTE DE ENCOMIENDA';
+  const descriptionFontSize = 10.2;
+  const descriptionLineHeight = 10;
+  const descriptionLines = wrapPreservingBreaks(String(content).toUpperCase(), regular, descriptionFontSize, CW - 16, 8);
+  const descriptionLineCount = Math.max(1, descriptionLines.length);
+  const encomiendaTopY = 264;
+  const encomiendaBaseY = 232 - ((descriptionLineCount - 1) * descriptionLineHeight) - 12;
+  const encomiendaHeight = encomiendaTopY - encomiendaBaseY;
+  const dynamicSummaryShift = encomiendaBaseY - 169;
   const qrText = [empresa.ruc, code, serie, number, issueDate, senderDoc, total].map(clean).join('|');
 
   const logoImage = await embedLogo(pdfDoc, logo);
@@ -267,7 +288,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // ENCOMIENDA_Y_SHIFT sube/baja encomienda sin tocar destino.
   // SUMMARY_Y_SHIFT sube/baja QR/total y el pie en conjunto.
   const ENCOMIENDA_Y_SHIFT = 12;
-  const SUMMARY_Y_SHIFT = 21;
+  const SUMMARY_Y_SHIFT = dynamicSummaryShift;
   const encomiendaY = (value) => afterOriginY(value + ENCOMIENDA_Y_SHIFT);
   const summaryY = (value) => afterOriginY(value + SUMMARY_Y_SHIFT);
 
@@ -337,24 +358,25 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   text(page, encomienda.destinatario_telefono || '-', M + 129, afterOriginY(287.5), 10.2, regular, INK, 64);
 
   // Detalle de encomienda: icono, unidad y descripcion del contenido.
-  // Altura del espacio: box(page, M, 190, CW, 74, ...).
-  // 190 es la base/inicio inferior; 74 es el alto total.
+  // Altura dinamica: encomiendaBaseY es la base inferior y encomiendaHeight el alto.
+  // El top queda fijo en 264; si hay mas lineas, la caja crece hacia abajo.
   // El SVG del icono usa la Y como base del dibujo completo.
   // Icono ENCOMIENDA: ajustar 253 si se ve arriba/abajo del label.
-  // Descripcion multilinea: ajustar 232, maxLines=4 e interlineado 8.8.
-  box(page, M, encomiendaY(190), CW, 74, SOFT, LIGHT_LINE, 0.45);
+  // Descripcion multilinea: respeta saltos manuales y envuelve lineas largas.
+  box(page, M, encomiendaY(encomiendaBaseY), CW, encomiendaHeight, SOFT, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.package, M + 8, encomiendaY(263), 14, ICON_MUTED);
   text(page, 'ENCOMIENDA', M + 25, encomiendaY(249), 10.2, regular, MUTED, 58);
   text(page, 'UNIDAD', M + 100, encomiendaY(249), 10.2, regular, MUTED, 26);
   text(page, unit, M + 128, encomiendaY(247.5), 10.2, regular, INK, 74);
-  wrap(String(content).toUpperCase(), regular, 10.2, CW - 16, 4).forEach((item, index) => {
-    text(page, item, M + 8, encomiendaY(232 - (index * 10)), 10.2, regular, INK, CW - 16);
+  descriptionLines.forEach((item, index) => {
+    text(page, item, M + 8, encomiendaY(232 - (index * descriptionLineHeight)), descriptionFontSize, regular, INK, CW - 16);
   });
 
   // Resumen inferior: QR a la izquierda, condicion al centro y total a la derecha.
   // Altura del espacio: box(page, M, 114, CW, 62, ...).
   // 114 es la base/inicio inferior; 62 es el alto total. Top = 176.
-  // Como encomienda empieza en y=190, el espacio entre ambos queda en 10 puntos.
+  // SUMMARY_Y_SHIFT se calcula con la base dinamica de ENCOMIENDA.
+  // Asi QR/total sube o baja sin descuadrarse cuando cambia la descripcion.
   // QR: y=119 y alto=53. Estado de pago: ajustar 145.
   box(page, M, summaryY(114), CW, 62, WHITE, LIGHT_LINE, 0.75);
   page.drawImage(qrImage, { x: M + 8, y: summaryY(119), width: 53, height: 53 });

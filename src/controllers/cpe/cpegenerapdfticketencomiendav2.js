@@ -284,7 +284,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Interlineado del remitente: cambiar "index * 5.8".
   box(page, M, bodyY(376), CW, 84, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, bodyY(438), 14, ICON_MUTED);
-  text(page, 'ORIGEN', M + 25, bodyY(444), 8.1, semibold, MUTED, 46);
+  centered(page, 'ORIGEN', bodyY(444), 8.1, semibold, MUTED, CW - 16);
   centeredTracking(page, String(origin).toUpperCase(), bodyY(430), 17.6, bold, INK, 0.22, CW - 18);
   line(page, bodyY(421), M + 8, W - M - 8, 0.45, LIGHT_LINE);
   text(page, 'REMITENTE', M + 8, bodyY(414), 7.2, regular, MUTED, 54);
@@ -303,7 +303,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Interlineado del destinatario: cambiar "index * 5.8".
   box(page, M, bodyY(281), CW, 84, WHITE, LIGHT_LINE, 0.45);
   drawIcon(page, ICONS.place, M + 8, bodyY(343), 14, ICON_MUTED);
-  text(page, 'DESTINO', M + 25, bodyY(349), 8.1, semibold, MUTED, 52);
+  centered(page, 'DESTINO', bodyY(349), 8.1, semibold, MUTED, CW - 16);
   centeredTracking(page, String(destination).toUpperCase(), bodyY(335), 17.6, bold, INK, 0.22, CW - 18);
   line(page, bodyY(326), M + 8, W - M - 8, 0.45, LIGHT_LINE);
   text(page, 'DESTINATARIO', M + 8, bodyY(319), 7.2, regular, MUTED, 64);
@@ -322,7 +322,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Icono ENCOMIENDA: ajustar 253 si se ve arriba/abajo del label.
   // Espacio interno: ajustar 249, 253 y 230.
   box(page, M, bodyY(222), CW, 42, SOFT, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.package, M + 8, bodyY(243), 14, ICON_MUTED);
+  drawIcon(page, ICONS.package, M + 8, bodyY(263), 14, ICON_MUTED);
   text(page, 'ENCOMIENDA', M + 25, bodyY(249), 7.8, regular, MUTED, 58);
   text(page, 'UNIDAD', M + 100, bodyY(249), 6.3, regular, MUTED, 26);
   text(page, unit, M + 128, bodyY(247.5), 10.2, regular, INK, 74);

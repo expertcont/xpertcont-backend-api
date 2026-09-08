@@ -244,7 +244,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const encomiendaTopY = 264;
   const encomiendaBaseY = 232 - ((descriptionLineCount - 1) * descriptionLineHeight) - 12;
   const encomiendaHeight = encomiendaTopY - encomiendaBaseY;
-  const dynamicSummaryShift = encomiendaBaseY - 169;
+  const dynamicSummaryShift = encomiendaBaseY - 149;
   const qrText = [empresa.ruc, code, serie, number, issueDate, senderDoc, total].map(clean).join('|');
 
   const logoImage = await embedLogo(pdfDoc, logo);
@@ -291,7 +291,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Ajustes de separacion entre los ultimos bloques.
   // ENCOMIENDA_Y_SHIFT sube/baja encomienda sin tocar destino.
   // SUMMARY_Y_SHIFT sube/baja QR/total y el pie en conjunto.
-  const ENCOMIENDA_Y_SHIFT = 22;
+  const ENCOMIENDA_Y_SHIFT = 31;
   const SUMMARY_Y_SHIFT = dynamicSummaryShift;
   const encomiendaY = (value) => afterOriginY(value + ENCOMIENDA_Y_SHIFT);
   const summaryY = (value) => afterOriginY(value + SUMMARY_Y_SHIFT);

@@ -322,9 +322,9 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Icono ENCOMIENDA: ajustar 253 si se ve arriba/abajo del label.
   // Espacio interno: ajustar 249, 253 y 230.
   box(page, M, bodyY(222), CW, 42, SOFT, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.package, M + 8, bodyY(253), 14, ICON_MUTED);
+  drawIcon(page, ICONS.package, M + 8, bodyY(243), 14, ICON_MUTED);
   text(page, 'ENCOMIENDA', M + 25, bodyY(249), 7.8, regular, MUTED, 58);
-  text(page, 'UNIDAD', M + 112, bodyY(249), 6.3, regular, MUTED, 26);
+  text(page, 'UNIDAD', M + 100, bodyY(249), 6.3, regular, MUTED, 26);
   text(page, unit, M + 128, bodyY(247.5), 10.2, regular, INK, 74);
   text(page, String(content).toUpperCase(), M + 8, bodyY(230), 11.6, regular, INK, CW - 16);
 

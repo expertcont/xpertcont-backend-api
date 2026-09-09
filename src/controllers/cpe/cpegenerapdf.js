@@ -159,36 +159,20 @@ const cpegenerapdf = async (size, logo, jsonVenta, digestvalue) => {
 
     // ── PAGO CONTADO ────────────────────────────────────────────────────
     if (draw) {
-      const tw = fontNegrita.widthOfTextAtSize("CONTADO", fontSize);
-      P.drawText("CONTADO", { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      const tw = fontNegrita.widthOfTextAtSize("CONTADO: " + venta.efectivo, fontSize);
+      P.drawText("CONTADO: " + venta.efectivo, { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+      //consumed += 10;
     }
-    consumed += 10;
-    
-    //no esta efectivo, ahora si
-    if (draw) {
-      if (venta.efectivo) {
-        const tw = fontNegrita.widthOfTextAtSize((venta.efectivo || ''), fontSize);
-        P.drawText((venta.efectivo || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-        consumed += 10;
-      }
-    }
-
+        
     //Seccion nueva aumentada
     if (draw) {
       if (venta.forma_pago2) {
-        const tw = fontNegrita.widthOfTextAtSize((venta.forma_pago2 || ''), fontSize);
-        P.drawText((venta.forma_pago2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-        consumed += 10;
+        const tw = fontNegrita.widthOfTextAtSize((venta.forma_pago2 + ' ' + venta.efectivo2 || ''), fontSize);
+        P.drawText((venta.forma_pago2 + ' ' + venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
+        //consumed += 10;
       }
     }
     
-    if (draw) {
-      if (Number(venta.efectivo2) > 0) {
-        const tw = fontNegrita.widthOfTextAtSize((venta.efectivo2 || ''), fontSize);
-        P.drawText((venta.efectivo2 || ''), { x:(ticketWidth-tw-marginLeftSize)/2, y:Y(), size:fontSize });
-        consumed += 10;
-      }
-    }
     consumed += 10;
     //Fin seccion nueva
 

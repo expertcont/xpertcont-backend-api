@@ -117,9 +117,9 @@ function drawHeader(page, { pngImage, pngDims, empresa, venta, cliente, font, fo
     page.drawText('Vendedor: '+venta.vendedor.trim(), { x:MARGIN_L+5, y, size:9, font }); y -= 11;
   }
   page.drawText('Forma de Pago: CONTADO', { x:MARGIN_L+5, y, size:9, font }); 
-  page.drawText((venta.efectivo || ''), { x:MARGIN_L+100, y, size:9, font });
+  page.drawText((venta.efectivo || ''), { x:MARGIN_L+140, y, size:9, font });
   page.drawText((venta.forma_pago2 || ''), { x:MARGIN_L+200, y, size:9, font });
-  page.drawText((venta.efectivo2 || ''), { x:MARGIN_L+240, y, size:9, font });
+  page.drawText((venta.efectivo2 || ''), { x:MARGIN_L+260, y, size:9, font });
   y -= 10;
   
 

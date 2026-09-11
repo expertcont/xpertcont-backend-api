@@ -5,7 +5,7 @@ const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
-const H = 420;
+const H = 500;
 const M = 12;
 const CW = W - (M * 2);
 
@@ -247,9 +247,9 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     ? 391 - ((originOptionalLines - 1) * originOptionalLineHeight)
     : 400;
   const originHeight = originTopY - originBaseY;
-  const receiverNameLines = wrap(String(receiverName).toUpperCase(), semibold, 14.6, CW - 16, 2);
-  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone.toUpperCase(), semibold, 10.8, CW - 16, 2) : [];
-  const receiverAddressLines = receiverAddress ? wrap(receiverAddress.toUpperCase(), semibold, 10.8, CW - 16, 3) : [];
+  const receiverNameLines = wrap(String(receiverName).toUpperCase(), semibold, 15.2, CW - 16, 2);
+  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone.toUpperCase(), semibold, 12.4, CW - 16, 2) : [];
+  const receiverAddressLines = receiverAddress ? wrap(receiverAddress.toUpperCase(), semibold, 12.4, CW - 16, 4) : [];
   const qrText = displayNumber;
 
   const logoImage = await embedLogo(pdfDoc, logo);
@@ -288,7 +288,7 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     .forEach((item, index) => centered(page, item, issuerTopY - 22 - (index * 8.2), 7.4, regular, MUTED));
 
   dotted(page, cpeTopY);
-  centered(page, documentName(code), cpeTopY - 11, 9.5, regular);
+  centered(page, 'DATOS DE ENTREGA', cpeTopY - 11, 10.4, semibold);
   centeredTracking(page, displayNumber || 'MODELO', cpeTopY - 29, 16.8, bold, INK, 0.55, CW - 8);
   text(page, 'FECHA', 39, cpeTopY - 38, 6.3, regular, MUTED, 29);
   text(page, datePe(issueDate), 68, cpeTopY - 41, 11.4, regular, INK, 52);
@@ -296,20 +296,20 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   text(page, 'HORA', 126, cpeTopY - 38, 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, cpeTopY - 41, 11.4, regular, INK, 58);
 
-  drawIcon(page, ICONS.place, M + 2, 228, 15, ICON_MUTED);
-  text(page, 'Dest.', M + 20, 229, 9.2, semibold, MUTED, 30);
-  centeredTracking(page, String(destination).toUpperCase(), 210, 20.5, bold, INK, 0.22, CW - 18);
+  centered(page, 'DESTINO', 284, 9.6, semibold, MUTED);
+  drawIcon(page, ICONS.place, M + 10, 258, 16, ICON_MUTED);
+  centeredTracking(page, String(destination).toUpperCase(), 258, 21.6, bold, INK, 0.22, CW - 18);
 
-  let cursorY = 192;
+  let cursorY = 239;
   receiverZoneLines.forEach((item, index) => {
-    text(page, index === 0 ? 'ZONA:' : '', M + 8, cursorY + 1.2, 7.2, semibold, MUTED, 26);
-    text(page, item, M + 37, cursorY, 10.8, semibold, INK, CW - 45);
-    cursorY -= 10.8;
+    text(page, index === 0 ? 'ZONA:' : '', M + 8, cursorY + 1.2, 8.2, semibold, MUTED, 28);
+    text(page, item, M + 40, cursorY, 12.4, semibold, INK, CW - 48);
+    cursorY -= 12.6;
   });
   receiverAddressLines.forEach((item, index) => {
-    text(page, index === 0 ? 'DIR:' : '', M + 8, cursorY + 1.2, 7.2, semibold, MUTED, 23);
-    text(page, item, M + 37, cursorY, 10.8, semibold, INK, CW - 45);
-    cursorY -= 10.8;
+    text(page, index === 0 ? 'DIR:' : '', M + 8, cursorY + 1.2, 8.2, semibold, MUTED, 25);
+    text(page, item, M + 40, cursorY, 12.4, semibold, INK, CW - 48);
+    cursorY -= 12.6;
   });
 
   cursorY -= receiverZoneLines.length || receiverAddressLines.length ? 4 : 0;
@@ -317,17 +317,17 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   text(page, 'DESTINATARIO', M + 8, cursorY - 8, 8.2, semibold, MUTED, 58);
   cursorY -= 24;
   receiverNameLines.forEach((item) => {
-    text(page, item, M + 8, cursorY, 14.6, semibold, INK, CW - 16);
-    cursorY -= 13.2;
+    text(page, item, M + 8, cursorY, 15.2, semibold, INK, CW - 16);
+    cursorY -= 13.8;
   });
 
-  const contactY = Math.max(74, cursorY - 3);
-  text(page, 'DNI:', M + 8, contactY + 2, 8.6, semibold, MUTED, 22);
-  text(page, receiverDoc, M + 34, contactY, 13.4, semibold, INK, 60);
-  drawIcon(page, ICONS.whatsapp, M + 103, contactY + 1, 12, ICON_MUTED);
-  text(page, encomienda.destinatario_telefono || '-', M + 120, contactY, 13.8, bold, INK, 82);
+  const contactY = Math.max(126, cursorY - 2);
+  text(page, 'DNI:', M + 8, contactY + 4, 8.6, semibold, MUTED, 22);
+  text(page, receiverDoc, M + 34, contactY, 14.2, semibold, INK, 60);
+  drawIcon(page, ICONS.whatsapp, M + 96, contactY + 2, 16, ICON_MUTED);
+  text(page, encomienda.destinatario_telefono || '-', M + 118, contactY, 18.2, bold, INK, 86);
 
-  page.drawImage(qrImage, { x: (W - 74) / 2, y: -2, width: 74, height: 74 });
+  page.drawImage(qrImage, { x: (W - 111) / 2, y: 8, width: 111, height: 111 });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

@@ -296,11 +296,11 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   text(page, 'HORA', 126, cpeTopY - 38, 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, cpeTopY - 41, 11.4, regular, INK, 58);
 
-  centered(page, 'DESTINO', 284, 9.6, semibold, MUTED);
-  drawIcon(page, ICONS.place, M + 10, 258, 16, ICON_MUTED);
-  centeredTracking(page, String(destination).toUpperCase(), 258, 21.6, bold, INK, 0.22, CW - 18);
+  centered(page, 'DESTINO', 316, 9.6, semibold, MUTED);
+  drawIcon(page, ICONS.place, M + 10, 292, 16, ICON_MUTED);
+  centeredTracking(page, String(destination).toUpperCase(), 290, 21.6, bold, INK, 0.22, CW - 18);
 
-  let cursorY = 239;
+  let cursorY = 271;
   receiverZoneLines.forEach((item, index) => {
     text(page, index === 0 ? 'ZONA:' : '', M + 8, cursorY + 1.2, 8.2, semibold, MUTED, 28);
     text(page, item, M + 40, cursorY, 12.4, semibold, INK, CW - 48);
@@ -321,13 +321,13 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     cursorY -= 13.8;
   });
 
-  const contactY = Math.max(126, cursorY - 2);
+  const contactY = Math.max(136, cursorY - 2);
   text(page, 'DNI:', M + 8, contactY + 4, 8.6, semibold, MUTED, 22);
   text(page, receiverDoc, M + 34, contactY, 14.2, semibold, INK, 60);
-  drawIcon(page, ICONS.whatsapp, M + 96, contactY + 2, 16, ICON_MUTED);
+  drawIcon(page, ICONS.whatsapp, M + 96, contactY + 6, 16, ICON_MUTED);
   text(page, encomienda.destinatario_telefono || '-', M + 118, contactY, 18.2, bold, INK, 86);
 
-  page.drawImage(qrImage, { x: (W - 111) / 2, y: 8, width: 111, height: 111 });
+  page.drawImage(qrImage, { x: (W - 111) / 2, y: 24, width: 111, height: 111 });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

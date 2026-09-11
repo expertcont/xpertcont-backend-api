@@ -5,9 +5,70 @@ const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
-const H = 450;
+const H = 500;
 const M = 12;
 const CW = W - (M * 2);
+
+const LAYOUT = {
+  logo: {
+    maxWidth: 190,
+    maxHeight: 65,
+    topMargin: 12,
+    issuerGap: 8,
+  },
+  issuer: {
+    fallbackTopGap: 34,
+    fallbackIssuerGap: 18,
+    razonSize: 7.8,
+    razonLineHeight: 5.8,
+    rucGap: 12,
+    rucSize: 9.2,
+    addressGap: 22,
+    addressSize: 7.4,
+    addressLineHeight: 8.2,
+    cpeGap: 42,
+  },
+  cpe: {
+    titleGap: 11,
+    titleSize: 10.4,
+    numberGap: 29,
+    numberSize: 16.8,
+    dateLabelGap: 38,
+    dateValueGap: 41,
+    dateValueSize: 11.4,
+  },
+  delivery: {
+    topGap: 52,
+    labelSize: 9.6,
+    iconX: M + 10,
+    iconGap: 24,
+    iconSize: 16,
+    destinationGap: 26,
+    destinationSize: 21.6,
+    detailsGap: 45,
+    detailsLabelX: M + 8,
+    detailsTextX: M + 40,
+    detailsLabelSize: 8.2,
+    detailsTextSize: 12.4,
+    detailsLineHeight: 12.6,
+    detailsLabelYOffset: 1.2,
+    detailsAfterGap: 4,
+  },
+  recipient: {
+    separatorYOffset: 5,
+    labelGap: 8,
+    labelSize: 8.2,
+    nameGap: 24,
+    nameSize: 15.2,
+    nameLineHeight: 13.8,
+  },
+  qr: {
+    size: 111,
+    minBottom: 12,
+    preferredY: 86,
+    gapAbove: 8,
+  },
+};
 
 // Medidas base del ticket:
 // W/H son ancho y alto de la hoja en puntos PDF.
@@ -262,12 +323,12 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   // pdf-lib interpreta width/height como puntos PDF, no como pixeles de pantalla.
   // Por eso se escala proporcionalmente para que entre en el ticket.
   if (logoImage) {
-    const scale = Math.min(190 / logoImage.width, 65 / logoImage.height);
+    const scale = Math.min(LAYOUT.logo.maxWidth / logoImage.width, LAYOUT.logo.maxHeight / logoImage.height);
     const logoWidth = logoImage.width * scale;
     const logoHeight = logoImage.height * scale;
     const logoX = (W - logoWidth) / 2;
-    const logoY = H - logoHeight - 12;
-    issuerTopY = logoY - 8;
+    const logoY = H - logoHeight - LAYOUT.logo.topMargin;
+    issuerTopY = logoY - LAYOUT.logo.issuerGap;
     page.drawImage(logoImage, {
       x: logoX,
       y: logoY,
@@ -275,53 +336,58 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
       height: logoHeight,
     });
   } else {
-    centered(page, 'TRANSPORTE DE ENCOMIENDAS', H - 34, 10.5, bold);
-    issuerTopY = H - 52;
+    centered(page, 'TRANSPORTE DE ENCOMIENDAS', H - LAYOUT.issuer.fallbackTopGap, 10.5, bold);
+    issuerTopY = H - LAYOUT.issuer.fallbackTopGap - LAYOUT.issuer.fallbackIssuerGap;
   }
 
-  const cpeTopY = issuerTopY - 42;
+  const cpeTopY = issuerTopY - LAYOUT.issuer.cpeGap;
 
   wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.8, CW, 2)
-    .forEach((item, index) => centered(page, item, issuerTopY - (index * 5.8), 7.8, regular));
-  centered(page, `RUC ${empresa.ruc || ''}`, issuerTopY - 12, 9.2, regular);
-  wrap(empresa.domicilio_fiscal || '', regular, 7.4, CW, 2)
-    .forEach((item, index) => centered(page, item, issuerTopY - 22 - (index * 8.2), 7.4, regular, MUTED));
+    .forEach((item, index) => centered(page, item, issuerTopY - (index * LAYOUT.issuer.razonLineHeight), LAYOUT.issuer.razonSize, regular));
+  centered(page, `RUC ${empresa.ruc || ''}`, issuerTopY - LAYOUT.issuer.rucGap, LAYOUT.issuer.rucSize, regular);
+  wrap(empresa.domicilio_fiscal || '', regular, LAYOUT.issuer.addressSize, CW, 2)
+    .forEach((item, index) => centered(page, item, issuerTopY - LAYOUT.issuer.addressGap - (index * LAYOUT.issuer.addressLineHeight), LAYOUT.issuer.addressSize, regular, MUTED));
 
   dotted(page, cpeTopY);
-  centered(page, 'DATOS DE ENTREGA', cpeTopY - 11, 10.4, semibold);
-  centeredTracking(page, displayNumber || 'MODELO', cpeTopY - 29, 16.8, bold, INK, 0.55, CW - 8);
-  text(page, 'FECHA', 39, cpeTopY - 38, 6.3, regular, MUTED, 29);
-  text(page, datePe(issueDate), 68, cpeTopY - 41, 11.4, regular, INK, 52);
+  centered(page, 'DATOS DE ENTREGA', cpeTopY - LAYOUT.cpe.titleGap, LAYOUT.cpe.titleSize, semibold);
+  centeredTracking(page, displayNumber || 'MODELO', cpeTopY - LAYOUT.cpe.numberGap, LAYOUT.cpe.numberSize, bold, INK, 0.55, CW - 8);
+  text(page, 'FECHA', 39, cpeTopY - LAYOUT.cpe.dateLabelGap, 6.3, regular, MUTED, 29);
+  text(page, datePe(issueDate), 68, cpeTopY - LAYOUT.cpe.dateValueGap, LAYOUT.cpe.dateValueSize, regular, INK, 52);
   line(page, cpeTopY - 40, 113, 113, 0.45);
-  text(page, 'HORA', 126, cpeTopY - 38, 6.3, regular, MUTED, 26);
-  text(page, timePe(issueTime), 152, cpeTopY - 41, 11.4, regular, INK, 58);
+  text(page, 'HORA', 126, cpeTopY - LAYOUT.cpe.dateLabelGap, 6.3, regular, MUTED, 26);
+  text(page, timePe(issueTime), 152, cpeTopY - LAYOUT.cpe.dateValueGap, LAYOUT.cpe.dateValueSize, regular, INK, 58);
 
-  const destinationY = cpeTopY - 26;
-  drawIcon(page, ICONS.place, M + 10, destinationY + 2, 16, ICON_MUTED);
-  centeredTracking(page, String(destination).toUpperCase(), destinationY, 21.6, bold, INK, 0.22, CW - 18);
+  const deliveryTopY = cpeTopY - LAYOUT.delivery.topGap;
+  centered(page, 'DESTINO', deliveryTopY, LAYOUT.delivery.labelSize, semibold, MUTED);
+  drawIcon(page, ICONS.place, LAYOUT.delivery.iconX, deliveryTopY - LAYOUT.delivery.iconGap, LAYOUT.delivery.iconSize, ICON_MUTED);
+  centeredTracking(page, String(destination).toUpperCase(), deliveryTopY - LAYOUT.delivery.destinationGap, LAYOUT.delivery.destinationSize, bold, INK, 0.22, CW - 18);
 
-  let cursorY = destinationY - 19;
+  let cursorY = deliveryTopY - LAYOUT.delivery.detailsGap;
   receiverZoneLines.forEach((item, index) => {
-    text(page, index === 0 ? 'ZONA:' : '', M + 8, cursorY + 1.2, 8.2, semibold, MUTED, 28);
-    text(page, item, M + 40, cursorY, 12.4, semibold, INK, CW - 48);
-    cursorY -= 12.6;
+    text(page, index === 0 ? 'ZONA:' : '', LAYOUT.delivery.detailsLabelX, cursorY + LAYOUT.delivery.detailsLabelYOffset, LAYOUT.delivery.detailsLabelSize, semibold, MUTED, 28);
+    text(page, item, LAYOUT.delivery.detailsTextX, cursorY, LAYOUT.delivery.detailsTextSize, semibold, INK, CW - 48);
+    cursorY -= LAYOUT.delivery.detailsLineHeight;
   });
   receiverAddressLines.forEach((item, index) => {
-    text(page, index === 0 ? 'DIR:' : '', M + 8, cursorY + 1.2, 8.2, semibold, MUTED, 25);
-    text(page, item, M + 40, cursorY, 12.4, semibold, INK, CW - 48);
-    cursorY -= 12.6;
+    text(page, index === 0 ? 'DIR:' : '', LAYOUT.delivery.detailsLabelX, cursorY + LAYOUT.delivery.detailsLabelYOffset, LAYOUT.delivery.detailsLabelSize, semibold, MUTED, 25);
+    text(page, item, LAYOUT.delivery.detailsTextX, cursorY, LAYOUT.delivery.detailsTextSize, semibold, INK, CW - 48);
+    cursorY -= LAYOUT.delivery.detailsLineHeight;
   });
 
-  cursorY -= receiverZoneLines.length || receiverAddressLines.length ? 4 : 0;
-  line(page, cursorY + 5, M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  centered(page, 'DESTINATARIO', cursorY - 8, 8.2, semibold, MUTED);
-  cursorY -= 24;
+  cursorY -= receiverZoneLines.length || receiverAddressLines.length ? LAYOUT.delivery.detailsAfterGap : 0;
+  line(page, cursorY + LAYOUT.recipient.separatorYOffset, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO', M + 8, cursorY - LAYOUT.recipient.labelGap, LAYOUT.recipient.labelSize, semibold, MUTED, 58);
+  cursorY -= LAYOUT.recipient.nameGap;
   receiverNameLines.forEach((item) => {
-    text(page, item, M + 8, cursorY, 15.2, semibold, INK, CW - 16);
-    cursorY -= 13.8;
+    text(page, item, M + 8, cursorY, LAYOUT.recipient.nameSize, semibold, INK, CW - 16);
+    cursorY -= LAYOUT.recipient.nameLineHeight;
   });
 
-  page.drawImage(qrImage, { x: (W - 111) / 2, y: 30, width: 111, height: 111 });
+  const qrY = Math.max(
+    LAYOUT.qr.minBottom,
+    Math.min(LAYOUT.qr.preferredY, cursorY - LAYOUT.qr.gapAbove - LAYOUT.qr.size)
+  );
+  page.drawImage(qrImage, { x: (W - LAYOUT.qr.size) / 2, y: qrY, width: LAYOUT.qr.size, height: LAYOUT.qr.size });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

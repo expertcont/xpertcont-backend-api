@@ -5,7 +5,7 @@ const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
-const H = 390;
+const H = 420;
 const M = 12;
 const CW = W - (M * 2);
 
@@ -140,6 +140,7 @@ const ICONS = {
   place: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   package: 'M20 8.69V18c0 .72-.38 1.38-1 1.73l-6 3.46c-.62.36-1.38.36-2 0l-6-3.46A2 2 0 0 1 4 18V8.69c0-.72.38-1.38 1-1.73l6-3.46c.62-.36 1.38-.36 2 0l6 3.46c.62.35 1 1.01 1 1.73zM12 5.23 6.74 8.26 12 11.29l5.26-3.03L12 5.23zm-6 4.76V18l5 2.88v-7.86L6 9.99zm12 0-5 3.03v7.86L18 18V9.99z',
   phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.32 1.84.55 2.8.68A2 2 0 0 1 22 16.92z',
+  whatsapp: 'M20.52 3.49A10 10 0 0 0 3.9 14.55L2.5 21.5l6.82-1.6A10 10 0 0 0 20.52 3.49zM12 20a8 8 0 0 1-4.07-1.12l-.29-.17-3.05.72.64-3.12-.18-.3A8 8 0 1 1 12 20zm4.44-5.74c-.24-.12-1.43-.71-1.65-.79-.22-.08-.38-.12-.54.12-.16.24-.62.79-.76.95-.14.16-.28.18-.52.06-.24-.12-1.01-.37-1.92-1.18-.71-.63-1.19-1.41-1.33-1.65-.14-.24-.01-.37.11-.49.11-.11.24-.28.36-.42.12-.14.16-.24.24-.4.08-.16.04-.3-.02-.42-.06-.12-.54-1.3-.74-1.78-.2-.47-.4-.41-.54-.42h-.46c-.16 0-.42.06-.64.3-.22.24-.84.82-.84 2s.86 2.32.98 2.48c.12.16 1.69 2.58 4.1 3.62.57.25 1.02.4 1.37.51.58.18 1.1.16 1.51.1.46-.07 1.43-.58 1.63-1.14.2-.56.2-1.04.14-1.14-.06-.1-.22-.16-.46-.28z',
 };
 
 const drawTrackingText = (page, value, x, y, size, font, color = INK, tracking = 0.5, maxWidth = null) => {
@@ -246,20 +247,15 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     ? 391 - ((originOptionalLines - 1) * originOptionalLineHeight)
     : 400;
   const originHeight = originTopY - originBaseY;
-  const destinationOptionalLineHeight = 10.5;
-  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone.toUpperCase(), semibold, 10.2, CW - 12, 2) : [];
-  const receiverAddressLines = receiverAddress ? wrap(receiverAddress.toUpperCase(), semibold, 10.2, CW - 12, 3) : [];
-  const destinationOptionalLines = receiverZoneLines.length + receiverAddressLines.length;
-  const destinationTopY = 365;
-  const destinationBaseY = destinationOptionalLines
-    ? 294 - ((destinationOptionalLines - 1) * destinationOptionalLineHeight)
-    : 302;
-  const destinationHeight = destinationTopY - destinationBaseY;
-  const qrText = [empresa.ruc, code, serie, number, issueDate, senderDoc, total].map(clean).join('|');
+  const receiverNameLines = wrap(String(receiverName).toUpperCase(), semibold, 14.6, CW - 16, 2);
+  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone.toUpperCase(), semibold, 10.8, CW - 16, 2) : [];
+  const receiverAddressLines = receiverAddress ? wrap(receiverAddress.toUpperCase(), semibold, 10.8, CW - 16, 3) : [];
+  const qrText = displayNumber;
 
   const logoImage = await embedLogo(pdfDoc, logo);
   const qrDataUrl = await QRCode.toDataURL(qrText || displayNumber || empresa.ruc || 'XPERTCONT');
   const qrImage = await pdfDoc.embedPng(base64ToBytes(qrDataUrl.split(',')[1]));
+  let issuerTopY = H - 74;
 
   // Logo superior.
   // La imagen puede venir en pixeles grandes, por ejemplo 380x130.
@@ -271,6 +267,7 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     const logoHeight = logoImage.height * scale;
     const logoX = (W - logoWidth) / 2;
     const logoY = H - logoHeight - 12;
+    issuerTopY = logoY - 8;
     page.drawImage(logoImage, {
       x: logoX,
       y: logoY,
@@ -279,63 +276,58 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     });
   } else {
     centered(page, 'TRANSPORTE DE ENCOMIENDAS', H - 34, 10.5, bold);
+    issuerTopY = H - 52;
   }
 
-  // Desplaza todo el cuerpo del ticket desde la razon social hacia abajo.
-  // Valor negativo baja el bloque; valor positivo lo sube.
-  // Ejemplo: -14 baja todo 14 puntos sin tocar el logo.
-  const BODY_Y_OFFSET = -304;
-  const bodyY = (value) => value + BODY_Y_OFFSET;
-  // Cabecera mas compacta: este valor sube todos los bloques debajo del emisor.
-  // Si reduces mas espacios entre razon social/RUC/direccion, aumenta este numero.
-  const HEADER_HEIGHT_REDUCTION = 10;
-  const afterHeaderY = (value) => bodyY(value + HEADER_HEIGHT_REDUCTION);
-  const ticketDestinationY = (value) => value - 194;
+  const cpeTopY = issuerTopY - 42;
 
-  // Cabecera del emisor: razon social, RUC y direccion.
-  // Espacio entre lineas: razon social usa "index * 5.8".
-  // Direccion usa "index * 8.2" para no pisarse por tener letra 7.4.
-  // Posicion vertical de cada bloque: cambiar 576, 563 o 550.
   wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.8, CW, 2)
-    .forEach((item, index) => centered(page, item, bodyY(576 - (index * 5.8)), 7.8, regular));
-  centered(page, `RUC ${empresa.ruc || ''}`, bodyY(563), 13.8, bold);
+    .forEach((item, index) => centered(page, item, issuerTopY - (index * 5.8), 7.8, regular));
+  centered(page, `RUC ${empresa.ruc || ''}`, issuerTopY - 12, 9.2, regular);
   wrap(empresa.domicilio_fiscal || '', regular, 7.4, CW, 2)
-    .forEach((item, index) => centered(page, item, bodyY(550 - (index * 8.2)), 7.4, regular, MUTED));
+    .forEach((item, index) => centered(page, item, issuerTopY - 22 - (index * 8.2), 7.4, regular, MUTED));
 
-  // Datos del comprobante: tipo, numero, fecha y hora.
-  // Altura del espacio de este bloque: esta debajo del separador punteado de cabecera.
-  // Para compactar mas, acercar esos Y y las lineas internas: 514, 496 y 480.
-  dotted(page, afterHeaderY(525));
-  centered(page, documentName(code), afterHeaderY(514), 9.5, regular);
-  centeredTracking(page, displayNumber || 'MODELO', afterHeaderY(496), 16.8, bold, INK, 0.55, CW - 8);
-  text(page, 'FECHA', 39, afterHeaderY(487), 6.3, regular, MUTED, 29);
-  text(page, datePe(issueDate), 68, afterHeaderY(484), 11.4, regular, INK, 52);
-  line(page, afterHeaderY(485), 113, 113, 0.45);
-  text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
-  text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
+  dotted(page, cpeTopY);
+  centered(page, documentName(code), cpeTopY - 11, 9.5, regular);
+  centeredTracking(page, displayNumber || 'MODELO', cpeTopY - 29, 16.8, bold, INK, 0.55, CW - 8);
+  text(page, 'FECHA', 39, cpeTopY - 38, 6.3, regular, MUTED, 29);
+  text(page, datePe(issueDate), 68, cpeTopY - 41, 11.4, regular, INK, 52);
+  line(page, cpeTopY - 40, 113, 113, 0.45);
+  text(page, 'HORA', 126, cpeTopY - 38, 6.3, regular, MUTED, 26);
+  text(page, timePe(issueTime), 152, cpeTopY - 41, 11.4, regular, INK, 58);
 
-  drawIcon(page, ICONS.place, M + 2, ticketDestinationY(353), 15, ICON_MUTED);
-  text(page, 'Dest.', M + 20, ticketDestinationY(347), 9.2, semibold, MUTED, 30);
-  centeredTracking(page, String(destination).toUpperCase(), ticketDestinationY(342), 19.8, bold, INK, 0.22, CW - 18);
-  line(page, ticketDestinationY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, ticketDestinationY(322), 8.2, semibold, MUTED, 58);
-  text(page, String(receiverName).toUpperCase(), M + 8, ticketDestinationY(307), 15, semibold, INK, CW - 16);
-  text(page, 'DNI:', M + 8, ticketDestinationY(290), 8.6, semibold, MUTED, 22);
-  text(page, receiverDoc, M + 34, ticketDestinationY(288), 13.4, semibold, INK, 60);
-  drawIcon(page, ICONS.phone, M + 104, ticketDestinationY(291), 11, ICON_MUTED);
-  text(page, encomienda.destinatario_telefono || '-', M + 120, ticketDestinationY(288), 13.8, bold, INK, 82);
+  drawIcon(page, ICONS.place, M + 2, 228, 15, ICON_MUTED);
+  text(page, 'Dest.', M + 20, 229, 9.2, semibold, MUTED, 30);
+  centeredTracking(page, String(destination).toUpperCase(), 210, 20.5, bold, INK, 0.22, CW - 18);
+
+  let cursorY = 192;
   receiverZoneLines.forEach((item, index) => {
-    const y = 273 - (index * destinationOptionalLineHeight);
-    text(page, index === 0 ? 'ZONA:' : '', M + 8, ticketDestinationY(y), 7.2, semibold, MUTED, 26);
-    text(page, item, M + 37, ticketDestinationY(y - 1.2), 10.2, semibold, INK, CW - 45);
+    text(page, index === 0 ? 'ZONA:' : '', M + 8, cursorY + 1.2, 7.2, semibold, MUTED, 26);
+    text(page, item, M + 37, cursorY, 10.8, semibold, INK, CW - 45);
+    cursorY -= 10.8;
   });
   receiverAddressLines.forEach((item, index) => {
-    const y = 273 - ((receiverZoneLines.length + index) * destinationOptionalLineHeight);
-    text(page, index === 0 ? 'DIR:' : '', M + 8, ticketDestinationY(y), 7.2, semibold, MUTED, 23);
-    text(page, item, M + 37, ticketDestinationY(y - 1.2), 10.2, semibold, INK, CW - 45);
+    text(page, index === 0 ? 'DIR:' : '', M + 8, cursorY + 1.2, 7.2, semibold, MUTED, 23);
+    text(page, item, M + 37, cursorY, 10.8, semibold, INK, CW - 45);
+    cursorY -= 10.8;
   });
 
-  page.drawImage(qrImage, { x: (W - 64) / 2, y: 10, width: 64, height: 64 });
+  cursorY -= receiverZoneLines.length || receiverAddressLines.length ? 4 : 0;
+  line(page, cursorY + 5, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO', M + 8, cursorY - 8, 8.2, semibold, MUTED, 58);
+  cursorY -= 24;
+  receiverNameLines.forEach((item) => {
+    text(page, item, M + 8, cursorY, 14.6, semibold, INK, CW - 16);
+    cursorY -= 13.2;
+  });
+
+  const contactY = Math.max(74, cursorY - 3);
+  text(page, 'DNI:', M + 8, contactY + 2, 8.6, semibold, MUTED, 22);
+  text(page, receiverDoc, M + 34, contactY, 13.4, semibold, INK, 60);
+  drawIcon(page, ICONS.whatsapp, M + 103, contactY + 1, 12, ICON_MUTED);
+  text(page, encomienda.destinatario_telefono || '-', M + 120, contactY, 13.8, bold, INK, 82);
+
+  page.drawImage(qrImage, { x: (W - 74) / 2, y: -2, width: 74, height: 74 });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

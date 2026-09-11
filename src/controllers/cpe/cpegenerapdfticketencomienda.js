@@ -73,7 +73,7 @@ const LAYOUT = {
   // deliveryTopY nace debajo de la linea fecha/hora del CPE.
   // Si se quiere eliminar espacio entre fecha y destino, reducir topGap.
   delivery: {
-    topGap: 44,
+    topGap: 56,
     iconX: M + 10,
     iconGap: 4,
     iconSize: 16,
@@ -103,7 +103,7 @@ const LAYOUT = {
   qr: {
     size: 111,
     minBottom: 6,
-    preferredY: 78,
+    preferredY: 96,
     gapAbove: 8,
   },
 };

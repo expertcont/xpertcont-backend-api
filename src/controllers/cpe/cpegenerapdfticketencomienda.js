@@ -1,47 +1,59 @@
+const fs = require('fs');
+const path = require('path');
 const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
-const TICKET_WIDTH = 226.77;
-const TICKET_HEIGHT = 650;
-const MARGIN = 11;
-const CONTENT_WIDTH = TICKET_WIDTH - (MARGIN * 2);
+const W = 226.77;
+const H = 390;
+const M = 12;
+const CW = W - (M * 2);
 
-const INK = rgb(0.04, 0.045, 0.055);
-const MUTED = rgb(0.36, 0.37, 0.4);
-const LINE = rgb(0.72, 0.73, 0.75);
-const LIGHT = rgb(0.945, 0.95, 0.958);
-const PAPER = rgb(1, 1, 1);
+// Medidas base del ticket:
+// W/H son ancho y alto de la hoja en puntos PDF.
+// M es el margen lateral y CW es el ancho util dentro de ese margen.
+// En pdf-lib, y=0 esta abajo y y=H esta arriba.
+// Para subir un elemento aumenta su Y; para bajarlo disminuye su Y.
+const INK = rgb(0.03, 0.035, 0.045);
+const MUTED = rgb(0.34, 0.35, 0.37);
+const LINE = rgb(0.7, 0.71, 0.73);
+const LIGHT_LINE = rgb(0.82, 0.83, 0.85);
+const SOFT = rgb(0.94, 0.945, 0.955);
+const ALERT = rgb(0.82, 0.12, 0.12);
+const ICON_MUTED = rgb(0.48, 0.5, 0.53);
+const WHITE = rgb(1, 1, 1);
 
-const cleanText = (value) => String(value || '').replace(/\s+/g, ' ').trim();
+const clean = (value) => String(value || '').replace(/\s+/g, ' ').trim();
 
 const money = (value) => Number(value || 0).toLocaleString('es-PE', {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
 });
 
-const fecha = (value) => {
+const datePe = (value) => {
   const text = String(value || '').slice(0, 10);
-  return text ? text.split('-').reverse().join('/') : '';
+  return text ? text.split('-').reverse().join('/') : '-';
 };
 
-const horaAmPm = (value) => {
-  const text = String(value || '').trim();
+const timePe = (value) => {
+  const text = clean(value);
   if (!text) return '-';
-  const horaTexto = text.includes('T') ? text.split('T')[1] : text.split(' ')[1] || text;
-  const [hora = '0', minuto = '00'] = horaTexto.split('.')[0].split(':');
-  const horaNumero = Number(hora);
-  if (!Number.isFinite(horaNumero)) return cleanText(value);
-  const periodo = horaNumero >= 12 ? 'PM' : 'AM';
-  const hora12 = horaNumero % 12 || 12;
-  return `${String(hora12).padStart(2, '0')}:${String(minuto).padStart(2, '0')} ${periodo}`;
+  const time = text.includes('T') ? text.split('T')[1] : text.split(' ')[1] || text;
+  const [hour = '0', minute = '00'] = time.split('.')[0].split(':');
+  const hourNumber = Number(hour);
+  if (!Number.isFinite(hourNumber)) return text;
+  const suffix = hourNumber >= 12 ? 'PM' : 'AM';
+  const hour12 = hourNumber % 12 || 12;
+  return `${String(hour12).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${suffix}`;
 };
 
-const comprobanteNombre = (rCod) => (rCod === '01' ? 'FACTURA ELECTRONICA' : 'BOLETA ELECTRONICA');
+const documentName = (code) => (code === '01' ? 'FACTURA ELECTRONICA' : 'BOLETA ELECTRONICA');
 
-const base64ToUint8Array = (base64) => Uint8Array.from(Buffer.from(base64, 'base64'));
+const base64ToBytes = (base64) => Uint8Array.from(Buffer.from(base64, 'base64'));
+const fontPath = (name) => path.join(__dirname, 'fonts', name);
 
-const fitText = (text, font, size, maxWidth) => {
-  const value = cleanText(text);
+const fit = (text, font, size, maxWidth) => {
+  const value = clean(text);
   if (!value) return '';
   if (font.widthOfTextAtSize(value, size) <= maxWidth) return value;
 
@@ -49,107 +61,120 @@ const fitText = (text, font, size, maxWidth) => {
   while (output.length > 3 && font.widthOfTextAtSize(`${output}...`, size) > maxWidth) {
     output = output.slice(0, -1);
   }
-
   return output.length > 3 ? `${output}...` : '';
 };
 
-const wrapText = (text, font, size, maxWidth, maxLines) => {
-  const words = cleanText(text).split(' ').filter(Boolean);
+const wrap = (text, font, size, maxWidth, maxLines = 2) => {
+  const words = clean(text).split(' ').filter(Boolean);
   const lines = [];
   let line = '';
 
-  words.forEach((word) => {
+  for (const word of words) {
     const next = line ? `${line} ${word}` : word;
     if (font.widthOfTextAtSize(next, size) <= maxWidth) {
       line = next;
-      return;
+      continue;
     }
-    if (line && lines.length < maxLines) lines.push(line);
+    if (line) lines.push(line);
     line = word;
-  });
+    if (lines.length >= maxLines) break;
+  }
 
   if (line && lines.length < maxLines) lines.push(line);
   if (!lines.length) return [''];
-  lines[lines.length - 1] = fitText(lines[lines.length - 1], font, size, maxWidth);
+  lines[lines.length - 1] = fit(lines[lines.length - 1], font, size, maxWidth);
   return lines;
 };
 
-const drawText = (page, text, x, y, size, font, color = INK, maxWidth = null) => {
-  const value = maxWidth ? fitText(text, font, size, maxWidth) : cleanText(text);
-  page.drawText(value, { x, y, size, font, color });
+const wrapPreservingBreaks = (value, font, size, maxWidth, maxLines = 8) => {
+  const sourceLines = String(value || '').replace(/\r\n/g, '\n').split('\n');
+  const lines = [];
+
+  for (const sourceLine of sourceLines) {
+    if (lines.length >= maxLines) break;
+    const wrapped = wrap(sourceLine, font, size, maxWidth, maxLines - lines.length);
+    lines.push(...(wrapped.length ? wrapped : ['']));
+  }
+
+  return lines.slice(0, maxLines);
 };
 
-const drawCentered = (page, text, y, size, font, color = INK, maxWidth = CONTENT_WIDTH) => {
-  const value = fitText(text, font, size, maxWidth);
-  const width = font.widthOfTextAtSize(value, size);
-  page.drawText(value, {
-    x: Math.max(MARGIN, (TICKET_WIDTH - width) / 2),
-    y,
-    size,
-    font,
-    color,
-  });
+const text = (page, value, x, y, size, font, color = INK, maxWidth = null) => {
+  page.drawText(maxWidth ? fit(value, font, size, maxWidth) : clean(value), { x, y, size, font, color });
 };
 
-const drawRight = (page, text, y, size, font, color = INK, right = TICKET_WIDTH - MARGIN, maxWidth = CONTENT_WIDTH) => {
-  const value = fitText(text, font, size, maxWidth);
-  const width = font.widthOfTextAtSize(value, size);
-  page.drawText(value, { x: right - width, y, size, font, color });
+// Texto centrado en el ancho del ticket.
+const centered = (page, value, y, size, font, color = INK, maxWidth = CW) => {
+  const label = fit(value, font, size, maxWidth);
+  const width = font.widthOfTextAtSize(label, size);
+  page.drawText(label, { x: (W - width) / 2, y, size, font, color });
 };
 
-const drawDottedLine = (page, y, x1 = MARGIN, x2 = TICKET_WIDTH - MARGIN) => {
+const right = (page, value, y, size, font, color = INK, rightX = W - M, maxWidth = CW) => {
+  const label = fit(value, font, size, maxWidth);
+  const width = font.widthOfTextAtSize(label, size);
+  page.drawText(label, { x: rightX - width, y, size, font, color });
+};
+
+const line = (page, y, x1 = M, x2 = W - M, thickness = 0.55, color = LINE) => {
+  page.drawLine({ start: { x: x1, y }, end: { x: x2, y }, thickness, color });
+};
+
+// Separador punteado. El valor y define la altura del separador.
+const dotted = (page, y, x1 = M, x2 = W - M) => {
   for (let x = x1; x < x2; x += 5) {
-    page.drawCircle({ x, y, size: 0.7, color: LINE });
+    page.drawCircle({ x, y, size: 0.65, color: LINE });
   }
 };
 
-const drawBox = (page, x, y, width, height, fill = PAPER, border = LINE, borderWidth = 0.55) => {
+// Caja de una seccion. x/y son la esquina inferior izquierda.
+const box = (page, x, y, width, height, fill = WHITE, border = LINE, borderWidth = 0.55) => {
   page.drawRectangle({ x, y, width, height, color: fill, borderColor: border, borderWidth });
 };
 
-const drawLabel = (page, text, x, y, fonts, maxWidth = 60) => {
-  drawText(page, text, x, y, 5.8, fonts.bold, MUTED, maxWidth);
-};
-
-const drawValue = (page, text, x, y, fonts, maxWidth = 80, size = 7.2) => {
-  drawText(page, text || '-', x, y, size, fonts.bold, INK, maxWidth);
-};
-
-const drawMaterialIcon = (page, path, x, y, size = 12, color = INK) => {
-  page.drawSvgPath(path, { x, y, scale: size / 24, color });
+const drawIcon = (page, pathData, x, y, size = 12, color = ICON_MUTED) => {
+  page.drawSvgPath(pathData, { x, y, scale: size / 24, color });
 };
 
 const ICONS = {
-  event: 'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM19 19H5V8h14v11z',
-  schedule: 'M12 20c4.41 0 8-3.59 8-8s-3.59-8-8-8-8 3.59-8 8 3.59 8 8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z',
-  person: 'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z',
+  place: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   package: 'M20 8.69V18c0 .72-.38 1.38-1 1.73l-6 3.46c-.62.36-1.38.36-2 0l-6-3.46A2 2 0 0 1 4 18V8.69c0-.72.38-1.38 1-1.73l6-3.46c.62-.36 1.38-.36 2 0l6 3.46c.62.35 1 1.01 1 1.73zM12 5.23 6.74 8.26 12 11.29l5.26-3.03L12 5.23zm-6 4.76V18l5 2.88v-7.86L6 9.99zm12 0-5 3.03v7.86L18 18V9.99z',
-  card: 'M20 4H4c-1.11 0-2 .89-2 2v12c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V6c0-1.11-.89-2-2-2zm0 14H4v-6h16v6zm0-10H4V6h16v2z',
-  truck: 'M20 8h-3V4H3c-1.1 0-2 .9-2 2v11h2c0 1.66 1.34 3 3 3s3-1.34 3-3h6c0 1.66 1.34 3 3 3s3-1.34 3-3h2v-5l-3-4zM6 18.5c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zm13.5-9 1.96 2.5H17V9.5h2.5zm-1.5 9c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5z',
 };
 
-const drawChip = (page, text, x, y, width, fonts) => {
-  drawBox(page, x, y, width, 12, LIGHT, LINE, 0.35);
-  drawCenteredInBox(page, text, x, y + 3.1, width, 6.4, fonts.bold, INK);
+const drawTrackingText = (page, value, x, y, size, font, color = INK, tracking = 0.5, maxWidth = null) => {
+  const label = maxWidth ? fit(value, font, size, maxWidth) : clean(value);
+  let cursor = x;
+
+  for (const character of label) {
+    page.drawText(character, { x: cursor, y, size, font, color });
+    cursor += font.widthOfTextAtSize(character, size) + tracking;
+  }
 };
 
-const drawCenteredInBox = (page, text, x, y, width, size, font, color = INK) => {
-  const value = fitText(text, font, size, width - 4);
-  const textWidth = font.widthOfTextAtSize(value, size);
-  page.drawText(value, { x: x + Math.max(2, (width - textWidth) / 2), y, size, font, color });
+const centeredTracking = (page, value, y, size, font, color = INK, tracking = 0.5, maxWidth = CW) => {
+  const label = fit(value, font, size, maxWidth);
+  const width = label
+    .split('')
+    .reduce((total, character) => total + font.widthOfTextAtSize(character, size) + tracking, 0) - tracking;
+
+  drawTrackingText(page, label, (W - width) / 2, y, size, font, color, tracking);
 };
 
-const drawParty = (page, title, name, docLabel, docValue, phoneValue, x, y, width, fonts) => {
-  drawMaterialIcon(page, ICONS.person, x, y + 47, 11, INK);
-  drawText(page, title, x + 14, y + 52, 7.2, fonts.bold, INK, width - 14);
-  wrapText(name || '-', fonts.bold, 7.3, width, 2).forEach((line, index) => {
-    drawText(page, line, x, y + 33 - (index * 8.5), 7.3, fonts.bold, INK, width);
-  });
-  page.drawLine({ start: { x, y: y + 18 }, end: { x: x + width, y: y + 18 }, thickness: 0.4, color: LINE, dashArray: [2, 3] });
-  drawText(page, docLabel, x, y + 8, 6.4, fonts.regular, INK, 42);
-  drawText(page, docValue || '-', x + 45, y + 8, 6.7, fonts.bold, INK, width - 45);
-  drawText(page, 'TELEFONO', x, y - 2, 6.4, fonts.regular, INK, 42);
-  drawText(page, phoneValue || '-', x + 45, y - 2, 6.7, fonts.regular, INK, width - 45);
+const pill = (page, label, x, y, width, fonts) => {
+  box(page, x, y, width, 12, SOFT, LINE, 0.35);
+  centeredIn(page, label, x, y + 3.2, width, 6.2, fonts.bold);
+};
+
+const centeredIn = (page, value, x, y, width, size, font, color = INK) => {
+  const label = fit(value, font, size, width - 4);
+  const textWidth = font.widthOfTextAtSize(label, size);
+  page.drawText(label, { x: x + ((width - textWidth) / 2), y, size, font, color });
+};
+
+// Label y valor en la misma linea. labelWidth controla donde empieza el valor.
+const labelValue = (page, label, value, x, y, labelWidth, valueWidth, fonts, valueBold = true) => {
+  text(page, label, x, y, 6.3, fonts.regular, MUTED, labelWidth);
+  text(page, value || '-', x + labelWidth, y, 7.6, valueBold ? fonts.semibold : fonts.regular, INK, valueWidth);
 };
 
 const embedLogo = async (pdfDoc, logo) => {
@@ -165,124 +190,158 @@ const embedLogo = async (pdfDoc, logo) => {
   }
 };
 
-const cpegenerapdfticketencomienda = async (logo, jsonTicket) => {
+const embedTicketFonts = async (pdfDoc) => {
+  pdfDoc.registerFontkit(fontkit);
+
+  try {
+    const regular = await pdfDoc.embedFont(fs.readFileSync(fontPath('BarlowCondensed-Regular.ttf')));
+    const semibold = await pdfDoc.embedFont(fs.readFileSync(fontPath('BarlowCondensed-SemiBold.ttf')));
+    const bold = await pdfDoc.embedFont(fs.readFileSync(fontPath('BarlowCondensed-Bold.ttf')));
+
+    return { regular, semibold, bold };
+  } catch (error) {
+    const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const semibold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    return { regular, semibold, bold };
+  }
+};
+
+const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   const pdfDoc = await PDFDocument.create();
-  const page = pdfDoc.addPage([TICKET_WIDTH, TICKET_HEIGHT]);
-  const regular = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const fonts = { regular, bold };
+  const page = pdfDoc.addPage([W, H]);
+  const fonts = await embedTicketFonts(pdfDoc);
+  const { regular, semibold, bold } = fonts;
 
   const empresa = jsonTicket.empresa || {};
   const venta = jsonTicket.venta || {};
   const encomienda = jsonTicket.encomienda || {};
-  const codigo = venta.codigo || encomienda.r_cod || '03';
+  const cliente = jsonTicket.cliente || {};
+  const code = venta.codigo || encomienda.r_cod || '03';
   const serie = venta.serie || encomienda.r_serie || '';
-  const numeroVenta = venta.numero || encomienda.r_numero || '';
-  const numero = [codigo, serie, numeroVenta].filter(Boolean).join('-');
-  const fechaEmision = venta.fecha_emision || encomienda.r_fecemi;
-  const horaEmision = venta.hora_emision || encomienda.ctrl_crea || encomienda.hora_grabacion;
+  const number = venta.numero || encomienda.r_numero || '';
+  const fullNumber = [code, serie, number].filter(Boolean).join('-');
+  const displayNumber = [serie, number].filter(Boolean).join('-') || fullNumber;
+  const issueDate = venta.fecha_emision || encomienda.r_fecemi;
+  const issueTime = venta.hora_emision || encomienda.ctrl_crea || encomienda.hora_grabacion;
   const total = venta.total || venta.r_monto_total || encomienda.r_monto_total || encomienda.precio_neto;
-  const clienteDocumento = encomienda.cliente_documento || encomienda.cliente_documento_id || jsonTicket.cliente?.documento_identidad;
-  const destinatarioDocumento = encomienda.destinatario_documento || encomienda.destinatario_documento_id;
-  const origen = encomienda.punto_venta_nombre || encomienda.id_punto_venta || 'ORIGEN';
-  const destino = encomienda.punto_venta_dest_nombre || encomienda.id_punto_venta_dest || 'DESTINO';
-  const unidad = `${cleanText(encomienda.placa)} ${cleanText(encomienda.licencia)}`.trim() || '-';
-  const condicionPago = cleanText(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
-  const medioPago = cleanText(venta.medio_pago || encomienda.medio_pago || 'EFECTIVO').toUpperCase();
-  const observaciones = cleanText(encomienda.observaciones || encomienda.observacion || (encomienda.numero_rdi ? `RDI: ${encomienda.numero_rdi}` : '-'));
-  const contenido = encomienda.descripcion || jsonTicket.items?.[0]?.producto || 'SERVICIO DE TRANSPORTE DE ENCOMIENDA';
-  const qrText = [empresa.ruc, codigo, serie, numeroVenta, fechaEmision, clienteDocumento, total].map(cleanText).join('|');
+  const origin = encomienda.punto_venta_nombre || encomienda.id_punto_venta || 'ORIGEN';
+  const destination = encomienda.punto_venta_dest_nombre || encomienda.id_punto_venta_dest || 'DESTINO';
+  const senderName = encomienda.cliente || cliente.razon_social_nombres || '-';
+  const senderDoc = encomienda.cliente_documento || encomienda.cliente_documento_id || cliente.documento_identidad || '-';
+  const senderOriginZone = clean(encomienda.remitente_zona || encomienda.cliente_zona);
+  const senderPickupAddress = clean(encomienda.remitente_direccion || encomienda.cliente_direccion || cliente.cliente_direccion || cliente.cliente_direccion_fact || cliente.direccion || '');
+  const receiverName = encomienda.destinatario || '-';
+  const receiverDoc = encomienda.destinatario_documento || encomienda.destinatario_documento_id || '-';
+  const receiverArrivalZone = clean(encomienda.destinatario_zona);
+  const receiverAddress = clean(encomienda.destinatario_direccion);
+  const originOptionalLineHeight = 6.6;
+  const senderZoneLines = senderOriginZone ? wrap(senderOriginZone, regular, 7.1, CW - 65, 2) : [];
+  const senderPickupAddressLines = senderPickupAddress ? wrap(senderPickupAddress, regular, 7.1, CW - 65, 2) : [];
+  const originOptionalLines = senderZoneLines.length + senderPickupAddressLines.length;
+  const originTopY = 460;
+  const originBaseY = originOptionalLines
+    ? 391 - ((originOptionalLines - 1) * originOptionalLineHeight)
+    : 400;
+  const originHeight = originTopY - originBaseY;
+  const destinationOptionalLineHeight = 6.6;
+  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone, regular, 7.1, CW - 65, 2) : [];
+  const receiverAddressLines = receiverAddress ? wrap(receiverAddress, regular, 7.1, CW - 65, 2) : [];
+  const destinationOptionalLines = receiverZoneLines.length + receiverAddressLines.length;
+  const destinationTopY = 365;
+  const destinationBaseY = destinationOptionalLines
+    ? 294 - ((destinationOptionalLines - 1) * destinationOptionalLineHeight)
+    : 302;
+  const destinationHeight = destinationTopY - destinationBaseY;
+  const qrText = [empresa.ruc, code, serie, number, issueDate, senderDoc, total].map(clean).join('|');
 
   const logoImage = await embedLogo(pdfDoc, logo);
-  const qrDataUrl = await QRCode.toDataURL(qrText || numero || empresa.ruc || 'XPERTCONT');
-  const qrImage = await pdfDoc.embedPng(base64ToUint8Array(qrDataUrl.split(',')[1]));
+  const qrDataUrl = await QRCode.toDataURL(qrText || displayNumber || empresa.ruc || 'XPERTCONT');
+  const qrImage = await pdfDoc.embedPng(base64ToBytes(qrDataUrl.split(',')[1]));
 
+  // Logo superior.
+  // La imagen puede venir en pixeles grandes, por ejemplo 380x130.
+  // pdf-lib interpreta width/height como puntos PDF, no como pixeles de pantalla.
+  // Por eso se escala proporcionalmente para que entre en el ticket.
   if (logoImage) {
-    const scale = Math.min(160 / logoImage.width, 48 / logoImage.height);
+    const scale = Math.min(190 / logoImage.width, 65 / logoImage.height);
     const logoWidth = logoImage.width * scale;
     const logoHeight = logoImage.height * scale;
+    const logoX = (W - logoWidth) / 2;
+    const logoY = H - logoHeight - 12;
     page.drawImage(logoImage, {
-      x: (TICKET_WIDTH - logoWidth) / 2,
-      y: 591,
+      x: logoX,
+      y: logoY,
       width: logoWidth,
       height: logoHeight,
     });
   } else {
-    drawCentered(page, 'XPERTCONT EXPRESS', 616, 13, bold);
+    centered(page, 'TRANSPORTE DE ENCOMIENDAS', H - 34, 10.5, bold);
   }
 
-  wrapText(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', bold, 7.3, CONTENT_WIDTH, 2).forEach((line, index) => {
-    drawCentered(page, line, 574 - (index * 8), 7.3, bold);
+  // Desplaza todo el cuerpo del ticket desde la razon social hacia abajo.
+  // Valor negativo baja el bloque; valor positivo lo sube.
+  // Ejemplo: -14 baja todo 14 puntos sin tocar el logo.
+  const BODY_Y_OFFSET = -304;
+  const bodyY = (value) => value + BODY_Y_OFFSET;
+  // Cabecera mas compacta: este valor sube todos los bloques debajo del emisor.
+  // Si reduces mas espacios entre razon social/RUC/direccion, aumenta este numero.
+  const HEADER_HEIGHT_REDUCTION = 10;
+  const afterHeaderY = (value) => bodyY(value + HEADER_HEIGHT_REDUCTION);
+  const ticketDestinationY = (value) => value - 194;
+
+  // Cabecera del emisor: razon social, RUC y direccion.
+  // Espacio entre lineas: razon social usa "index * 5.8".
+  // Direccion usa "index * 8.2" para no pisarse por tener letra 7.4.
+  // Posicion vertical de cada bloque: cambiar 576, 563 o 550.
+  wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.8, CW, 2)
+    .forEach((item, index) => centered(page, item, bodyY(576 - (index * 5.8)), 7.8, regular));
+  centered(page, `RUC ${empresa.ruc || ''}`, bodyY(563), 13.8, bold);
+  wrap(empresa.domicilio_fiscal || '', regular, 7.4, CW, 2)
+    .forEach((item, index) => centered(page, item, bodyY(550 - (index * 8.2)), 7.4, regular, MUTED));
+
+  // Datos del comprobante: tipo, numero, fecha y hora.
+  // Altura del espacio de este bloque: esta debajo del separador punteado de cabecera.
+  // Para compactar mas, acercar esos Y y las lineas internas: 514, 496 y 480.
+  dotted(page, afterHeaderY(525));
+  centered(page, documentName(code), afterHeaderY(514), 9.5, regular);
+  centeredTracking(page, displayNumber || 'MODELO', afterHeaderY(496), 16.8, bold, INK, 0.55, CW - 8);
+  text(page, 'FECHA', 39, afterHeaderY(487), 6.3, regular, MUTED, 29);
+  text(page, datePe(issueDate), 68, afterHeaderY(484), 11.4, regular, INK, 52);
+  line(page, afterHeaderY(485), 113, 113, 0.45);
+  text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
+  text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
+
+  // Seccion DESTINO. La altura baja solo cuando existe direccion de llegada.
+  // destinationBaseY es la base inferior dinamica; destinationTopY mantiene fijo el encabezado.
+  box(page, M, ticketDestinationY(destinationBaseY), CW, destinationHeight, WHITE, LIGHT_LINE, 0.45);
+  drawIcon(page, ICONS.place, M + 8, ticketDestinationY(353), 14, ICON_MUTED);
+  text(page, 'DESTINO', M + 25, ticketDestinationY(346), 8.1, semibold, MUTED, 52);
+  centeredTracking(page, String(destination).toUpperCase(), ticketDestinationY(342), 17.6, bold, INK, 0.22, CW - 18);
+  line(page, ticketDestinationY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  text(page, 'DESTINATARIO:', M + 8, ticketDestinationY(322), 7.1, semibold, MUTED, 52);
+  text(page, receiverName, M + 63, ticketDestinationY(321.4), 9.5, regular, INK, CW - 71);
+  text(page, 'DNI:', M + 8, ticketDestinationY(311), 7.1, semibold, MUTED, 20);
+  text(page, receiverDoc, M + 32, ticketDestinationY(310.4), 9.2, regular, INK, 65);
+  text(page, 'TEL:', M + 109, ticketDestinationY(311), 7.1, semibold, MUTED, 20);
+  text(page, encomienda.destinatario_telefono || '-', M + 132, ticketDestinationY(310.4), 11.2, regular, INK, 61);
+  receiverZoneLines.forEach((item, index) => {
+    const y = 300 - (index * destinationOptionalLineHeight);
+    text(page, index === 0 ? 'ZONA LLEGADA:' : '', M + 8, ticketDestinationY(y), 6.3, semibold, MUTED, 46);
+    text(page, item, M + 59, ticketDestinationY(y - 0.4), 7.1, regular, INK, CW - 61);
   });
-  drawCentered(page, `RUC ${cleanText(empresa.ruc || '')}`, 548, 15.6, bold);
-  wrapText(empresa.domicilio_fiscal || '', regular, 5.9, CONTENT_WIDTH, 2).forEach((line, index) => {
-    drawCentered(page, line, 532 - (index * 7), 5.9, regular, MUTED);
+  receiverAddressLines.forEach((item, index) => {
+    const y = 300 - ((receiverZoneLines.length + index) * destinationOptionalLineHeight);
+    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, ticketDestinationY(y), 6.3, semibold, MUTED, 45);
+    text(page, item, M + 57, ticketDestinationY(y - 0.4), 7.1, regular, INK, CW - 61);
   });
 
-  page.drawLine({ start: { x: MARGIN, y: 511 }, end: { x: TICKET_WIDTH - MARGIN, y: 511 }, thickness: 0.75, color: LINE });
-  drawCentered(page, comprobanteNombre(codigo), 492, 9.6, bold);
-  drawCentered(page, numero || 'MODELO', 468, 18, bold);
-  drawMaterialIcon(page, ICONS.event, 45, 445, 10);
-  drawText(page, `FECHA ${fecha(fechaEmision)}`, 58, 447, 7.2, regular, INK, 62);
-  page.drawLine({ start: { x: 116, y: 443 }, end: { x: 116, y: 457 }, thickness: 0.45, color: LINE });
-  drawMaterialIcon(page, ICONS.schedule, 128, 445, 10);
-  drawText(page, `HORA ${horaAmPm(horaEmision)}`, 141, 447, 7.2, regular, INK, 68);
-  drawDottedLine(page, 426);
-
-  drawChip(page, 'SALIDA', MARGIN + 6, 398, 46, fonts);
-  drawChip(page, 'LLEGADA', TICKET_WIDTH - MARGIN - 52, 398, 46, fonts);
-  drawText(page, String(origen).toUpperCase(), MARGIN, 371, 15.8, bold, INK, 83);
-  drawMaterialIcon(page, ICONS.truck, 96, 365, 32);
-  page.drawLine({ start: { x: 129, y: 377 }, end: { x: 165, y: 377 }, thickness: 0.9, color: INK, dashArray: [1.2, 3] });
-  drawText(page, '>', 168, 371, 14, bold);
-  drawRight(page, String(destino).toUpperCase(), 371, 15.8, bold, INK, TICKET_WIDTH - MARGIN, 68);
-  page.drawLine({ start: { x: MARGIN, y: 350 }, end: { x: TICKET_WIDTH - MARGIN, y: 350 }, thickness: 0.55, color: LINE });
-
-  const partyWidth = (CONTENT_WIDTH - 12) / 2;
-  drawParty(page, 'REMITENTE', encomienda.cliente || jsonTicket.cliente?.razon_social_nombres, 'DNI / RUC', clienteDocumento, encomienda.cliente_telefono, MARGIN, 288, partyWidth, fonts);
-  page.drawLine({ start: { x: MARGIN + partyWidth + 6, y: 340 }, end: { x: MARGIN + partyWidth + 6, y: 282 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  drawParty(page, 'DESTINATARIO', encomienda.destinatario, 'DNI', destinatarioDocumento, encomienda.destinatario_telefono, MARGIN + partyWidth + 12, 288, partyWidth, fonts);
-
-  drawBox(page, MARGIN, 194, CONTENT_WIDTH, 72, LIGHT, LINE, 0.45);
-  drawMaterialIcon(page, ICONS.package, MARGIN + 8, 241, 14);
-  drawText(page, 'ENCOMIENDA', MARGIN + 27, 245, 9.2, bold);
-  drawLabel(page, 'UNIDAD', 142, 246, fonts, 35);
-  drawRight(page, unidad, 234, 8, bold, INK, TICKET_WIDTH - MARGIN - 8, 70);
-  page.drawLine({ start: { x: MARGIN + 8, y: 229 }, end: { x: TICKET_WIDTH - MARGIN - 8, y: 229 }, thickness: 0.45, color: LINE });
-  drawLabel(page, 'CONTENIDO', MARGIN + 8, 216, fonts, 55);
-  drawText(page, String(contenido).toUpperCase(), MARGIN + 8, 201, 12, bold, INK, CONTENT_WIDTH - 16);
-  page.drawLine({ start: { x: MARGIN, y: 184 }, end: { x: TICKET_WIDTH - MARGIN, y: 184 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  drawLabel(page, 'OBSERVACIONES', MARGIN + 8, 173, fonts, 64);
-  drawText(page, observaciones || '-', MARGIN + 76, 173, 7, regular, INK, CONTENT_WIDTH - 86);
-
-  drawBox(page, MARGIN, 93, CONTENT_WIDTH, 76, PAPER, INK, 0.75);
-  page.drawCircle({ x: MARGIN, y: 131, size: 5.5, color: PAPER, borderColor: INK, borderWidth: 0.75 });
-  page.drawCircle({ x: TICKET_WIDTH - MARGIN, y: 131, size: 5.5, color: PAPER, borderColor: INK, borderWidth: 0.75 });
-  page.drawImage(qrImage, { x: MARGIN + 8, y: 105, width: 54, height: 54 });
-  page.drawLine({ start: { x: 75, y: 104 }, end: { x: 75, y: 158 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  page.drawLine({ start: { x: 137, y: 104 }, end: { x: 137, y: 158 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  drawLabel(page, 'PAGO', 86, 149, fonts, 40);
-  drawBox(page, 86, 125, 42, 18, PAPER, INK, 0.55);
-  drawCenteredInBox(page, condicionPago, 86, 130, 42, 10, bold);
-  drawMaterialIcon(page, ICONS.card, 87, 105, 14);
-  drawText(page, medioPago, 104, 108, 7.1, regular, INK, 31);
-  drawLabel(page, 'TOTAL', 170, 149, fonts, 32);
-  drawText(page, 'S/', 146, 126, 10, bold);
-  drawRight(page, money(total), 112, 21, bold, INK, TICKET_WIDTH - MARGIN - 7, 65);
-
-  page.drawLine({ start: { x: MARGIN, y: 75 }, end: { x: TICKET_WIDTH - MARGIN, y: 75 }, thickness: 0.65, color: LINE });
-  drawText(page, 'TERMINOS Y CONDICIONES', MARGIN, 58, 6.8, bold);
-  wrapText('Conserva este ticket para seguimiento y entrega. La empresa no se responsabiliza por articulos no declarados o embalaje inadecuado.', regular, 6.2, 138, 3).forEach((line, index) => {
-    drawText(page, line, MARGIN, 47 - (index * 7.5), 6.2, regular, MUTED, 138);
-  });
-  page.drawLine({ start: { x: 160, y: 22 }, end: { x: 160, y: 61 }, thickness: 0.45, color: LINE, dashArray: [2, 3] });
-  drawMaterialIcon(page, ICONS.package, 166, 39, 15);
-  drawText(page, 'GRACIAS POR', 184, 50, 5.9, regular, INK, 38);
-  drawText(page, 'CONFIAR EN', 184, 42, 5.9, regular, INK, 38);
-  drawText(page, 'NOSOTROS', 184, 34, 5.9, regular, INK, 38);
+  box(page, M, 6, CW, 72, WHITE, LIGHT_LINE, 0.75);
+  page.drawImage(qrImage, { x: (W - 64) / 2, y: 10, width: 64, height: 64 });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };
 };
 
-module.exports = cpegenerapdfticketencomienda;
+module.exports = generarPdfTicketEncomienda;

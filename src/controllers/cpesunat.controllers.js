@@ -834,11 +834,11 @@ async function generarPDFTicketEncomienda(req, res) {
       venta.serie,
       venta.numero,
       resultadoPdf.buffer_pdf,
-      'PDF'
+      'PDF_ADMIN'
     );
 
     const server_sftp = process.env.CPE_HOST;
-    const ruta_pdf = `http://${server_sftp}:8080/descargas/${ruc}/${ruc}-${venta.codigo}-${venta.serie}-${venta.numero}.pdf`;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${ruc}/${ruc}-${venta.codigo}-${venta.serie}-${venta.numero}-admin.pdf`;
 
     return res.status(200).json({
       respuesta_sunat_descripcion: 'Ticket de encomienda generado correctamente',

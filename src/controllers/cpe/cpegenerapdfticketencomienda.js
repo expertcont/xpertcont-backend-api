@@ -5,17 +5,47 @@ const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
-const H = 500;
+const H = 465;
 const M = 12;
 const CW = W - (M * 2);
 
+// ============================================================
+// TICKET ADMIN DE ENCOMIENDA
+// Endpoint backend-api:
+//   POST /cpesunatticketencomienda
+//
+// Este archivo genera el PDF pequeño para pegar al paquete.
+// Contenido actual:
+//   1. Cabecera del emisor y datos basicos del CPE.
+//   2. Datos de entrega: destino, zona/direccion y destinatario.
+//   3. QR con solo "serie-numero" para lector de barras/QR.
+//
+// Importante:
+//   - El ticket completo vive en cpegenerapdfticketencomiendav2.js.
+//   - No tocar /v2 cuando se personaliza este formato admin.
+//
+// Sistema de coordenadas pdf-lib:
+//   - x=0,y=0 esta en la esquina inferior izquierda.
+//   - Para subir un elemento, aumenta su Y.
+//   - Para bajarlo, disminuye su Y.
+//   - W/H son ancho y alto del papel en puntos PDF.
+//   - M es margen lateral; CW es el ancho util dentro del margen.
+//
+// Como personalizar sin romper el layout:
+//   - Modifica primero las variables de LAYOUT.
+//   - Evita cambiar numeros sueltos dentro del dibujo.
+//   - Los bloques se calculan en cadena:
+//       logo -> emisor -> CPE -> entrega -> destinatario -> QR
+// ============================================================
 const LAYOUT = {
+  // Logo superior. Si la empresa no tiene logo, se imprime un titulo fallback.
   logo: {
     maxWidth: 190,
     maxHeight: 65,
     topMargin: 12,
     issuerGap: 8,
   },
+  // Cabecera del emisor. issuerTopY nace justo debajo del logo.
   issuer: {
     fallbackTopGap: 34,
     fallbackIssuerGap: 18,
@@ -28,6 +58,8 @@ const LAYOUT = {
     addressLineHeight: 8.2,
     cpeGap: 42,
   },
+  // Datos del CPE. cpeTopY nace debajo del emisor.
+  // Aqui se imprime "DATOS DE ENTREGA", serie-numero, fecha y hora.
   cpe: {
     titleGap: 11,
     titleSize: 10.4,
@@ -37,15 +69,17 @@ const LAYOUT = {
     dateValueGap: 41,
     dateValueSize: 11.4,
   },
+  // Bloque operativo para el transportista.
+  // deliveryTopY nace debajo de la linea fecha/hora del CPE.
+  // Si se quiere eliminar espacio entre fecha y destino, reducir topGap.
   delivery: {
-    topGap: 52,
-    labelSize: 9.6,
+    topGap: 32,
     iconX: M + 10,
-    iconGap: 24,
+    iconGap: 4,
     iconSize: 16,
-    destinationGap: 26,
+    destinationGap: 6,
     destinationSize: 21.6,
-    detailsGap: 45,
+    detailsGap: 28,
     detailsLabelX: M + 8,
     detailsTextX: M + 40,
     detailsLabelSize: 8.2,
@@ -54,6 +88,7 @@ const LAYOUT = {
     detailsLabelYOffset: 1.2,
     detailsAfterGap: 4,
   },
+  // Bloque del destinatario. Empieza despues de zona/direccion.
   recipient: {
     separatorYOffset: 5,
     labelGap: 8,
@@ -62,10 +97,13 @@ const LAYOUT = {
     nameSize: 15.2,
     nameLineHeight: 13.8,
   },
+  // QR inferior. Su Y se calcula desde el final del bloque destinatario.
+  // preferredY es la posicion ideal; minBottom evita que se salga del papel.
+  // gapAbove separa el QR del texto anterior.
   qr: {
     size: 111,
     minBottom: 12,
-    preferredY: 86,
+    preferredY: 112,
     gapAbove: 8,
   },
 };
@@ -316,12 +354,16 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   const logoImage = await embedLogo(pdfDoc, logo);
   const qrDataUrl = await QRCode.toDataURL(qrText || displayNumber || empresa.ruc || 'XPERTCONT');
   const qrImage = await pdfDoc.embedPng(base64ToBytes(qrDataUrl.split(',')[1]));
+
+  // issuerTopY:
+  //   Coordenada Y donde empieza la razon social del emisor.
+  //   Se define despues de dibujar el logo para que la cabecera quede pegada
+  //   al alto real del logo.
   let issuerTopY = H - 74;
 
-  // Logo superior.
-  // La imagen puede venir en pixeles grandes, por ejemplo 380x130.
-  // pdf-lib interpreta width/height como puntos PDF, no como pixeles de pantalla.
-  // Por eso se escala proporcionalmente para que entre en el ticket.
+  // SECCION 1: LOGO
+  // Inicia arriba del papel: H - logoHeight - LAYOUT.logo.topMargin.
+  // Tocar maxWidth/maxHeight para cambiar tamaño; tocar topMargin para subir/bajar.
   if (logoImage) {
     const scale = Math.min(LAYOUT.logo.maxWidth / logoImage.width, LAYOUT.logo.maxHeight / logoImage.height);
     const logoWidth = logoImage.width * scale;
@@ -340,29 +382,49 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     issuerTopY = H - LAYOUT.issuer.fallbackTopGap - LAYOUT.issuer.fallbackIssuerGap;
   }
 
+  // cpeTopY:
+  //   Coordenada Y de la linea punteada que separa emisor y datos del CPE.
+  //   Nace desde issuerTopY - LAYOUT.issuer.cpeGap.
   const cpeTopY = issuerTopY - LAYOUT.issuer.cpeGap;
 
+  // SECCION 2: EMISOR
+  // Inicia en issuerTopY. Incluye razon social, RUC y direccion fiscal.
   wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.8, CW, 2)
     .forEach((item, index) => centered(page, item, issuerTopY - (index * LAYOUT.issuer.razonLineHeight), LAYOUT.issuer.razonSize, regular));
   centered(page, `RUC ${empresa.ruc || ''}`, issuerTopY - LAYOUT.issuer.rucGap, LAYOUT.issuer.rucSize, regular);
   wrap(empresa.domicilio_fiscal || '', regular, LAYOUT.issuer.addressSize, CW, 2)
     .forEach((item, index) => centered(page, item, issuerTopY - LAYOUT.issuer.addressGap - (index * LAYOUT.issuer.addressLineHeight), LAYOUT.issuer.addressSize, regular, MUTED));
 
+  // SECCION 3: DATOS CPE / IMPRESION
+  // Inicia en cpeTopY. Mantiene la misma idea de la cabecera original:
+  // titulo, serie-numero, fecha del CPE y hora de impresion/emision.
   dotted(page, cpeTopY);
   centered(page, 'DATOS DE ENTREGA', cpeTopY - LAYOUT.cpe.titleGap, LAYOUT.cpe.titleSize, semibold);
-  centeredTracking(page, displayNumber || 'MODELO', cpeTopY - LAYOUT.cpe.numberGap, LAYOUT.cpe.numberSize, bold, INK, 0.55, CW - 8);
+  centeredTracking(page, displayNumber || 'MODELO', cpeTopY - LAYOUT.cpe.numberGap, LAYOUT.cpe.numberSize, regular, INK, 0.55, CW - 8);
   text(page, 'FECHA', 39, cpeTopY - LAYOUT.cpe.dateLabelGap, 6.3, regular, MUTED, 29);
   text(page, datePe(issueDate), 68, cpeTopY - LAYOUT.cpe.dateValueGap, LAYOUT.cpe.dateValueSize, regular, INK, 52);
   line(page, cpeTopY - 40, 113, 113, 0.45);
   text(page, 'HORA', 126, cpeTopY - LAYOUT.cpe.dateLabelGap, 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, cpeTopY - LAYOUT.cpe.dateValueGap, LAYOUT.cpe.dateValueSize, regular, INK, 58);
 
+  // deliveryTopY:
+  //   Coordenada Y donde inicia el bloque de entrega.
+  //   Si aparece mucho aire entre fecha/hora y destino, reducir LAYOUT.delivery.topGap.
   const deliveryTopY = cpeTopY - LAYOUT.delivery.topGap;
-  centered(page, 'DESTINO', deliveryTopY, LAYOUT.delivery.labelSize, semibold, MUTED);
+
+  // SECCION 4: DESTINO
+  // Inicia en deliveryTopY. Se omite el label "DESTINO" para ahorrar altura.
   drawIcon(page, ICONS.place, LAYOUT.delivery.iconX, deliveryTopY - LAYOUT.delivery.iconGap, LAYOUT.delivery.iconSize, ICON_MUTED);
   centeredTracking(page, String(destination).toUpperCase(), deliveryTopY - LAYOUT.delivery.destinationGap, LAYOUT.delivery.destinationSize, bold, INK, 0.22, CW - 18);
 
+  // cursorY:
+  //   Cursor vertical mutable. Cada linea dibujada lo reduce por su lineHeight.
+  //   Desde aqui se evita usar coordenadas absolutas para textos variables.
   let cursorY = deliveryTopY - LAYOUT.delivery.detailsGap;
+
+  // SECCION 5: ZONA Y DIRECCION DE ENTREGA
+  // Inicia debajo del destino. Va antes del destinatario porque es lo primero
+  // que necesita leer el transportista si la entrega es a domicilio.
   receiverZoneLines.forEach((item, index) => {
     text(page, index === 0 ? 'ZONA:' : '', LAYOUT.delivery.detailsLabelX, cursorY + LAYOUT.delivery.detailsLabelYOffset, LAYOUT.delivery.detailsLabelSize, semibold, MUTED, 28);
     text(page, item, LAYOUT.delivery.detailsTextX, cursorY, LAYOUT.delivery.detailsTextSize, semibold, INK, CW - 48);
@@ -375,6 +437,9 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   });
 
   cursorY -= receiverZoneLines.length || receiverAddressLines.length ? LAYOUT.delivery.detailsAfterGap : 0;
+
+  // SECCION 6: DESTINATARIO
+  // Inicia donde termino zona/direccion. Nombre soporta multilinea.
   line(page, cursorY + LAYOUT.recipient.separatorYOffset, M + 8, W - M - 8, 0.45, LIGHT_LINE);
   text(page, 'DESTINATARIO', M + 8, cursorY - LAYOUT.recipient.labelGap, LAYOUT.recipient.labelSize, semibold, MUTED, 58);
   cursorY -= LAYOUT.recipient.nameGap;
@@ -383,6 +448,12 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     cursorY -= LAYOUT.recipient.nameLineHeight;
   });
 
+  // SECCION 7: QR ADMIN
+  // Contenido del QR: solo serie-numero del CPE, por ejemplo B001-0000000123.
+  // Posicion:
+  //   - preferredY intenta mantenerlo a una altura comoda.
+  //   - Si el texto anterior crece, cursorY lo empuja hacia abajo.
+  //   - minBottom evita que el QR salga por debajo del papel.
   const qrY = Math.max(
     LAYOUT.qr.minBottom,
     Math.min(LAYOUT.qr.preferredY, cursorY - LAYOUT.qr.gapAbove - LAYOUT.qr.size)

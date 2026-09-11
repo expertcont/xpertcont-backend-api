@@ -139,6 +139,7 @@ const drawIcon = (page, pathData, x, y, size = 12, color = ICON_MUTED) => {
 const ICONS = {
   place: 'M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z',
   package: 'M20 8.69V18c0 .72-.38 1.38-1 1.73l-6 3.46c-.62.36-1.38.36-2 0l-6-3.46A2 2 0 0 1 4 18V8.69c0-.72.38-1.38 1-1.73l6-3.46c.62-.36 1.38-.36 2 0l6 3.46c.62.35 1 1.01 1 1.73zM12 5.23 6.74 8.26 12 11.29l5.26-3.03L12 5.23zm-6 4.76V18l5 2.88v-7.86L6 9.99zm12 0-5 3.03v7.86L18 18V9.99z',
+  phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.68 2.8a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.9.32 1.84.55 2.8.68A2 2 0 0 1 22 16.92z',
 };
 
 const drawTrackingText = (page, value, x, y, size, font, color = INK, tracking = 0.5, maxWidth = null) => {
@@ -245,9 +246,9 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     ? 391 - ((originOptionalLines - 1) * originOptionalLineHeight)
     : 400;
   const originHeight = originTopY - originBaseY;
-  const destinationOptionalLineHeight = 6.6;
-  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone, regular, 7.1, CW - 65, 2) : [];
-  const receiverAddressLines = receiverAddress ? wrap(receiverAddress, regular, 7.1, CW - 65, 2) : [];
+  const destinationOptionalLineHeight = 10.5;
+  const receiverZoneLines = receiverArrivalZone ? wrap(receiverArrivalZone.toUpperCase(), semibold, 10.2, CW - 12, 2) : [];
+  const receiverAddressLines = receiverAddress ? wrap(receiverAddress.toUpperCase(), semibold, 10.2, CW - 12, 3) : [];
   const destinationOptionalLines = receiverZoneLines.length + receiverAddressLines.length;
   const destinationTopY = 365;
   const destinationBaseY = destinationOptionalLines
@@ -313,31 +314,27 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   text(page, 'HORA', 126, afterHeaderY(487), 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, afterHeaderY(484), 11.4, regular, INK, 58);
 
-  // Seccion DESTINO. La altura baja solo cuando existe direccion de llegada.
-  // destinationBaseY es la base inferior dinamica; destinationTopY mantiene fijo el encabezado.
-  box(page, M, ticketDestinationY(destinationBaseY), CW, destinationHeight, WHITE, LIGHT_LINE, 0.45);
-  drawIcon(page, ICONS.place, M + 8, ticketDestinationY(353), 14, ICON_MUTED);
-  text(page, 'DESTINO', M + 25, ticketDestinationY(346), 8.1, semibold, MUTED, 52);
-  centeredTracking(page, String(destination).toUpperCase(), ticketDestinationY(342), 17.6, bold, INK, 0.22, CW - 18);
+  drawIcon(page, ICONS.place, M + 2, ticketDestinationY(353), 15, ICON_MUTED);
+  text(page, 'Dest.', M + 20, ticketDestinationY(347), 9.2, semibold, MUTED, 30);
+  centeredTracking(page, String(destination).toUpperCase(), ticketDestinationY(342), 19.8, bold, INK, 0.22, CW - 18);
   line(page, ticketDestinationY(333), M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO:', M + 8, ticketDestinationY(322), 7.1, semibold, MUTED, 52);
-  text(page, receiverName, M + 63, ticketDestinationY(321.4), 9.5, regular, INK, CW - 71);
-  text(page, 'DNI:', M + 8, ticketDestinationY(311), 7.1, semibold, MUTED, 20);
-  text(page, receiverDoc, M + 32, ticketDestinationY(310.4), 9.2, regular, INK, 65);
-  text(page, 'TEL:', M + 109, ticketDestinationY(311), 7.1, semibold, MUTED, 20);
-  text(page, encomienda.destinatario_telefono || '-', M + 132, ticketDestinationY(310.4), 11.2, regular, INK, 61);
+  text(page, 'DESTINATARIO', M + 8, ticketDestinationY(322), 8.2, semibold, MUTED, 58);
+  text(page, String(receiverName).toUpperCase(), M + 8, ticketDestinationY(307), 15, semibold, INK, CW - 16);
+  text(page, 'DNI:', M + 8, ticketDestinationY(290), 8.6, semibold, MUTED, 22);
+  text(page, receiverDoc, M + 34, ticketDestinationY(288), 13.4, semibold, INK, 60);
+  drawIcon(page, ICONS.phone, M + 104, ticketDestinationY(291), 11, ICON_MUTED);
+  text(page, encomienda.destinatario_telefono || '-', M + 120, ticketDestinationY(288), 13.8, bold, INK, 82);
   receiverZoneLines.forEach((item, index) => {
-    const y = 300 - (index * destinationOptionalLineHeight);
-    text(page, index === 0 ? 'ZONA LLEGADA:' : '', M + 8, ticketDestinationY(y), 6.3, semibold, MUTED, 46);
-    text(page, item, M + 59, ticketDestinationY(y - 0.4), 7.1, regular, INK, CW - 61);
+    const y = 273 - (index * destinationOptionalLineHeight);
+    text(page, index === 0 ? 'ZONA:' : '', M + 8, ticketDestinationY(y), 7.2, semibold, MUTED, 26);
+    text(page, item, M + 37, ticketDestinationY(y - 1.2), 10.2, semibold, INK, CW - 45);
   });
   receiverAddressLines.forEach((item, index) => {
-    const y = 300 - ((receiverZoneLines.length + index) * destinationOptionalLineHeight);
-    text(page, index === 0 ? 'DIR LLEGADA:' : '', M + 8, ticketDestinationY(y), 6.3, semibold, MUTED, 45);
-    text(page, item, M + 57, ticketDestinationY(y - 0.4), 7.1, regular, INK, CW - 61);
+    const y = 273 - ((receiverZoneLines.length + index) * destinationOptionalLineHeight);
+    text(page, index === 0 ? 'DIR:' : '', M + 8, ticketDestinationY(y), 7.2, semibold, MUTED, 23);
+    text(page, item, M + 37, ticketDestinationY(y - 1.2), 10.2, semibold, INK, CW - 45);
   });
 
-  box(page, M, 6, CW, 72, WHITE, LIGHT_LINE, 0.75);
   page.drawImage(qrImage, { x: (W - 64) / 2, y: 10, width: 64, height: 64 });
 
   const pdfBytes = await pdfDoc.save();

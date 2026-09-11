@@ -414,7 +414,7 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
 
   // SECCION 4: DESTINO
   // Inicia en deliveryTopY. Se omite el label "DESTINO" para ahorrar altura.
-  drawIcon(page, ICONS.place, LAYOUT.delivery.iconX, deliveryTopY - LAYOUT.delivery.iconGap, LAYOUT.delivery.iconSize, ICON_MUTED);
+  drawIcon(page, ICONS.place, LAYOUT.delivery.iconX, deliveryTopY - LAYOUT.delivery.iconGap + 40, LAYOUT.delivery.iconSize, ICON_MUTED);
   centeredTracking(page, String(destination).toUpperCase(), deliveryTopY - LAYOUT.delivery.destinationGap, LAYOUT.delivery.destinationSize, bold, INK, 0.22, CW - 18);
 
   // cursorY:
@@ -444,7 +444,7 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   centered(page, 'DESTINATARIO', cursorY - LAYOUT.recipient.labelGap, LAYOUT.recipient.labelSize, semibold, MUTED);
   cursorY -= LAYOUT.recipient.nameGap;
   receiverNameLines.forEach((item) => {
-    text(page, item, M + 8, cursorY, LAYOUT.recipient.nameSize, semibold, INK, CW - 16);
+    text(page, item, M + 8, cursorY, LAYOUT.recipient.nameSize, regular, INK, CW - 16);
     cursorY -= LAYOUT.recipient.nameLineHeight;
   });
 

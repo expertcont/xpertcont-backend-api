@@ -5,7 +5,7 @@ const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
-const H = 500;
+const H = 450;
 const M = 12;
 const CW = W - (M * 2);
 
@@ -296,12 +296,11 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   text(page, 'HORA', 126, cpeTopY - 38, 6.3, regular, MUTED, 26);
   text(page, timePe(issueTime), 152, cpeTopY - 41, 11.4, regular, INK, 58);
 
-  const deliveryTopY = cpeTopY - 52;
-  centered(page, 'DESTINO', deliveryTopY, 9.6, semibold, MUTED);
-  drawIcon(page, ICONS.place, M + 10, deliveryTopY - 24, 16, ICON_MUTED);
-  centeredTracking(page, String(destination).toUpperCase(), deliveryTopY - 26, 21.6, bold, INK, 0.22, CW - 18);
+  const destinationY = cpeTopY - 26;
+  drawIcon(page, ICONS.place, M + 10, destinationY + 2, 16, ICON_MUTED);
+  centeredTracking(page, String(destination).toUpperCase(), destinationY, 21.6, bold, INK, 0.22, CW - 18);
 
-  let cursorY = deliveryTopY - 45;
+  let cursorY = destinationY - 19;
   receiverZoneLines.forEach((item, index) => {
     text(page, index === 0 ? 'ZONA:' : '', M + 8, cursorY + 1.2, 8.2, semibold, MUTED, 28);
     text(page, item, M + 40, cursorY, 12.4, semibold, INK, CW - 48);
@@ -315,14 +314,14 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
 
   cursorY -= receiverZoneLines.length || receiverAddressLines.length ? 4 : 0;
   line(page, cursorY + 5, M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, cursorY - 8, 8.2, semibold, MUTED, 58);
+  centered(page, 'DESTINATARIO', cursorY - 8, 8.2, semibold, MUTED);
   cursorY -= 24;
   receiverNameLines.forEach((item) => {
     text(page, item, M + 8, cursorY, 15.2, semibold, INK, CW - 16);
     cursorY -= 13.8;
   });
 
-  page.drawImage(qrImage, { x: (W - 111) / 2, y: 86, width: 111, height: 111 });
+  page.drawImage(qrImage, { x: (W - 111) / 2, y: 30, width: 111, height: 111 });
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

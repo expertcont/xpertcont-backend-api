@@ -5,7 +5,7 @@ const fontkit = require('@pdf-lib/fontkit');
 const QRCode = require('qrcode');
 
 const W = 226.77;
-const H = 465;
+const H = 400;
 const M = 12;
 const CW = W - (M * 2);
 
@@ -73,7 +73,7 @@ const LAYOUT = {
   // deliveryTopY nace debajo de la linea fecha/hora del CPE.
   // Si se quiere eliminar espacio entre fecha y destino, reducir topGap.
   delivery: {
-    topGap: 32,
+    topGap: 44,
     iconX: M + 10,
     iconGap: 4,
     iconSize: 16,
@@ -102,8 +102,8 @@ const LAYOUT = {
   // gapAbove separa el QR del texto anterior.
   qr: {
     size: 111,
-    minBottom: 12,
-    preferredY: 112,
+    minBottom: 6,
+    preferredY: 78,
     gapAbove: 8,
   },
 };
@@ -441,7 +441,7 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   // SECCION 6: DESTINATARIO
   // Inicia donde termino zona/direccion. Nombre soporta multilinea.
   line(page, cursorY + LAYOUT.recipient.separatorYOffset, M + 8, W - M - 8, 0.45, LIGHT_LINE);
-  text(page, 'DESTINATARIO', M + 8, cursorY - LAYOUT.recipient.labelGap, LAYOUT.recipient.labelSize, semibold, MUTED, 58);
+  centered(page, 'DESTINATARIO', cursorY - LAYOUT.recipient.labelGap, LAYOUT.recipient.labelSize, semibold, MUTED);
   cursorY -= LAYOUT.recipient.nameGap;
   receiverNameLines.forEach((item) => {
     text(page, item, M + 8, cursorY, LAYOUT.recipient.nameSize, semibold, INK, CW - 16);

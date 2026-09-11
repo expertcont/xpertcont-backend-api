@@ -414,8 +414,8 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
 
   // SECCION 4: DESTINO
   // Inicia en deliveryTopY. Se omite el label "DESTINO" para ahorrar altura.
-  drawIcon(page, ICONS.place, LAYOUT.delivery.iconX, deliveryTopY - LAYOUT.delivery.iconGap + 40, LAYOUT.delivery.iconSize, ICON_MUTED);
-  centeredTracking(page, String(destination).toUpperCase(), deliveryTopY - LAYOUT.delivery.destinationGap, LAYOUT.delivery.destinationSize, bold, INK, 0.22, CW - 18);
+  drawIcon(page, ICONS.place, LAYOUT.delivery.iconX - 5, deliveryTopY - LAYOUT.delivery.iconGap + 10, LAYOUT.delivery.iconSize, ICON_MUTED);
+  centeredTracking(page, String(destination).toUpperCase(), deliveryTopY - LAYOUT.delivery.destinationGap, LAYOUT.delivery.destinationSize, semibold, INK, 0.22, CW - 18);
 
   // cursorY:
   //   Cursor vertical mutable. Cada linea dibujada lo reduce por su lineHeight.

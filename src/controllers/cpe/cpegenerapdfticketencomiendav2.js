@@ -322,7 +322,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Posicion vertical de cada bloque: cambiar 576, 563 o 550.
   wrap(empresa.razon_social || empresa.nombre_comercial || 'TRANSPORTE DE ENCOMIENDAS', regular, 7.8, CW, 2)
     .forEach((item, index) => centered(page, item, bodyY(576 - (index * 5.8)), 7.8, regular));
-  centered(page, `RUC ${empresa.ruc || ''}`, bodyY(563), 13.8, bold);
+  centered(page, `RUC ${empresa.ruc || ''}`, bodyY(563), 13.8, regular );
   wrap(empresa.domicilio_fiscal || '', regular, 7.4, CW, 2)
     .forEach((item, index) => centered(page, item, bodyY(550 - (index * 8.2)), 7.4, regular, MUTED));
 
@@ -331,7 +331,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   // Para compactar mas, acercar esos Y y las lineas internas: 514, 496 y 480.
   dotted(page, afterHeaderY(525));
   centered(page, documentName(code), afterHeaderY(514), 9.5, regular);
-  centeredTracking(page, displayNumber || 'MODELO', afterHeaderY(496), 16.8, bold, INK, 0.55, CW - 8);
+  centeredTracking(page, displayNumber || 'MODELO', afterHeaderY(496), 16.8, regular, INK, 0.55, CW - 8);
   text(page, 'FECHA', 39, afterHeaderY(487), 6.3, regular, MUTED, 29);
   text(page, datePe(issueDate), 68, afterHeaderY(484), 11.4, regular, INK, 52);
   line(page, afterHeaderY(485), 113, 113, 0.45);

@@ -440,7 +440,7 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
 
   // SECCION 6: DESTINATARIO
   // Inicia donde termino zona/direccion. Nombre soporta multilinea.
-  line(page, cursorY + LAYOUT.recipient.separatorYOffset, M + 8, W - M - 8, 0.45, LIGHT_LINE);
+  dotted(page, cursorY + LAYOUT.recipient.separatorYOffset);
   centered(page, 'DESTINATARIO', cursorY - LAYOUT.recipient.labelGap, LAYOUT.recipient.labelSize, semibold, MUTED);
   cursorY -= LAYOUT.recipient.nameGap;
   receiverNameLines.forEach((item) => {

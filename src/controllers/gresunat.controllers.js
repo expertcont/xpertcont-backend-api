@@ -496,6 +496,25 @@ const registrarTicketDB = async ({documento_id, codigo, serie, numero, sTicketGr
     }
 };
 
+const eliminarTicketDB = async ({ documento_id, codigo, serie, numero }) => {
+    try {
+        await pool.query(
+          `
+            DELETE FROM api_usuarioticket
+             WHERE documento_id = $1
+               AND codigo = $2
+               AND serie = $3
+               AND numero = $4
+          `,
+          [documento_id, codigo, serie, numero]
+        );
+        return true;
+    } catch (error) {
+        console.error('Error al eliminar ticket GRE:', error);
+        return false;
+    }
+};
+
 const generarTicketGreSunat = async (sJson) => {
     try {
         const dataGuia = sJson;
@@ -601,6 +620,12 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) 
         estado = 'ERROR';
         console.error(`SUNAT Error ${data.error?.numError}: ${data.error?.desError}`);
         console.log(`SUNAT Error ${data.error?.numError}: ${data.error?.desError}`);
+        await eliminarTicketDB({
+          documento_id: ruc,
+          codigo: cod,
+          serie,
+          numero,
+        });
         break;
       default:
         console.warn(`Código de respuesta no esperado: ${codRespuesta}`);

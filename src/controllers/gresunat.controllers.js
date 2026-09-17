@@ -1,6 +1,9 @@
 const gregeneraxml = require('./gre/gregeneraxml');
 const gregenerapdf = require('./gre/gregenerapdf');
 const gregenerapdfa4 = require('./gre/gregenerapdfa4');
+const gremgeneraxml = require('./grem/gremgeneraxml');
+const gremgenerapdf = require('./grem/gremgenerapdf');
+const gremgenerapdfa4 = require('./grem/gremgenerapdfa4');
 
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
@@ -24,6 +27,7 @@ const fetch = require('node-fetch');
 require('dotenv').config();
 
 const texto = (valor) => (valor || '').toString().trim();
+const esGremTransporte = (data = {}) => texto(data.rubro).toUpperCase() === 'TRANS_GREM' || texto(data.guia?.codigo) === '31';
 
 const normalizarEmpresaGrem = (empresa = {}) => ({
   ruc: texto(empresa.ruc || empresa.documento_id),
@@ -55,8 +59,6 @@ const normalizarPayloadGremTransporte = (payload = {}) => {
   const empresa = normalizarEmpresaGrem(payload.empresa || {});
   const guia = payload.guia || {};
   const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
-  const primerDetalle = detalles[0] || {};
-  const primerDestinatario = primerDetalle.destinatario || {};
 
   return {
     ...payload,
@@ -84,9 +86,9 @@ const normalizarPayloadGremTransporte = (payload = {}) => {
       conductor_apellidos: texto(guia.conductor_apellidos),
       conductor_licencia: texto(guia.conductor_licencia),
       vehiculo_placa: texto(guia.vehiculo_placa || guia.transportista_placa_numero),
-      destinatario_tipo: texto(guia.destinatario_tipo || primerDestinatario.tipo_documento) || '1',
-      destinatario_ruc_dni: texto(guia.destinatario_ruc_dni || primerDestinatario.numero_documento),
-      destinatario_razon_social: texto(guia.destinatario_razon_social || primerDestinatario.razon_social),
+      destinatario_tipo: texto(guia.destinatario_tipo),
+      destinatario_ruc_dni: texto(guia.destinatario_ruc_dni),
+      destinatario_razon_social: texto(guia.destinatario_razon_social),
       observacion: texto(guia.observacion),
     },
     items: detalles.map((detalle) => ({
@@ -94,10 +96,27 @@ const normalizarPayloadGremTransporte = (payload = {}) => {
       producto: descripcionItemGrem(detalle),
       codigo: detalle.id_producto || 'ENCOMIENDA',
       codigo_unidad: detalle.unidad_medida || 'NIU',
+      monto_flete: detalle.monto_flete,
       documento_relacionado: detalle.documento_relacionado || null,
       destinatario: detalle.destinatario || null,
     })),
   };
+};
+
+const generarXmlGreSegunTipo = (dataGuia) => (
+  esGremTransporte(dataGuia) ? gremgeneraxml(dataGuia) : gregeneraxml(dataGuia)
+);
+
+const generarPdfGreSegunTipo = (sTamaño, logoBuffer, dataGuia, sDigestInicial) => {
+  if (esGremTransporte(dataGuia)) {
+    return sTamaño === 'A4'
+      ? gremgenerapdfa4(logoBuffer, dataGuia, sDigestInicial)
+      : gremgenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
+  }
+
+  return sTamaño === 'A4'
+    ? gregenerapdfa4(logoBuffer, dataGuia, sDigestInicial)
+    : gregenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
 };
 
 const registrarGRESunat = async (req,res,next)=> {
@@ -473,7 +492,7 @@ const generarTicketGreSunat = async (sJson) => {
         const sToken = data.access_token;
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
-        let xmlComprobante = await gregeneraxml(dataGuia);
+        let xmlComprobante = await generarXmlGreSegunTipo(dataGuia);
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Nueva firma implementado propio
@@ -598,7 +617,7 @@ async function descargarGreSunatCDR(ruc, numTicket, cod,serie,numero, dataGuia) 
       /////////////////////////////////////////////////////////////////////
       //05. New: Generar PDF  NEWWW
       const documentDescription = obtenerDocumentDescription(cdrXml);
-      void procesarPDFGRE('80mm', dataGuia, documentDescription);
+      await procesarPDFGRE('80mm', dataGuia, documentDescription);
       /*
       (async () => {
         try {
@@ -644,11 +663,7 @@ async function procesarPDFGRE(sTamaño, dataGuia, sDigestInicial) {
 
     //const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
     let resultadoPdf;
-    if (sTamaño === 'A4') {
-      resultadoPdf = await gregenerapdfa4(logoBuffer, dataGuia, sDigestInicial);
-    } else {
-      resultadoPdf = await gregenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
-    }
+    resultadoPdf = await generarPdfGreSegunTipo(sTamaño, logoBuffer, dataGuia, sDigestInicial);
 
     if (resultadoPdf?.estado) {
       console.log('✅ PDF generado correctamente');

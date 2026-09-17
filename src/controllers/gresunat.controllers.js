@@ -23,6 +23,83 @@ const fetch = require('node-fetch');
 
 require('dotenv').config();
 
+const texto = (valor) => (valor || '').toString().trim();
+
+const normalizarEmpresaGrem = (empresa = {}) => ({
+  ruc: texto(empresa.ruc || empresa.documento_id),
+  razon_social: texto(empresa.razon_social),
+  nombre_comercial: texto(empresa.nombre_comercial || empresa.razon_social),
+  domicilio_fiscal: texto(empresa.domicilio_fiscal || empresa.direccion),
+  ubigeo: texto(empresa.ubigeo),
+  distrito: texto(empresa.distrito),
+  provincia: texto(empresa.provincia),
+  departamento: texto(empresa.departamento),
+  modo: texto(empresa.modo),
+});
+
+const descripcionItemGrem = (detalle = {}) => {
+  const documento = detalle.documento_relacionado || {};
+  const destinatario = detalle.destinatario || {};
+  return [
+    texto(detalle.descripcion) || 'ENCOMIENDA',
+    documento.serie && documento.numero
+      ? `Comp: ${[documento.tipo_documento, documento.serie, documento.numero].filter(Boolean).join('-')}`
+      : '',
+    destinatario.numero_documento
+      ? `Dest: ${destinatario.numero_documento} ${texto(destinatario.razon_social)}`
+      : '',
+  ].filter(Boolean).join(' | ');
+};
+
+const normalizarPayloadGremTransporte = (payload = {}) => {
+  const empresa = normalizarEmpresaGrem(payload.empresa || {});
+  const guia = payload.guia || {};
+  const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
+  const primerDetalle = detalles[0] || {};
+  const primerDestinatario = primerDetalle.destinatario || {};
+
+  return {
+    ...payload,
+    rubro: 'TRANS_GREM',
+    empresa,
+    guia: {
+      codigo: texto(guia.codigo) || '31',
+      serie: texto(guia.serie),
+      numero: texto(guia.numero),
+      fecha_emision: texto(guia.fecha_emision),
+      fecha_traslado: texto(guia.fecha_traslado),
+      guia_motivo_id: texto(guia.guia_motivo_id || guia.motivo_traslado_id) || '13',
+      guia_modalidad_id: texto(guia.guia_modalidad_id || guia.modalidad_traslado_id) || '01',
+      partida_ubigeo: texto(guia.partida_ubigeo),
+      partida_direccion: texto(guia.partida_direccion),
+      llegada_ubigeo: texto(guia.llegada_ubigeo),
+      llegada_direccion: texto(guia.llegada_direccion),
+      peso_total: guia.peso_total || 1,
+      numero_bultos: guia.numero_bultos || detalles.length || 1,
+      transp_ruc: texto(guia.transp_ruc || empresa.ruc),
+      transp_razon_social: texto(guia.transp_razon_social || empresa.razon_social),
+      transp_mtc: texto(guia.transp_mtc || guia.transportista_mtc || '-'),
+      conductor_dni: texto(guia.conductor_dni || guia.conductor_documento_id),
+      conductor_nombres: texto(guia.conductor_nombres),
+      conductor_apellidos: texto(guia.conductor_apellidos),
+      conductor_licencia: texto(guia.conductor_licencia),
+      vehiculo_placa: texto(guia.vehiculo_placa || guia.transportista_placa_numero),
+      destinatario_tipo: texto(guia.destinatario_tipo || primerDestinatario.tipo_documento) || '1',
+      destinatario_ruc_dni: texto(guia.destinatario_ruc_dni || primerDestinatario.numero_documento),
+      destinatario_razon_social: texto(guia.destinatario_razon_social || primerDestinatario.razon_social),
+      observacion: texto(guia.observacion),
+    },
+    items: detalles.map((detalle) => ({
+      cantidad: detalle.cantidad || 1,
+      producto: descripcionItemGrem(detalle),
+      codigo: detalle.id_producto || 'ENCOMIENDA',
+      codigo_unidad: detalle.unidad_medida || 'NIU',
+      documento_relacionado: detalle.documento_relacionado || null,
+      destinatario: detalle.destinatario || null,
+    })),
+  };
+};
+
 const registrarGRESunat = async (req,res,next)=> {
     try {
         const dataGuia = req.body;
@@ -96,6 +173,44 @@ const registrarGRESunat = async (req,res,next)=> {
           mensaje: error
         });
     }
+};
+
+const registrarGREMTransSunat = async (req, res, next) => {
+  try {
+    const dataGrem = normalizarPayloadGremTransporte(req.body || {});
+
+    if (!dataGrem.empresa.ruc || !dataGrem.guia.serie || !dataGrem.guia.numero) {
+      return res.status(400).json({
+        respuesta_sunat_descripcion: 'Faltan datos minimos GREM: empresa.ruc/documento_id, guia.serie o guia.numero',
+        ruta_xml: 'error',
+        ruta_cdr: 'error',
+        ruta_pdf: 'error',
+        codigo_hash: null,
+      });
+    }
+
+    if (dataGrem.items.length === 0) {
+      return res.status(400).json({
+        respuesta_sunat_descripcion: 'La GREM debe tener al menos un detalle',
+        ruta_xml: 'error',
+        ruta_cdr: 'error',
+        ruta_pdf: 'error',
+        codigo_hash: null,
+      });
+    }
+
+    req.body = dataGrem;
+    return registrarGRESunat(req, res, next);
+  } catch (error) {
+    console.error('Error normalizando GREM Transportista:', error);
+    return res.status(500).json({
+      respuesta_sunat_descripcion: error.message || 'ERROR interno GREM',
+      ruta_xml: null,
+      ruta_cdr: null,
+      ruta_pdf: null,
+      codigo_hash: null,
+    });
+  }
 };
 function canonicalizarManual(xmlStr) {
   return xmlStr
@@ -622,6 +737,7 @@ const registrarGRESunatPrevioPDFA4 = async (req, res, next) => {
 
 module.exports = {
     registrarGRESunat,
+    registrarGREMTransSunat,
     registrarGRESunatPrevioPDF,
     registrarGRESunatPrevioPDFA4
 }; 

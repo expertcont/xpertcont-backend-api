@@ -20,7 +20,7 @@ function gremgenerarxml(data) {
           ${gremgeneracab(data.guia)}
           ${gremgenerafirma(data.empresa)}
           ${gremgeneraremitente(data.empresa)}
-          ${gremgeneradestinatario(data.guia)}
+          ${gremgeneradestinatario(data.guia, data.empresa)}
           ${gremgeneratransporte(data.guia)}
           ${gremgeneradet(data.items)}
   </DespatchAdvice>`;

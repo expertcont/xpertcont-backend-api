@@ -72,6 +72,22 @@ const normalizarPayloadGremTransporte = (payload = {}) => {
   const empresa = normalizarEmpresaGrem(payload.empresa || {});
   const guia = payload.guia || {};
   const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
+  const primerDestinatario = detalles.find((detalle) => detalle?.destinatario)?.destinatario || {};
+  const destinatarioTipo = texto(
+    guia.destinatario_tipo ||
+    primerDestinatario.tipo_documento ||
+    empresa.ruc && '6'
+  );
+  const destinatarioNumero = texto(
+    guia.destinatario_ruc_dni ||
+    primerDestinatario.numero_documento ||
+    empresa.ruc
+  );
+  const destinatarioRazonSocial = texto(
+    guia.destinatario_razon_social ||
+    primerDestinatario.razon_social ||
+    empresa.razon_social
+  );
 
   return {
     ...payload,
@@ -100,9 +116,9 @@ const normalizarPayloadGremTransporte = (payload = {}) => {
       conductor_apellidos: texto(guia.conductor_apellidos),
       conductor_licencia: texto(guia.conductor_licencia),
       vehiculo_placa: texto(guia.vehiculo_placa || guia.transportista_placa_numero),
-      destinatario_tipo: texto(guia.destinatario_tipo),
-      destinatario_ruc_dni: texto(guia.destinatario_ruc_dni),
-      destinatario_razon_social: texto(guia.destinatario_razon_social),
+      destinatario_tipo: destinatarioTipo,
+      destinatario_ruc_dni: destinatarioNumero,
+      destinatario_razon_social: destinatarioRazonSocial,
       observacion: texto(guia.observacion),
     },
     items: detalles.map((detalle) => ({

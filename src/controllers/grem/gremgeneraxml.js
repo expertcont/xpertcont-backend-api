@@ -25,5 +25,5 @@ function gremgenerarxml(data) {
           ${gremgeneradet(data.items)}
   </DespatchAdvice>`;
 }
-
+//documentar pre arquitectura clean
 module.exports = gremgenerarxml;

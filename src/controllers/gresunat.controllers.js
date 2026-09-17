@@ -29,6 +29,19 @@ require('dotenv').config();
 const texto = (valor) => (valor || '').toString().trim();
 const esGremTransporte = (data = {}) => texto(data.rubro).toUpperCase() === 'TRANS_GREM' || texto(data.guia?.codigo) === '31';
 
+const horaActualLima = () => new Intl.DateTimeFormat('en-GB', {
+  timeZone: 'America/Lima',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: false,
+}).format(new Date());
+
+const normalizarHora = (valor) => {
+  const match = texto(valor).match(/(?:^|[T\s])(\d{2}):(\d{2})(?::(\d{2}))?/);
+  return match ? `${match[1]}:${match[2]}:${match[3] || '00'}` : horaActualLima();
+};
+
 const normalizarEmpresaGrem = (empresa = {}) => ({
   ruc: texto(empresa.ruc || empresa.documento_id),
   razon_social: texto(empresa.razon_social),
@@ -69,6 +82,7 @@ const normalizarPayloadGremTransporte = (payload = {}) => {
       serie: texto(guia.serie),
       numero: texto(guia.numero),
       fecha_emision: texto(guia.fecha_emision),
+      hora_emision: normalizarHora(guia.hora_emision || payload.hora_emision),
       fecha_traslado: texto(guia.fecha_traslado),
       guia_motivo_id: texto(guia.guia_motivo_id || guia.motivo_traslado_id) || '13',
       guia_modalidad_id: texto(guia.guia_modalidad_id || guia.modalidad_traslado_id) || '01',

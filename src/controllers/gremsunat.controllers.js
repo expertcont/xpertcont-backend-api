@@ -378,6 +378,8 @@ const generarPdfGrem = async (
   );
 
   const logoBuffer = rows[0]?.logo || null;
+  
+  console.log('antes del gremgenerapdfa4consolidada');
 
   const resultadoPdf =
     formato === 'A4'
@@ -392,6 +394,8 @@ const generarPdfGrem = async (
           dataGrem,
           digestInicial
         );
+  
+  console.log('despues del gremgenerapdfa4consolidada');
 
   if (
     !resultadoPdf?.estado ||
@@ -492,6 +496,8 @@ const generarGREMPrevioPDFA4 = async (
       serie,
       numero,
     } = validarGrem(dataGrem);
+
+    console.log('antes de generarPdfGrem: ',dataGrem);
 
     const rutaPdf = await generarPdfGrem(
       'A4',

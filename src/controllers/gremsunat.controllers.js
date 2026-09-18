@@ -361,6 +361,9 @@ const generarPdfGrem = async (
   dataGrem,
   digestInicial = '-'
 ) => {
+  
+  console.log('antes de validarGrem: ',dataGrem);
+
   const {
     ruc,
     cod,
@@ -378,7 +381,7 @@ const generarPdfGrem = async (
   );
 
   const logoBuffer = rows[0]?.logo || null;
-  
+
   console.log('antes del gremgenerapdfa4consolidada');
 
   const resultadoPdf =

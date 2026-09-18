@@ -494,6 +494,7 @@ const generarGREMPrevioPDFA4 = async (
   try {
     const dataGrem = req.body || {};
 
+    console.log('antes de validarGrem: ',dataGrem);
     const {
       cod,
       serie,

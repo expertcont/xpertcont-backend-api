@@ -1,11 +1,6 @@
 const { Router } = require('express');
 const router = Router();
-
-const {
-  registrarGREMTransSunat,
-  generarGREMPrevioPDF,
-  generarGREMPrevioPDFA4,
-} = require('../controllers/gremsunat.controllers');
+const {registrarGREMTransSunat,generarGREMPrevioPDF,generarGREMPrevioPDFA4} = require('../controllers/gremsunat.controllers');
 
 // GRE Transportista - envío real a SUNAT
 router.post('/gremsunat/trans', registrarGREMTransSunat);

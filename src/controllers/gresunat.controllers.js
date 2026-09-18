@@ -1,149 +1,25 @@
 const gregeneraxml = require('./gre/gregeneraxml');
 const gregenerapdf = require('./gre/gregenerapdf');
 const gregenerapdfa4 = require('./gre/gregenerapdfa4');
-const gremgeneraxml = require('./grem/gremgeneraxml');
-const gremgenerapdf = require('./grem/gremgenerapdf');
-const gremgenerapdfa4 = require('./grem/gremgenerapdfa4');
 
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
 /////////////////////////////////////////////////////////
 const { XmlSignatureMod } = require('../utils/xmlsignaturemod.utils');
 const crypto = require('crypto');
-const os = require('os');
-const fs = require('fs');
 const yazl = require("yazl");
-const archiver = require('archiver');
 const crc32 = require('crc-32');
 /////////////////////////////////////////////////////////
 const { DOMParser} = require('xmldom');
 
 const xpath = require('xpath');
-const path = require('path');
 
 const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
 
 require('dotenv').config();
 
-const texto = (valor) => (valor || '').toString().trim();
-const esGremTransporte = (data = {}) => texto(data.rubro).toUpperCase() === 'TRANS_GREM' || texto(data.guia?.codigo) === '31';
-
-const horaActualLima = () => new Intl.DateTimeFormat('en-GB', {
-  timeZone: 'America/Lima',
-  hour: '2-digit',
-  minute: '2-digit',
-  second: '2-digit',
-  hour12: false,
-}).format(new Date());
-
-const normalizarHora = (valor) => {
-  const match = texto(valor).match(/(?:^|[T\s])(\d{2}):(\d{2})(?::(\d{2}))?/);
-  return match ? `${match[1]}:${match[2]}:${match[3] || '00'}` : horaActualLima();
-};
-
-const normalizarEmpresaGrem = (empresa = {}) => ({
-  ruc: texto(empresa.ruc || empresa.documento_id),
-  razon_social: texto(empresa.razon_social),
-  nombre_comercial: texto(empresa.nombre_comercial || empresa.razon_social),
-  domicilio_fiscal: texto(empresa.domicilio_fiscal || empresa.direccion),
-  ubigeo: texto(empresa.ubigeo),
-  distrito: texto(empresa.distrito),
-  provincia: texto(empresa.provincia),
-  departamento: texto(empresa.departamento),
-  modo: texto(empresa.modo),
-});
-
-const descripcionItemGrem = (detalle = {}) => {
-  const documento = detalle.documento_relacionado || {};
-  const destinatario = detalle.destinatario || {};
-  return [
-    texto(detalle.descripcion) || 'ENCOMIENDA',
-    documento.serie && documento.numero
-      ? `Comp: ${[documento.tipo_documento, documento.serie, documento.numero].filter(Boolean).join('-')}`
-      : '',
-    destinatario.numero_documento
-      ? `Dest: ${destinatario.numero_documento} ${texto(destinatario.razon_social)}`
-      : '',
-  ].filter(Boolean).join(' | ');
-};
-
-const normalizarPayloadGremTransporte = (payload = {}) => {
-  const empresa = normalizarEmpresaGrem(payload.empresa || {});
-  const guia = payload.guia || {};
-  const detalles = Array.isArray(payload.detalles) ? payload.detalles : [];
-  const primerDestinatario = detalles.find((detalle) => detalle?.destinatario)?.destinatario || {};
-  const destinatarioTipo = texto(
-    guia.destinatario_tipo ||
-    primerDestinatario.tipo_documento ||
-    empresa.ruc && '6'
-  );
-  const destinatarioNumero = texto(
-    guia.destinatario_ruc_dni ||
-    primerDestinatario.numero_documento ||
-    empresa.ruc
-  );
-  const destinatarioRazonSocial = texto(
-    guia.destinatario_razon_social ||
-    primerDestinatario.razon_social ||
-    empresa.razon_social
-  );
-
-  return {
-    ...payload,
-    rubro: 'TRANS_GREM',
-    empresa,
-    guia: {
-      codigo: texto(guia.codigo) || '31',
-      serie: texto(guia.serie),
-      numero: texto(guia.numero),
-      fecha_emision: texto(guia.fecha_emision),
-      hora_emision: normalizarHora(guia.hora_emision || payload.hora_emision),
-      fecha_traslado: texto(guia.fecha_traslado),
-      guia_motivo_id: texto(guia.guia_motivo_id || guia.motivo_traslado_id) || '13',
-      guia_modalidad_id: texto(guia.guia_modalidad_id || guia.modalidad_traslado_id) || '01',
-      partida_ubigeo: texto(guia.partida_ubigeo),
-      partida_direccion: texto(guia.partida_direccion),
-      llegada_ubigeo: texto(guia.llegada_ubigeo),
-      llegada_direccion: texto(guia.llegada_direccion),
-      peso_total: guia.peso_total || 1,
-      numero_bultos: guia.numero_bultos || detalles.length || 1,
-      transp_ruc: texto(guia.transp_ruc || empresa.ruc),
-      transp_razon_social: texto(guia.transp_razon_social || empresa.razon_social),
-      transp_mtc: texto(guia.transp_mtc || guia.transportista_mtc || '-'),
-      conductor_dni: texto(guia.conductor_dni || guia.conductor_documento_id),
-      conductor_nombres: texto(guia.conductor_nombres),
-      conductor_apellidos: texto(guia.conductor_apellidos),
-      conductor_licencia: texto(guia.conductor_licencia),
-      vehiculo_placa: texto(guia.vehiculo_placa || guia.transportista_placa_numero),
-      destinatario_tipo: destinatarioTipo,
-      destinatario_ruc_dni: destinatarioNumero,
-      destinatario_razon_social: destinatarioRazonSocial,
-      observacion: texto(guia.observacion),
-    },
-    items: detalles.map((detalle) => ({
-      cantidad: detalle.cantidad || 1,
-      producto: descripcionItemGrem(detalle),
-      codigo: detalle.id_producto || 'ENCOMIENDA',
-      codigo_unidad: detalle.unidad_medida || 'NIU',
-      monto_flete: detalle.monto_flete,
-      documento_relacionado: detalle.documento_relacionado || null,
-      destinatario: detalle.destinatario || null,
-    })),
-  };
-};
-
-const generarXmlGreSegunTipo = (dataGuia) => (
-  esGremTransporte(dataGuia) ? gremgeneraxml(dataGuia) : gregeneraxml(dataGuia)
-);
-
 const generarPdfGreSegunTipo = (sTamaño, logoBuffer, dataGuia, sDigestInicial) => {
-  if (esGremTransporte(dataGuia)) {
-    return sTamaño === 'A4'
-      ? gremgenerapdfa4(logoBuffer, dataGuia, sDigestInicial)
-      : gremgenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
-  }
-
   return sTamaño === 'A4'
     ? gregenerapdfa4(logoBuffer, dataGuia, sDigestInicial)
     : gregenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
@@ -152,7 +28,6 @@ const generarPdfGreSegunTipo = (sTamaño, logoBuffer, dataGuia, sDigestInicial) 
 const registrarGRESunat = async (req,res,next)=> {
     try {
         const dataGuia = req.body;
-        //console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
 
         let server_sftp = process.env.CPE_HOST;
         let ruta_xml = 'http://' + server_sftp + ':8080/descargas/'+ dataGuia.empresa.ruc + '/' + dataGuia.empresa.ruc+ '-' + dataGuia.guia.codigo + '-' + dataGuia.guia.serie + '-' + dataGuia.guia.numero + '.xml'
@@ -224,43 +99,6 @@ const registrarGRESunat = async (req,res,next)=> {
     }
 };
 
-const registrarGREMTransSunat = async (req, res, next) => {
-  try {
-    const dataGrem = normalizarPayloadGremTransporte(req.body || {});
-
-    if (!dataGrem.empresa.ruc || !dataGrem.guia.serie || !dataGrem.guia.numero) {
-      return res.status(400).json({
-        respuesta_sunat_descripcion: 'Faltan datos minimos GREM: empresa.ruc/documento_id, guia.serie o guia.numero',
-        ruta_xml: 'error',
-        ruta_cdr: 'error',
-        ruta_pdf: 'error',
-        codigo_hash: null,
-      });
-    }
-
-    if (dataGrem.items.length === 0) {
-      return res.status(400).json({
-        respuesta_sunat_descripcion: 'La GREM debe tener al menos un detalle',
-        ruta_xml: 'error',
-        ruta_cdr: 'error',
-        ruta_pdf: 'error',
-        codigo_hash: null,
-      });
-    }
-
-    req.body = dataGrem;
-    return registrarGRESunat(req, res, next);
-  } catch (error) {
-    console.error('Error normalizando GREM Transportista:', error);
-    return res.status(500).json({
-      respuesta_sunat_descripcion: error.message || 'ERROR interno GREM',
-      ruta_xml: null,
-      ruta_cdr: null,
-      ruta_pdf: null,
-      codigo_hash: null,
-    });
-  }
-};
 function canonicalizarManual(xmlStr) {
   return xmlStr
     .replace(/(\r\n|\n|\r)/g, '')
@@ -535,13 +373,12 @@ const generarTicketGreSunat = async (sJson) => {
     try {
         const dataGuia = sJson;
         //console.log(sJson);
-        //console.log('Procesando comprobante: ',dataGuia.empresa.ruc,dataGuia.venta.codigo,dataGuia.venta.serie,dataGuia.venta.numero);
 
         const data = await obtenerTokenSunatGre(dataGuia.empresa.ruc);
         const sToken = data.access_token;
 
         //01. Genera XML desde el servicio y canonicalizo el resultado
-        let xmlComprobante = await generarXmlGreSegunTipo(dataGuia);
+        let xmlComprobante = await gregeneraxml(dataGuia);
         xmlComprobante = canonicalizarManual(xmlComprobante);
 
         //02. Nueva firma implementado propio
@@ -716,7 +553,7 @@ async function procesarPDFGRE(sTamaño, dataGuia, sDigestInicial) {
     const { rows } = await pool.query(`SELECT logo FROM api_usuariocertificado WHERE documento_id = $1`, [dataGuia.empresa.ruc]);
     const {logo:logoBuffer} = rows[0];
 
-    //const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataVenta, sDigestInicial);
+    //const resultadoPdf = await cpegenerapdf('80mm', logoBuffer, dataGuia, sDigestInicial);
     let resultadoPdf;
     resultadoPdf = await generarPdfGreSegunTipo(sTamaño, logoBuffer, dataGuia, sDigestInicial);
 
@@ -774,7 +611,7 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
 
     // 3️⃣ Construir URL de descarga del PDF
     const server_sftp = process.env.CPE_HOST;
-    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataGuia.empresa.ruc}/${dataGuia.empresa.ruc}-${dataGuia.venta.codigo}-${dataGuia.venta.serie}-${dataGuia.venta.numero}.pdf`;
+    const ruta_pdf = `http://${server_sftp}:8080/descargas/${dataGuia.empresa.ruc}/${dataGuia.empresa.ruc}-${dataGuia.guia.codigo}-${dataGuia.guia.serie}-${dataGuia.guia.numero}.pdf`;
 
     // 4️⃣ Responder inmediatamente al cliente
     return res.status(200).json({
@@ -807,7 +644,6 @@ const registrarGRESunatPrevioPDFA4 = async (req, res, next) => {
 
 module.exports = {
     registrarGRESunat,
-    registrarGREMTransSunat,
     registrarGRESunatPrevioPDF,
     registrarGRESunatPrevioPDFA4
 }; 

@@ -1,4 +1,23 @@
-function gremgeneratransporte(data) {
+// GREM CLASICA (NO RESUMEN >20)
+//
+// Shipment de la GRE Transportista.
+//
+// Estructura relevante:
+// Shipment
+// ├─ ShipmentStage
+// │  └─ CarrierParty
+// ├─ Delivery
+// │  ├─ DeliveryAddress             = llegada
+// │  └─ Despatch
+// │     ├─ DespatchAddress          = partida
+// │     └─ DespatchParty            = REMITENTE REAL
+// └─ TransportHandlingUnit          = vehículo
+//
+// El DespatchParty se mantiene separado en gremgeneraremitente.js.
+
+const gremgeneraremitente = require('./gremgeneraremitente');
+
+function gremgeneratransporte(data = {}) {
   let xmlTransporte = `<cac:Shipment>
         <cbc:ID>1</cbc:ID>
         <cbc:HandlingCode>${data.guia_motivo_id}</cbc:HandlingCode>
@@ -50,6 +69,7 @@ function gremgeneratransporte(data) {
                         <cbc:Line><![CDATA[${data.llegada_direccion}]]></cbc:Line>
                     </cac:AddressLine>
                 </cac:DeliveryAddress>
+
                 <cac:Despatch>
                     <cac:DespatchAddress>
                         <cbc:ID>${data.partida_ubigeo}</cbc:ID>
@@ -57,11 +77,18 @@ function gremgeneratransporte(data) {
                             <cbc:Line><![CDATA[${data.partida_direccion}]]></cbc:Line>
                         </cac:AddressLine>
                     </cac:DespatchAddress>
+
+                    <!-- REMITENTE REAL, distinto del transportista/emisor -->
+                    ${gremgeneraremitente(data)}
+
                 </cac:Despatch>
             </cac:Delivery>`;
 
   if (data.vehiculo_placa) {
-    const placa = String(data.vehiculo_placa).toUpperCase().replace(/[-\s]/g, '');
+    const placa = String(data.vehiculo_placa)
+      .toUpperCase()
+      .replace(/[-\s]/g, '');
+
     xmlTransporte += `<cac:TransportHandlingUnit>
                 <cac:TransportEquipment>
                     <cbc:ID>${placa}</cbc:ID>
@@ -70,6 +97,7 @@ function gremgeneratransporte(data) {
   }
 
   xmlTransporte += `</cac:Shipment>`;
+
   return xmlTransporte;
 }
 

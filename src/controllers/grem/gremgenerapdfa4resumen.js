@@ -141,8 +141,15 @@ const PALETTE = {
  */
 
 const texto = (valor, defecto = '') => {
+  /*
+   * page.drawText() de pdf-lib NO soporta saltos de línea ni tabs
+   * embebidos (revienta con "WinAnsi cannot encode \n"). Cualquier
+   * campo que pase por aquí (descripción, glosa, nombres, etc.)
+   * queda garantizado como una sola línea plana.
+   */
   const resultado = (valor ?? '')
     .toString()
+    .replace(/\s+/g, ' ')
     .trim();
 
   return resultado || defecto;

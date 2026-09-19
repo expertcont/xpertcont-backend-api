@@ -144,8 +144,17 @@ const PALETTE = {
  */
 
 const texto = (valor, defecto = '') => {
+  /*
+   * page.drawText() de pdf-lib NO soporta saltos de línea ni tabs
+   * embebidos (revienta con "WinAnsi cannot encode \n"). Cualquier
+   * campo que pase por aquí (descripción, glosa, nombres, etc.)
+   * queda garantizado como una sola línea plana. El wrap multilínea
+   * (drawTextWrapped) sigue funcionando igual, solo que ahora parte
+   * de texto ya limpio en vez de reventar en un \n suelto.
+   */
   const resultado = (valor ?? '')
     .toString()
+    .replace(/\s+/g, ' ')
     .trim();
 
   return resultado || defecto;

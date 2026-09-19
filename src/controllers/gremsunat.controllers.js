@@ -759,10 +759,10 @@ const descargarGremSunatCDR = async ({
 
       const documentDescription =
         obtenerDocumentDescription(cdrXml);
-
+      //Aqui al descargar el pdf, son 2 tipos de A4(consolidado y normal), pero actualmente A4 esta como consolidado, falta especificar si es normal sale error, son otros campos
       if (codRespuesta === '0') {
         await generarPdfGrem(
-          '80mm',
+          'A4',
           dataGrem,
           documentDescription
         );

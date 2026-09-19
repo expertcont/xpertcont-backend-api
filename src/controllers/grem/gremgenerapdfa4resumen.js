@@ -463,7 +463,7 @@ function crearPagina(contexto) {
 
   dibujarTextoCentrado(
     page,
-    'GUÍA DE REMISIÓN ELECTRÓNICA TRANSPORTISTA — RESUMEN',
+    'GUÍA DE REMISIÓN ELECTRÓNICA TRANSPORTISTA - RESUMEN',
     fontNegrita,
     9.5,
     width,
@@ -541,7 +541,7 @@ function crearPagina(contexto) {
   dibujarCampoLinea({
     page,
     label: 'Ruta:',
-    value: `${texto(guia.partida_ubigeo, '-')} → ${texto(guia.llegada_ubigeo, '-')}`,
+    value: `${texto(guia.partida_ubigeo, '-')} -> ${texto(guia.llegada_ubigeo, '-')}`,
     x: marginLeft + mitad + 6,
     y: y - 23,
     font,

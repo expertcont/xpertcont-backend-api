@@ -363,7 +363,7 @@ const generarPdfGrem = async (
   digestInicial = '-'
 ) => {
   
-  console.log('antes de validarGrem: ',dataGrem);
+  //console.log('antes de validarGrem: ',dataGrem);
 
   const {
     ruc,
@@ -495,14 +495,14 @@ const generarGREMPrevioPDFA4 = async (
   try {
     const dataGrem = req.body || {};
 
-    console.log('antes de validarGrem: ',dataGrem);
+    //console.log('antes de validarGrem: ',dataGrem);
     const {
       cod,
       serie,
       numero,
     } = validarGrem(dataGrem);
 
-    console.log('antes de generarPdfGrem: ',dataGrem);
+    //console.log('antes de generarPdfGrem: ',dataGrem);
 
     const rutaPdf = await generarPdfGrem(
       'A4',

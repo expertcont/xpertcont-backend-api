@@ -2,6 +2,7 @@ const gremgeneraxml = require('./grem/gremgeneraxml');
 const gremgenerapdf = require('./grem/gremgenerapdf');
 const gremgenerapdfa4 = require('./grem/gremgenerapdfa4');
 const gremgenerapdfa4consolidada = require('./grem/gremgenerapdfa4consolidada');
+const gremgenerapdfa4resumen = require('./grem/gremgenerapdfa4resumen');
 
 const { subirArchivoDesdeMemoria } = require('./cpe/cpeuploader');
 const pool = require('../db');
@@ -386,7 +387,7 @@ const generarPdfGrem = async (
 
   const resultadoPdf =
     formato === 'A4'
-      ? await gremgenerapdfa4consolidada(
+      ? await gremgenerapdfa4resumen(
           logoBuffer,
           dataGrem,
           digestInicial

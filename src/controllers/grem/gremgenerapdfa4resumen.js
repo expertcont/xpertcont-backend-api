@@ -8,6 +8,115 @@ const QRCode = require('qrcode');
 
 /*
  * ============================================================
+ * PAYLOAD DISPONIBLE (sJson)
+ * ============================================================
+ *
+ * Esta es la forma exacta que entrega generarPayloadGremTransporte().
+ * Deja este bloque como referencia rápida: si quieres mostrar un
+ * campo que hoy no se dibuja, solo búscalo aquí y agrégalo donde
+ * corresponda (fila de encomienda, franja de datos, chips, etc).
+ *
+ * sJson = {
+ *   rubro: 'TRANS_GREM',
+ *
+ *   empresa: {
+ *     documento_id,     // RUC transportista            [USADO - cabecera]
+ *     razon_social,     //                               [USADO - cabecera]
+ *     direccion,        //                               [USADO - cabecera]
+ *     id_ubigeo,        //                               [DISPONIBLE - no se dibuja]
+ *   },
+ *
+ *   guia: {
+ *     cod,                      // '31' = GRE Transportista   [USADO - título/QR]
+ *     serie,                    //                             [USADO - título]
+ *     numero,                   //                             [USADO - título]
+ *     fecha_emision,            //                             [USADO - "F. emisión:"]
+ *     hora_emision,             //                             [USADO - "Hora:"]
+ *     fecha_traslado,           //                             [USADO - "F. traslado:"]
+ *
+ *     guia_motivo_id,           // catálogo 20 SUNAT           [USADO - "Motivo:"]
+ *     guia_modalidad_id,        // catálogo 18 SUNAT           [DISPONIBLE - no se dibuja]
+ *
+ *     partida_ubigeo,           //                             [USADO - "Partida:"]
+ *     partida_direccion,        //                             [USADO - "Partida:"]
+ *     llegada_ubigeo,           //                             [USADO - "Llegada:"]
+ *     llegada_direccion,        //                             [USADO - "Llegada:"]
+ *
+ *     peso_total,               //                             [USADO - chip "PESO TOTAL"]
+ *     numero_bultos,            //                             [USADO - chip "BULTOS"]
+ *
+ *     conductor_dni,            //                             [USADO - "DNI:"]
+ *     conductor_nombres,        //                             [USADO - "Conductor:"]
+ *     conductor_apellidos,      //                             [USADO - "Conductor:"]
+ *     conductor_licencia,       //                             [USADO - "Licencia:"]
+ *
+ *     vehiculo_placa,           //                             [USADO - "Placa:"]
+ *
+ *     glosa,                    // observación libre           [USADO - sección "OBSERVACIÓN" (si existe)]
+ *
+ *     cantidad_remitentes,      // calculado en el controller  [USADO - chip "REMITENTES"]
+ *     resumen_mas_20_remitentes,// bandera >20 remitentes      [DISPONIBLE - útil para leyenda/aviso]
+ *   },
+ *
+ *   detalles: [
+ *     {
+ *       item,                       // N° correlativo             [USADO - col. N°]
+ *
+ *       // Referencia a mve_transventa = "CPE" de la encomienda
+ *       r_periodo,                  //                             [DISPONIBLE]
+ *       r_cod,                      //                             [USADO - col. CPE]
+ *       r_serie,                    //                             [USADO - col. CPE]
+ *       r_numero,                   //                             [USADO - col. CPE]
+ *       elemento,                   //                             [DISPONIBLE]
+ *       r_fecemi,                   // fecha emisión venta         [DISPONIBLE]
+ *
+ *       r_cod_ref,                  //                             [DISPONIBLE]
+ *       r_serie_ref,                //                             [DISPONIBLE]
+ *       r_numero_ref,               //                             [DISPONIBLE]
+ *       r_fecemi_ref,               //                             [DISPONIBLE]
+ *
+ *       // Remitente (línea 1: solo número de documento + nombre,
+ *       // SIN el label "DNI"/"RUC" -> ahorra espacio para las 3
+ *       // columnas: CPE / Remitente / Destinatario)
+ *       cliente_id_doc,             // tipo doc (1=DNI, 6=RUC...)  [DISPONIBLE - se usó para decidir formato, no se imprime la etiqueta]
+ *       cliente_documento_id,       // número de documento         [USADO - col. Remitente]
+ *       cliente,                    // nombre / razón social       [USADO - col. Remitente]
+ *       cliente_telefono,           //                             [NO USADO por pedido: sin teléfonos]
+ *       cliente_direccion,          //                             [NO USADO por pedido: sin direcciones]
+ *
+ *       id_ruta,                    //                             [DISPONIBLE]
+ *       descripcion,                // descripción del bien        [USADO - línea 2, ancho completo]
+ *
+ *       id_punto_venta,             // agencia origen               [DISPONIBLE]
+ *       id_punto_venta_dest,        // agencia destino               [DISPONIBLE]
+ *
+ *       placa,                      // placa asociada a la venta   [DISPONIBLE - guia.vehiculo_placa manda]
+ *       licencia,                   //                             [DISPONIBLE - guia.conductor_licencia manda]
+ *
+ *       // Destinatario (mismo criterio que remitente)
+ *       destinatario_id_doc,        //                             [DISPONIBLE - no se imprime la etiqueta]
+ *       destinatario_documento_id,  //                             [USADO - col. Destinatario]
+ *       destinatario,               //                             [USADO - col. Destinatario]
+ *       destinatario_telefono,      //                             [NO USADO por pedido: sin teléfonos]
+ *       destinatario_direccion,     //                             [NO USADO por pedido: sin direcciones]
+ *
+ *       precio_neto,                //                             [DISPONIBLE - no se dibuja, es dato comercial]
+ *       r_monto_total,              //                             [DISPONIBLE - no se dibuja, es dato comercial]
+ *     },
+ *     // ... un objeto por cada encomienda seleccionada
+ *   ],
+ * }
+ *
+ * Otros parámetros de la función:
+ *   logo          Buffer|Uint8Array PNG/JPG del logo de la empresa (opcional)
+ *   digestvalue   string: hash/DigestValue de la firma XML de SUNAT.
+ *                 Si aún no existe (documento sin firmar todavía),
+ *                 se genera un QR temporal con RUC|cod|serie|numero.
+ * ============================================================
+ */
+
+/*
+ * ============================================================
  * PALETA / TOKENS DE DISEÑO (mismos tokens que la versión
  * descriptiva, para mantener identidad visual consistente)
  * ============================================================
@@ -53,31 +162,6 @@ const primero = (...valores) => {
   return '';
 };
 
-const formatearTipoDocumento = (tipo) => {
-  const codigo = texto(tipo);
-
-  switch (codigo) {
-    case '1':
-    case '01':
-      return 'DNI';
-
-    case '6':
-    case '06':
-      return 'RUC';
-
-    case '4':
-    case '04':
-      return 'CE';
-
-    case '7':
-    case '07':
-      return 'PAS';
-
-    default:
-      return codigo ? `DOC ${codigo}` : 'DOC';
-  }
-};
-
 const formatearFecha = (valor) => {
   const fecha = texto(valor);
 
@@ -111,8 +195,9 @@ const formatearNumero = (valor, decimales = 3) => {
 };
 
 /*
- * Referencia interna de la encomienda:
- * r_periodo, r_cod, r_serie, r_numero, elemento
+ * CPE de la encomienda (referencia interna): r_cod-r_serie-r_numero.
+ * Antes se mostraba como "Ref:" en la línea 2; ahora es el primer
+ * elemento de la línea 1.
  */
 const referenciaEncomienda = (detalle = {}) => {
   const referencia = [
@@ -126,23 +211,20 @@ const referenciaEncomienda = (detalle = {}) => {
   return referencia || '-';
 };
 
-const textoDocumentoPersona = (
-  tipoDocumento,
-  numeroDocumento
-) => {
+/*
+ * Solo el número de documento, SIN el label "DNI"/"RUC" (se quita
+ * a propósito para ganar espacio horizontal entre las 3 columnas
+ * de la línea 1: CPE / Remitente / Destinatario).
+ */
+const soloNumeroDocumento = (numeroDocumento) => {
   const numero = texto(numeroDocumento);
 
-  if (!numero) {
-    return '-';
-  }
-
-  return `${formatearTipoDocumento(tipoDocumento)} ${numero}`;
+  return numero || '-';
 };
 
 /*
  * Recorta un texto a una sola línea que quepa en maxWidth,
- * agregando "..." si no entra completo. Pensado para la
- * versión resumida (sin wrap multilínea).
+ * agregando "..." si no entra completo.
  */
 const truncarTexto = (
   text,
@@ -180,7 +262,7 @@ const truncarTexto = (
 
 /*
  * ============================================================
- * GENERADOR PRINCIPAL — VERSIÓN RESUMIDA
+ * GENERADOR PRINCIPAL
  * ============================================================
  */
 
@@ -276,6 +358,9 @@ const gremgenerapdfa4resumen = async (
   /*
    * ========================================================
    * TABLA COMPACTA DE ENCOMIENDAS — 2 LÍNEAS C/U
+   *
+   * Línea 1: N°  |  CPE  |  Remitente (doc + nombre)  |  Destinatario (doc + nombre)
+   * Línea 2: Descripción de la encomienda, a todo lo ancho
    * ========================================================
    */
 
@@ -361,6 +446,11 @@ const gremgenerapdfa4resumen = async (
  * ============================================================
  * CREAR PÁGINA
  * ============================================================
+ *
+ * Cabecera IDÉNTICA a la del modelo "consolidada" (banner en dos
+ * franjas, chips de resumen, sección de transportista/traslado y
+ * sección de origen/destino). Lo único que cambia es lo que hay
+ * debajo: en vez de tarjetas por encomienda, una tabla compacta.
  */
 
 function crearPagina(contexto) {
@@ -397,10 +487,12 @@ function crearPagina(contexto) {
   let y = height - marginTop;
 
   /*
+   * ========================================================
    * LOGO Y EMPRESA
+   * ========================================================
    */
 
-  const logoBoxSize = 34;
+  const logoBoxSize = 40;
 
   if (logoImagen) {
     const escala = Math.min(
@@ -408,11 +500,14 @@ function crearPagina(contexto) {
       logoBoxSize / logoImagen.height
     );
 
+    const logoWidth = logoImagen.width * escala;
+    const logoHeight = logoImagen.height * escala;
+
     page.drawImage(logoImagen, {
       x: marginLeft,
-      y: y - logoImagen.height * escala,
-      width: logoImagen.width * escala,
-      height: logoImagen.height * escala,
+      y: y - logoHeight,
+      width: logoWidth,
+      height: logoHeight,
     });
   }
 
@@ -421,29 +516,40 @@ function crearPagina(contexto) {
   page.drawText(razonSocial || '-', {
     x: xEmpresa,
     y: y - 6,
-    size: 9.5,
+    size: 10.5,
     font: fontNegrita,
     color: PALETTE.ink,
   });
 
-  page.drawText(
-    `RUC ${rucEmpresa || '-'}  ·  ${texto(domicilioFiscal, '-')}`,
-    {
-      x: xEmpresa,
-      y: y - 18,
-      size: 7,
-      font,
-      color: PALETTE.gray600,
-    }
+  page.drawText(`RUC ${rucEmpresa || '-'}`, {
+    x: xEmpresa,
+    y: y - 20,
+    size: 8.5,
+    font: fontNegrita,
+    color: PALETTE.gray600,
+  });
+
+  drawTextWrapped(
+    page,
+    domicilioFiscal || '-',
+    font,
+    7.5,
+    contentWidth - logoBoxSize - 8,
+    xEmpresa,
+    y - 32,
+    9,
+    PALETTE.gray600
   );
 
-  y -= 38;
+  y -= 54;
 
   /*
-   * BANNER DE TÍTULO (compacto, una sola franja)
+   * ========================================================
+   * BANNER DE TÍTULO (dos franjas: principal + acento)
+   * ========================================================
    */
 
-  const bannerHeight = 30;
+  const bannerHeight = 46;
 
   page.drawRectangle({
     x: marginLeft,
@@ -463,104 +569,54 @@ function crearPagina(contexto) {
 
   dibujarTextoCentrado(
     page,
-    'GUÍA DE REMISIÓN ELECTRÓNICA TRANSPORTISTA - RESUMEN',
+    'GUÍA DE REMISIÓN ELECTRÓNICA TRANSPORTISTA',
     fontNegrita,
-    9.5,
+    11.5,
     width,
-    y - 13,
+    y - 16,
     PALETTE.white
   );
 
   dibujarTextoCentrado(
     page,
-    `${serie || '-'}-${numero || '-'}  ·  CARGA CONSOLIDADA`,
+    'CARGA CONSOLIDADA · MODO RESUMEN',
     fontNegrita,
-    8,
+    8.5,
     width,
-    y - 25,
+    y - 29,
     rgb(0.85, 0.90, 1.0)
   );
 
-  y -= bannerHeight + 8;
+  dibujarTextoCentrado(
+    page,
+    `${serie || '-'}-${numero || '-'}`,
+    fontNegrita,
+    13,
+    width,
+    y - 41,
+    PALETTE.white
+  );
+
+  y -= bannerHeight + 12;
 
   /*
-   * FRANJA DE DATOS BÁSICOS SUNAT (una sola línea, 2 columnas)
-   */
-
-  const mitad = contentWidth / 2;
-
-  page.drawRectangle({
-    x: marginLeft,
-    y: y - 30,
-    width: contentWidth,
-    height: 30,
-    color: PALETTE.gray100,
-    borderColor: PALETTE.gray300,
-    borderWidth: 0.5,
-  });
-
-  const placa = texto(guia.vehiculo_placa);
-
-  const conductor = [
-    texto(guia.conductor_nombres),
-    texto(guia.conductor_apellidos),
-  ]
-    .filter(Boolean)
-    .join(' ');
-
-  let yA = dibujarCampoLinea({
-    page,
-    label: 'Placa:',
-    value: placa,
-    x: marginLeft + 6,
-    y: y - 11,
-    font,
-    fontNegrita,
-  });
-
-  dibujarCampoLinea({
-    page,
-    label: 'Conductor:',
-    value: conductor,
-    x: marginLeft + 6,
-    y: y - 23,
-    font,
-    fontNegrita,
-  });
-
-  dibujarCampoLinea({
-    page,
-    label: 'Traslado:',
-    value: formatearFecha(guia.fecha_traslado),
-    x: marginLeft + mitad + 6,
-    y: y - 11,
-    font,
-    fontNegrita,
-  });
-
-  dibujarCampoLinea({
-    page,
-    label: 'Ruta:',
-    value: `${texto(guia.partida_ubigeo, '-')} -> ${texto(guia.llegada_ubigeo, '-')}`,
-    x: marginLeft + mitad + 6,
-    y: y - 23,
-    font,
-    fontNegrita,
-  });
-
-  y -= 38;
-
-  /*
-   * CHIPS DE RESUMEN (fila única, compacta)
+   * ========================================================
+   * CHIPS DE RESUMEN
+   * ========================================================
    */
 
   const chips = [
     { label: 'ENCOMIENDAS', value: String(totalEncomiendas) },
     { label: 'REMITENTES', value: String(cantidadRemitentes) },
-    { label: 'PESO TOTAL', value: `${formatearNumero(guia.peso_total, 2)} KG` },
+    {
+      label: 'PESO TOTAL',
+      value: `${formatearNumero(guia.peso_total, 2)} KG`,
+    },
     {
       label: 'BULTOS',
-      value: String(primero(guia.numero_bultos, totalEncomiendas)),
+      value: String(
+        primero(guia.numero_bultos, totalEncomiendas)
+      ),
     },
   ];
 
@@ -573,114 +629,278 @@ function crearPagina(contexto) {
     fontNegrita,
   });
 
-  y -= 8;
+  y -= 10;
 
   /*
-   * CABECERA DE TABLA
+   * ========================================================
+   * TRANSPORTISTA Y TRASLADO
+   * ========================================================
    */
 
-  const alturaCabeceraTabla = 16;
+  y = dibujarTituloSeccion({
+    page,
+    titulo: 'DATOS DEL TRANSPORTISTA Y DEL TRASLADO',
+    x: marginLeft,
+    y,
+    width: contentWidth,
+    fontNegrita,
+  });
+
+  const mitad = contentWidth / 2;
+
+  let yIzquierda = y;
+  let yDerecha = y;
+
+  const placa = texto(guia.vehiculo_placa);
+
+  const conductor = [
+    texto(guia.conductor_nombres),
+    texto(guia.conductor_apellidos),
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  yIzquierda = dibujarCampo({
+    page,
+    label: 'Placa:',
+    value: placa,
+    x: marginLeft + 4,
+    y: yIzquierda,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yIzquierda = dibujarCampo({
+    page,
+    label: 'Conductor:',
+    value: conductor,
+    x: marginLeft + 4,
+    y: yIzquierda,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yIzquierda = dibujarCampo({
+    page,
+    label: 'DNI:',
+    value: guia.conductor_dni,
+    x: marginLeft + 4,
+    y: yIzquierda,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yIzquierda = dibujarCampo({
+    page,
+    label: 'Licencia:',
+    value: guia.conductor_licencia,
+    x: marginLeft + 4,
+    y: yIzquierda,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  const xDerecha = marginLeft + mitad + 5;
+
+  yDerecha = dibujarCampo({
+    page,
+    label: 'F. emisión:',
+    value: formatearFecha(guia.fecha_emision),
+    x: xDerecha,
+    y: yDerecha,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yDerecha = dibujarCampo({
+    page,
+    label: 'Hora:',
+    value: formatearHora(guia.hora_emision),
+    x: xDerecha,
+    y: yDerecha,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yDerecha = dibujarCampo({
+    page,
+    label: 'F. traslado:',
+    value: formatearFecha(guia.fecha_traslado),
+    x: xDerecha,
+    y: yDerecha,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yDerecha = dibujarCampo({
+    page,
+    label: 'Motivo:',
+    value: primero(guia.guia_motivo_id, '-'),
+    x: xDerecha,
+    y: yDerecha,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  y = Math.min(yIzquierda, yDerecha) - 5;
+
+  /*
+   * ========================================================
+   * ORIGEN Y DESTINO
+   * ========================================================
+   */
+
+  y = dibujarTituloSeccion({
+    page,
+    titulo: 'ORIGEN Y DESTINO',
+    x: marginLeft,
+    y,
+    width: contentWidth,
+    fontNegrita,
+  });
+
+  yIzquierda = y;
+  yDerecha = y;
+
+  yIzquierda = dibujarCampo({
+    page,
+    label: 'Partida:',
+    value: [
+      texto(guia.partida_ubigeo),
+      texto(guia.partida_direccion),
+    ]
+      .filter(Boolean)
+      .join(' - '),
+    x: marginLeft + 4,
+    y: yIzquierda,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  yDerecha = dibujarCampo({
+    page,
+    label: 'Llegada:',
+    value: [
+      texto(guia.llegada_ubigeo),
+      texto(guia.llegada_direccion),
+    ]
+      .filter(Boolean)
+      .join(' - '),
+    x: xDerecha,
+    y: yDerecha,
+    maxWidth: mitad - 10,
+    font,
+    fontNegrita,
+  });
+
+  y = Math.min(yIzquierda, yDerecha) - 6;
+
+  /*
+   * ========================================================
+   * GLOSA (si existe)
+   * ========================================================
+   */
+
+  if (texto(guia.glosa)) {
+    y = dibujarTituloSeccion({
+      page,
+      titulo: 'OBSERVACIÓN',
+      x: marginLeft,
+      y,
+      width: contentWidth,
+      fontNegrita,
+    });
+
+    y = drawTextWrapped(
+      page,
+      guia.glosa,
+      font,
+      7.2,
+      contentWidth - 8,
+      marginLeft + 4,
+      y,
+      9,
+      PALETTE.ink
+    );
+
+    y -= 4;
+  }
+
+  /*
+   * ========================================================
+   * CABECERA DE LA TABLA DE ENCOMIENDAS (cuerpo resumido)
+   * ========================================================
+   */
+
+  y = dibujarTituloSeccion({
+    page,
+    titulo: 'ENCOMIENDAS DE LA CARGA CONSOLIDADA',
+    x: marginLeft,
+    y,
+    width: contentWidth,
+    fontNegrita,
+    oscuro: true,
+  });
+
+  const alturaCabeceraTabla = 15;
 
   page.drawRectangle({
     x: marginLeft,
     y: y - alturaCabeceraTabla,
     width: contentWidth,
     height: alturaCabeceraTabla,
+    color: PALETTE.primarySoft,
+    borderColor: PALETTE.gray300,
+    borderWidth: 0.4,
+  });
+
+  const yCabecera = y - 10.5;
+
+  page.drawText('N°', {
+    x: marginLeft + 6,
+    y: yCabecera,
+    size: 6.6,
+    font: fontNegrita,
     color: PALETTE.primary,
   });
 
-  const colItem = marginLeft + 6;
-  const colDescripcion = marginLeft + 30;
-  const colRemitente = marginLeft + contentWidth * 0.46;
-  const colDestinatario = marginLeft + contentWidth * 0.73;
-
-  const yCabecera = y - 11;
-
-  page.drawText('N°', {
-    x: colItem,
+  page.drawText('CPE', {
+    x: marginLeft + 24,
     y: yCabecera,
-    size: 7,
+    size: 6.6,
     font: fontNegrita,
-    color: PALETTE.white,
+    color: PALETTE.primary,
   });
 
-  page.drawText('DESCRIPCIÓN / REF.', {
-    x: colDescripcion,
+  page.drawText('REMITENTE', {
+    x: marginLeft + contentWidth * 0.32,
     y: yCabecera,
-    size: 7,
+    size: 6.6,
     font: fontNegrita,
-    color: PALETTE.white,
+    color: PALETTE.primary,
   });
 
-  page.drawText('REMITENTE (DNI/RUC)', {
-    x: colRemitente,
+  page.drawText('DESTINATARIO', {
+    x: marginLeft + contentWidth * 0.66,
     y: yCabecera,
-    size: 7,
+    size: 6.6,
     font: fontNegrita,
-    color: PALETTE.white,
-  });
-
-  page.drawText('DESTINATARIO (DNI/RUC)', {
-    x: colDestinatario,
-    y: yCabecera,
-    size: 7,
-    font: fontNegrita,
-    color: PALETTE.white,
+    color: PALETTE.primary,
   });
 
   return {
     page,
-    y: y - alturaCabeceraTabla,
-
-    columnas: {
-      colItem,
-      colDescripcion,
-      colRemitente,
-      colDestinatario,
-    },
+    y: y - alturaCabeceraTabla - 2,
   };
-}
-
-/*
- * ============================================================
- * CAMPO EN UNA SOLA LÍNEA (label + valor, sin wrap)
- * ============================================================
- */
-
-function dibujarCampoLinea({
-  page,
-  label,
-  value,
-  x,
-  y,
-  font,
-  fontNegrita,
-}) {
-  const etiqueta = texto(label);
-  const contenido = texto(value, '-');
-
-  const labelWidth = fontNegrita.widthOfTextAtSize(
-    etiqueta,
-    7.2
-  );
-
-  page.drawText(etiqueta, {
-    x,
-    y,
-    size: 7.2,
-    font: fontNegrita,
-    color: PALETTE.gray600,
-  });
-
-  page.drawText(contenido, {
-    x: x + labelWidth + 3,
-    y,
-    size: 7.2,
-    font,
-    color: PALETTE.ink,
-  });
-
-  return y;
 }
 
 /*
@@ -697,7 +917,7 @@ function dibujarChipsResumen({
   width,
   fontNegrita,
 }) {
-  const chipHeight = 26;
+  const chipHeight = 32;
   const gap = 6;
   const chipWidth =
     (width - gap * (chips.length - 1)) / chips.length;
@@ -712,14 +932,14 @@ function dibujarChipsResumen({
       height: chipHeight,
       color: PALETTE.gray100,
       borderColor: PALETTE.gray300,
-      borderWidth: 0.5,
+      borderWidth: 0.6,
     });
 
     page.drawRectangle({
       x: chipX,
-      y: y - 2,
+      y: y - 3,
       width: chipWidth,
-      height: 2,
+      height: 3,
       color: PALETTE.accent,
     });
 
@@ -727,9 +947,9 @@ function dibujarChipsResumen({
       page,
       chip.label,
       fontNegrita,
-      6,
+      6.4,
       chipWidth,
-      y - 11,
+      y - 13,
       PALETTE.gray600,
       chipX
     );
@@ -738,9 +958,9 @@ function dibujarChipsResumen({
       page,
       chip.value,
       fontNegrita,
-      10,
+      11,
       chipWidth,
-      y - 21,
+      y - 26,
       PALETTE.primary,
       chipX
     );
@@ -751,9 +971,13 @@ function dibujarChipsResumen({
 
 /*
  * ============================================================
- * FILA DE ENCOMIENDA — 2 LÍNEAS, SOLO DATOS BÁSICOS SUNAT
- * (N°, descripción, referencia, remitente doc+nombre,
- *  destinatario doc+nombre — SIN teléfono ni dirección)
+ * FILA DE ENCOMIENDA — CUERPO RESUMIDO, 2 LÍNEAS
+ *
+ * Línea 1: N°  |  CPE (primer elemento)  |  Remitente (número
+ *          de documento + nombre, SIN label "DNI"/"RUC")  |
+ *          Destinatario (ídem)
+ * Línea 2: Descripción de la encomienda, a todo el ancho
+ *          disponible, para evitar cortes de texto.
  * ============================================================
  */
 
@@ -790,35 +1014,32 @@ function dibujarFilaEncomienda({
     color: PALETTE.accent,
   });
 
+  /*
+   * Columnas de la línea 1: N° | CPE | Remitente | Destinatario
+   */
   const colItem = marginLeft + 6;
-  const colDescripcion = marginLeft + 30;
-  const colRemitente = marginLeft + contentWidth * 0.46;
-  const colDestinatario = marginLeft + contentWidth * 0.73;
+  const colCpe = marginLeft + 24;
+  const colRemitente = marginLeft + contentWidth * 0.32;
+  const colDestinatario = marginLeft + contentWidth * 0.66;
 
-  const anchoDescripcion =
-    colRemitente - colDescripcion - 6;
-
-  const anchoRemitente =
-    colDestinatario - colRemitente - 6;
-
+  const anchoCpe = colRemitente - colCpe - 6;
+  const anchoRemitente = colDestinatario - colRemitente - 6;
   const anchoDestinatario =
     marginLeft + contentWidth - colDestinatario - 4;
 
   const item = primero(detalle.item, index + 1);
-  const referencia = referenciaEncomienda(detalle);
+  const cpe = referenciaEncomienda(detalle);
 
-  const docRemitente = textoDocumentoPersona(
-    detalle.cliente_id_doc,
+  const numeroDocRemitente = soloNumeroDocumento(
     detalle.cliente_documento_id
   );
 
-  const docDestinatario = textoDocumentoPersona(
-    detalle.destinatario_id_doc,
+  const numeroDocDestinatario = soloNumeroDocumento(
     detalle.destinatario_documento_id
   );
 
   /*
-   * LÍNEA 1: N° / Descripción / Remitente (documento + nombre) / Destinatario (documento + nombre)
+   * LÍNEA 1
    */
 
   const yLinea1 = top + alturaFila - 10;
@@ -826,30 +1047,25 @@ function dibujarFilaEncomienda({
   page.drawText(String(item), {
     x: colItem,
     y: yLinea1,
-    size: 7.6,
+    size: 7.4,
     font: fontNegrita,
     color: PALETTE.primary,
   });
 
   page.drawText(
-    truncarTexto(
-      texto(detalle.descripcion, 'ENCOMIENDA'),
-      font,
-      7.4,
-      anchoDescripcion
-    ),
+    truncarTexto(cpe, font, 7, anchoCpe),
     {
-      x: colDescripcion,
+      x: colCpe,
       y: yLinea1,
-      size: 7.4,
-      font: fontNegrita,
-      color: PALETTE.ink,
+      size: 7,
+      font,
+      color: PALETTE.gray600,
     }
   );
 
   page.drawText(
     truncarTexto(
-      `${docRemitente}  ${texto(detalle.cliente, '-')}`,
+      `${numeroDocRemitente}  ${texto(detalle.cliente, '-')}`,
       font,
       7.2,
       anchoRemitente
@@ -865,7 +1081,7 @@ function dibujarFilaEncomienda({
 
   page.drawText(
     truncarTexto(
-      `${docDestinatario}  ${texto(detalle.destinatario, '-')}`,
+      `${numeroDocDestinatario}  ${texto(detalle.destinatario, '-')}`,
       font,
       7.2,
       anchoDestinatario
@@ -880,20 +1096,126 @@ function dibujarFilaEncomienda({
   );
 
   /*
-   * LÍNEA 2: Referencia de la encomienda (r_cod-r_serie-r_numero)
+   * LÍNEA 2 — descripción a todo lo ancho, para minimizar cortes
    */
 
   const yLinea2 = top + alturaFila - 20;
 
-  page.drawText(`Ref: ${referencia}`, {
-    x: colDescripcion,
-    y: yLinea2,
-    size: 6.4,
-    font,
+  const anchoDescripcion = contentWidth - 12;
+
+  page.drawText(
+    truncarTexto(
+      texto(detalle.descripcion, 'ENCOMIENDA'),
+      font,
+      7,
+      anchoDescripcion
+    ),
+    {
+      x: colCpe,
+      y: yLinea2,
+      size: 7,
+      font: fontNegrita,
+      color: PALETTE.ink,
+    }
+  );
+
+  return top - 3;
+}
+
+/*
+ * ============================================================
+ * CAMPO GENERAL (label + valor con wrap, para secciones de cabecera)
+ * ============================================================
+ */
+
+function dibujarCampo({
+  page,
+  label,
+  value,
+
+  x,
+  y,
+  maxWidth,
+
+  font,
+  fontNegrita,
+}) {
+  const etiqueta = texto(label);
+  const contenido = texto(value, '-');
+
+  const labelWidth = fontNegrita.widthOfTextAtSize(
+    etiqueta,
+    7.2
+  );
+
+  page.drawText(etiqueta, {
+    x,
+    y,
+    size: 7.2,
+    font: fontNegrita,
     color: PALETTE.gray600,
   });
 
-  return top - 3;
+  return drawTextWrapped(
+    page,
+    contenido,
+    font,
+    7.2,
+    Math.max(30, maxWidth - labelWidth - 3),
+    x + labelWidth + 3,
+    y,
+    8,
+    PALETTE.ink
+  );
+}
+
+/*
+ * ============================================================
+ * TÍTULO DE SECCIÓN (barra con acento a la izquierda)
+ * ============================================================
+ */
+
+function dibujarTituloSeccion({
+  page,
+  titulo,
+
+  x,
+  y,
+  width,
+
+  fontNegrita,
+
+  oscuro = false,
+}) {
+  const alto = 16;
+
+  page.drawRectangle({
+    x,
+    y: y - alto,
+    width,
+    height: alto,
+    color: oscuro ? PALETTE.primary : PALETTE.primarySoft,
+    borderColor: PALETTE.primary,
+    borderWidth: 0.5,
+  });
+
+  page.drawRectangle({
+    x,
+    y: y - alto,
+    width: 3,
+    height: alto,
+    color: PALETTE.accent,
+  });
+
+  page.drawText(titulo, {
+    x: x + 9,
+    y: y - 11.5,
+    size: 8,
+    font: fontNegrita,
+    color: oscuro ? PALETTE.white : PALETTE.ink,
+  });
+
+  return y - 25;
 }
 
 /*
@@ -1093,6 +1415,80 @@ function dibujarTextoCentrado(
     font,
     color,
   });
+}
+
+/*
+ * ============================================================
+ * ENVOLVER TEXTO
+ * ============================================================
+ */
+
+function envolverTexto(text, maxWidth, fontSize, font) {
+  const contenido = texto(text, '-');
+  const words = contenido.split(/\s+/);
+  const lines = [];
+
+  let currentLine = '';
+
+  words.forEach((word) => {
+    const testLine = currentLine
+      ? `${currentLine} ${word}`
+      : word;
+
+    const ancho = font.widthOfTextAtSize(
+      testLine,
+      fontSize
+    );
+
+    if (ancho <= maxWidth) {
+      currentLine = testLine;
+      return;
+    }
+
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    currentLine = word;
+  });
+
+  if (currentLine) {
+    lines.push(currentLine);
+  }
+
+  return lines;
+}
+
+/*
+ * ============================================================
+ * DIBUJAR TEXTO CON WRAP
+ * ============================================================
+ */
+
+function drawTextWrapped(
+  page,
+  text,
+  font,
+  fontSize,
+  maxWidth,
+  x,
+  y,
+  lineHeight = 9,
+  color = rgb(0, 0, 0)
+) {
+  const lines = envolverTexto(text, maxWidth, fontSize, font);
+
+  lines.forEach((line, index) => {
+    page.drawText(line, {
+      x,
+      y: y - index * lineHeight,
+      size: fontSize,
+      font,
+      color,
+    });
+  });
+
+  return y - lines.length * lineHeight;
 }
 
 module.exports = gremgenerapdfa4resumen;

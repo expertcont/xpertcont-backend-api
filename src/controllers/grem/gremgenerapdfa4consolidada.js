@@ -8,6 +8,114 @@ const QRCode = require('qrcode');
 
 /*
  * ============================================================
+ * PAYLOAD DISPONIBLE (sJson)
+ * ============================================================
+ *
+ * Esta es la forma exacta que entrega generarPayloadGremTransporte().
+ * Deja este bloque como referencia rápida: si quieres mostrar un
+ * campo que hoy no se dibuja, solo búscalo aquí y agrégalo donde
+ * corresponda (tarjeta de encomienda, sección de traslado, etc).
+ *
+ * sJson = {
+ *   rubro: 'TRANS_GREM',
+ *
+ *   empresa: {
+ *     documento_id,     // RUC transportista            [USADO - cabecera]
+ *     razon_social,     //                               [USADO - cabecera]
+ *     direccion,        //                               [USADO - cabecera]
+ *     id_ubigeo,        //                               [DISPONIBLE - no se dibuja]
+ *   },
+ *
+ *   guia: {
+ *     cod,                      // '31' = GRE Transportista   [USADO - título/QR]
+ *     serie,                    //                             [USADO - título]
+ *     numero,                   //                             [USADO - título]
+ *     fecha_emision,            //                             [USADO - "F. emisión:"]
+ *     hora_emision,             //                             [USADO - "Hora:"]
+ *     fecha_traslado,           //                             [USADO - "F. traslado:"]
+ *
+ *     guia_motivo_id,           // catálogo 20 SUNAT           [USADO - "Motivo:"]
+ *     guia_modalidad_id,        // catálogo 18 SUNAT           [DISPONIBLE - no se dibuja]
+ *
+ *     partida_ubigeo,           //                             [USADO - "Partida:"]
+ *     partida_direccion,        //                             [USADO - "Partida:"]
+ *     llegada_ubigeo,           //                             [USADO - "Llegada:"]
+ *     llegada_direccion,        //                             [USADO - "Llegada:"]
+ *
+ *     peso_total,               //                             [USADO - chip "PESO TOTAL"]
+ *     numero_bultos,             //                             [USADO - chip "BULTOS"]
+ *
+ *     conductor_dni,            //                             [USADO - "DNI:"]
+ *     conductor_nombres,        //                             [USADO - "Conductor:"]
+ *     conductor_apellidos,      //                             [USADO - "Conductor:"]
+ *     conductor_licencia,       //                             [USADO - "Licencia:"]
+ *
+ *     vehiculo_placa,           //                             [USADO - "Placa:"]
+ *
+ *     glosa,                    // observación libre           [USADO - sección "OBSERVACIÓN" (si existe)]
+ *
+ *     cantidad_remitentes,      // calculado en el controller  [USADO - chip "REMITENTES"]
+ *     resumen_mas_20_remitentes,// bandera >20 remitentes      [DISPONIBLE - útil para leyenda/aviso]
+ *   },
+ *
+ *   detalles: [
+ *     {
+ *       item,                       // N° correlativo             [USADO]
+ *
+ *       // Referencia a mve_transventa (identifica la encomienda)
+ *       r_periodo,                  //                             [DISPONIBLE]
+ *       r_cod,                      //                             [USADO - "Ref:"]
+ *       r_serie,                    //                             [USADO - "Ref:"]
+ *       r_numero,                   //                             [USADO - "Ref:"]
+ *       elemento,                   //                             [DISPONIBLE]
+ *       r_fecemi,                   // fecha emisión venta         [DISPONIBLE]
+ *
+ *       // Documento de referencia
+ *       r_cod_ref,                  //                             [DISPONIBLE]
+ *       r_serie_ref,                //                             [DISPONIBLE]
+ *       r_numero_ref,               //                             [DISPONIBLE]
+ *       r_fecemi_ref,               //                             [DISPONIBLE]
+ *
+ *       // Remitente
+ *       cliente_id_doc,             // tipo doc (1=DNI, 6=RUC...)  [USADO]
+ *       cliente_documento_id,       // número de documento         [USADO]
+ *       cliente,                    // nombre / razón social       [USADO]
+ *       cliente_telefono,           //                             [USADO - solo si existe]
+ *       cliente_direccion,          //                             [USADO]
+ *
+ *       id_ruta,                    //                             [DISPONIBLE]
+ *       descripcion,                // descripción del bien        [USADO]
+ *
+ *       id_punto_venta,             // agencia origen               [DISPONIBLE]
+ *       id_punto_venta_dest,        // agencia destino               [DISPONIBLE]
+ *
+ *       placa,                      // placa asociada a la venta   [DISPONIBLE - guia.vehiculo_placa manda]
+ *       licencia,                   //                             [DISPONIBLE - guia.conductor_licencia manda]
+ *
+ *       // Destinatario
+ *       destinatario_id_doc,        //                             [USADO]
+ *       destinatario_documento_id,  //                             [USADO]
+ *       destinatario,               //                             [USADO]
+ *       destinatario_telefono,      //                             [USADO - solo si existe]
+ *       destinatario_direccion,     //                             [USADO]
+ *
+ *       precio_neto,                //                             [DISPONIBLE - no se dibuja, es dato comercial]
+ *       r_monto_total,              //                             [DISPONIBLE - no se dibuja, es dato comercial]
+ *     },
+ *     // ... un objeto por cada encomienda seleccionada
+ *   ],
+ * }
+ *
+ * Otros parámetros de la función:
+ *   logo          Buffer|Uint8Array PNG/JPG del logo de la empresa (opcional)
+ *   digestvalue   string: hash/DigestValue de la firma XML de SUNAT.
+ *                 Si aún no existe (documento sin firmar todavía),
+ *                 se genera un QR temporal con RUC|cod|serie|numero.
+ * ============================================================
+ */
+
+/*
+ * ============================================================
  * PALETA / TOKENS DE DISEÑO
  * ============================================================
  *

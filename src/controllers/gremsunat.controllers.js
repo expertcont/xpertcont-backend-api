@@ -1,4 +1,13 @@
-const gremgeneraxml = require('./grem/gremgeneraxml');
+// Este controller SIEMPRE emite GREM en modo carga consolidada.
+// El flujo clásico (un remitente por guía) vive en otro controller
+// y usa su propio gremgeneraxml.js; aquí no se importa.
+//
+// dataGrem = req.body, que YA viene con los nombres que este
+// generador necesita (ruc, domicilio_fiscal, items) porque
+// generarPayloadGremTransporte() los agrega como alias junto a los
+// nombres que usa el PDF (documento_id, direccion, detalles). No
+// hace falta ningún paso de adaptación aquí.
+const gremresumengeneraxml = require('./grem/gremresumengeneraxml');
 const gremgenerapdf = require('./grem/gremgenerapdf');
 const gremgenerapdfa4 = require('./grem/gremgenerapdfa4');
 const gremgenerapdfa4consolidada = require('./grem/gremgenerapdfa4consolidada');
@@ -577,7 +586,9 @@ const generarTicketGremSunat = async (
   const tokenData =
     await obtenerTokenSunatGrem(ruc);
 
-  let xml = await gremgeneraxml(dataGrem);
+  // Modo carga consolidada siempre. dataGrem ya trae ruc/domicilio_fiscal/items
+  // gracias a los alias agregados en generarPayloadGremTransporte().
+  let xml = await gremresumengeneraxml(dataGrem);
   xml = canonicalizarManual(xml);
 
   const { rows } = await pool.query(

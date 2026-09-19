@@ -24,6 +24,14 @@ function dato(item, ...keys) {
   return '';
 }
 
+// Escape mínimo para texto que NO va envuelto en CDATA.
+function escaparXml(v) {
+  return texto(v)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
 function propiedad(nombre, valor) {
   if (!texto(valor)) return '';
   return `<cac:AdditionalItemProperty>
@@ -80,13 +88,13 @@ function gremresumengeneradet(items = []) {
         </cac:OrderLineReference>
         <cac:Item>
             <cbc:Description><![CDATA[${descripcion}]]></cbc:Description>
+            <cac:SellersItemIdentification>
+                <cbc:ID>${escaparXml(codigo)}</cbc:ID>
+            </cac:SellersItemIdentification>
             ${propiedad('REMITENTE', remitenteTexto)}
             ${propiedad('DESTINATARIO', destinatarioTexto)}
             ${propiedad('FLETE', flete)}
             ${propiedad('DOCUMENTO_REFERENCIA', referencia)}
-            <cac:SellersItemIdentification>
-                <cbc:ID>${codigo}</cbc:ID>
-            </cac:SellersItemIdentification>
         </cac:Item>
     </cac:DespatchLine>`;
   }).join('');

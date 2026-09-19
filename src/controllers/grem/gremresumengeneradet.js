@@ -40,6 +40,7 @@ function propiedad(nombre, valor) {
                 </cac:AdditionalItemProperty>`;
 }
 
+//cambios en el orden nomas
 function gremresumengeneradet(items = []) {
   if (!Array.isArray(items) || !items.length) {
     throw new Error('GREM resumen: no existen items para generar el detalle');

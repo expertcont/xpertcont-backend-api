@@ -19,6 +19,7 @@ const MUTED = rgb(0.34, 0.35, 0.37);
 const LINE = rgb(0.7, 0.71, 0.73);
 const LIGHT_LINE = rgb(0.82, 0.83, 0.85);
 const SOFT = rgb(0.94, 0.945, 0.955);
+const HIGHLIGHT = rgb(1, 0.965, 0.84);
 const ALERT = rgb(0.82, 0.12, 0.12);
 const ICON_MUTED = rgb(0.48, 0.5, 0.53);
 const WHITE = rgb(1, 1, 1);
@@ -239,6 +240,7 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   const unit = `${clean(encomienda.placa)} ${clean(encomienda.licencia)}`.trim() || '-';
   const payment = clean(encomienda.condicion_pago || venta.forma_pago_id || 'PAGADO').toUpperCase();
   const paymentLabel = payment.includes('COBRAR') ? 'POR PAGAR' : payment;
+  const arrivalApprox = timePe(encomienda.llegada_aprox || venta.llegada_aprox || jsonTicket.llegada_aprox);
   const content = encomienda.descripcion || jsonTicket.items?.[0]?.producto || 'SERVICIO DE TRANSPORTE DE ENCOMIENDA';
   const originOptionalLineHeight = 6.6;
   const senderZoneLines = senderOriginZone ? wrap(senderOriginZone, regular, 7.1, CW - 65, 2) : [];
@@ -419,6 +421,10 @@ const generarPdfTicketEncomiendaV2 = async (logo, jsonTicket) => {
   centeredIn(page, 'TOTAL', W - M - 7 - 67, summaryY(164), 67, 8, regular);
   centeredIn(page, 'S/', W - M - 7 - 67, summaryY(149), 67, 9.8, regular);
   right(page, money(total), summaryY(127), 21, bold, INK, W - M - 7, 67);
+
+  box(page, M, summaryY(95), CW, 15, HIGHLIGHT, LINE, 0.55);
+  text(page, 'LLEGADA APROX.', M + 8, summaryY(99.6), 8.2, semibold, MUTED, 72);
+  right(page, arrivalApprox, summaryY(98.5), 13.8, bold, INK, W - M - 8, 82);
 
   text(page, 'TERMINOS Y CONDICIONES', M, summaryY(88), 6.5, regular);
   wrap('Conserva este ticket para seguimiento y entrega. No se aceptan reclamos por articulos no declarados o embalaje inadecuado.', regular, 6.1, 138, 3)

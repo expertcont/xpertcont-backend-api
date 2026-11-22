@@ -70,7 +70,7 @@ test('pendiente antiguo conserva motivo original desconocido',async()=>{
 });
 async function consultarSoap(soap) {
   const updates=[];
-  const service=cargar('controllers/cpesunatgetcdr.controllers.js',{
+  const service=cargar('controllers/cpesunatgetcdrtransporte.controllers.js',{
     '../db':{query:async()=>({rows:[{secundario_user:'usuario',secundario_passwd:'clave'}]})},
     './cpe/cpeuploader':{subirArchivoDesdeMemoria:async()=>{}},
     '../services/cdrseguimiento.services':{obtenerPendiente:async()=>({codigo_hash:'hash-pendiente'}),registrarResultado:async(d,r)=>updates.push(r)}

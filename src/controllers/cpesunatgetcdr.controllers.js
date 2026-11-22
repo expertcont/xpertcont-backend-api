@@ -7,116 +7,50 @@ const pool = require('../db');
  * Endpoint para consultar el estado y CDR de un comprobante en SUNAT
  * Ruta sugerida: POST /api/consultar-cdr
  */
+const seguimiento = require('../services/cdrseguimiento.services');
 const procesarCDRPendienteSunat = async (req, res, next) => {
   try {
-    const dataConsulta = req.body;
-    // Esperamos: { ruc_emisor, ruc, codigo, serie, numero }
-
-    const { ruc:ruc_emisor } = dataConsulta.empresa;
-    const { documento_identidad:ruc } = dataConsulta.cliente;
-    const { codigo, serie, numero } = dataConsulta.venta;
-
-    //const { ruc:ruc_emisor, documento_identidad:ruc, codigo, serie, numero } = dataConsulta;
-
-    console.log('🔍 Consultando CDR:', ruc_emisor,ruc, codigo, serie, numero);
-
-    // 01. Consulta previa datos necesarios: usuario secundario
-    const { rows } = await pool.query(`
-      SELECT secundario_user, secundario_passwd
-      FROM api_usuariocertificado 
-      WHERE documento_id = $1
-    `, [ruc_emisor]);
-
-    if (rows.length === 0) {
-      return res.status(404).json({
-        estado: false,
-        mensaje: 'RUC no encontrado en la base de datos'
-      });
-    }
-
-    const { secundario_user, secundario_passwd } = rows[0];
-
-    // 02. URL de consulta
-    const url_consulta = 'https://e-factura.sunat.gob.pe/ol-it-wsconscpegem/billConsultService';
-
-    // 03. Construir SOAP para getStatusCdr
-    const contenidoSOAP = construirSOAPConsultaCdr(
-      ruc_emisor,
-      codigo,
-      serie,
-      numero,
-      secundario_user,
-      secundario_passwd
-    );
-
-    // 04. Enviar SOAP y recepcionar respuesta SUNAT
-    const respuestaSoap = await enviarSOAPSunat(contenidoSOAP, url_consulta);
-    //console.log('📩 Respuesta recibida de SUNAT (getStatusCdr)');
-
-    // 04. Procesar respuesta SUNAT
-    const resultadoSunat = await procesarRespuestaConsultaCdr(respuestaSoap, dataConsulta);
-
-    // 05. Construir rutas de archivos
-    const server_sftp = process.env.CPE_HOST;
-    const ruta_xml = `http://${server_sftp}:8080/descargas/${ruc_emisor}/${ruc}-${codigo}-${serie}-${numero}.xml`;
-    const ruta_cdr = `http://${server_sftp}:8080/descargas/${ruc_emisor}/R-${ruc}-${codigo}-${serie}-${numero}.xml`;
-    const ruta_pdf = `http://${server_sftp}:8080/descargas/${ruc_emisor}/${ruc}-${codigo}-${serie}-${numero}.pdf`;
-
-    // 06. Enviar respuesta HTTP según resultado
-    console.log('resultadoSunat', resultadoSunat);
-    const descripcionCorta = (resultadoSunat.descripcion || '').substring(0, 80);
-
-    if (resultadoSunat.estado && resultadoSunat.tieneCdr) {
-
-      await pool.query(`
-        DELETE FROM api_cdrpendiente
-        WHERE documento_id = $1 AND codigo = $2 AND serie = $3 AND numero = $4
-      `, [
-        ruc_emisor,
-        codigo,
-        serie,
-        numero
-      ]);
-      
-      //Nota: codigo_hash=null, en backend cliente, no debe actualizarlo simplemente en caso null
-      res.status(200).json({
-        estado: true,
-        cdr_pendiente: '0',
-        respuesta_sunat_descripcion: resultadoSunat.descripcion,
-        ruta_xml: ruta_xml,
-        ruta_cdr: ruta_cdr,
-        ruta_pdf: ruta_pdf,
-        status_code: resultadoSunat.statusCode,
-        mensaje: 'CDR Recuperado de Producción'
-      });
-    } else if (resultadoSunat.estado && !resultadoSunat.tieneCdr) {
-      res.status(200).json({
-        estado: true,
-        cdr_pendiente: '1',
-        respuesta_sunat_descripcion: resultadoSunat.descripcion,
-        ruta_xml: ruta_xml,
-        ruta_cdr: ruta_cdr,
-        ruta_pdf: ruta_pdf,
-        status_code: resultadoSunat.statusCode,
-        mensaje: 'Comprobante encontrado pero sin CDR disponible'
-      });
-    } else {
-      res.status(400).json({
-        estado: false,
-        cdr_pendiente: '1',
-        respuesta_sunat_descripcion: 'Error SUNAT: ' + descripcionCorta,
-        ruta_xml: ruta_xml,
-        ruta_cdr: ruta_cdr,
-        ruta_pdf: ruta_pdf,
-        detalle_sunat: resultadoSunat.detalleSunat,
-        codigo: resultadoSunat.codigo,
-        mensaje: 'No se pudo recuperar el CDR'
-      });
-    }
-
-  } catch (error) {
-    console.error('❌ Error en consultarCDRSunat:', error);
-    next(error);
+    const data = req.body;
+    const ruc = data.empresa.ruc;
+    const { codigo, serie, numero } = data.venta;
+    const pendiente = await seguimiento.obtenerPendiente(data);
+    const { rows } = await pool.query(
+      'SELECT secundario_user, secundario_passwd FROM api_usuariocertificado WHERE documento_id=$1', [ruc]);
+    if (!rows.length) return res.status(404).json({ estado:false, codigo:'SIN_RUC',
+      nivel:'PENDIENTE',cdr_pendiente:'1',mensaje_usuario:'RUC no encontrado en la API.' });
+    const soap = construirSOAPConsultaCdr(ruc,codigo,serie,numero,rows[0].secundario_user,rows[0].secundario_passwd);
+    const respuesta = await enviarSOAPSunat(soap,'https://e-factura.sunat.gob.pe/ol-it-wsconscpegem/billConsultService');
+    const resultado = await procesarRespuestaConsultaCdr(respuesta,data);
+    const codigoResultado = resultado.codigo ?? resultado.statusCode ?? 'CONSULTA';
+    const tieneCdr = resultado.tieneCdr === true;
+    const aceptado = tieneCdr && resultado.codigo === '0';
+    // Solo este resultado de consulta permite ofrecer reenvio; no un error de red o credenciales.
+    const puedeReenviar = !tieneCdr && resultado.statusCode === '0127';
+    await seguimiento.registrarResultado(data, { codigo:codigoResultado,
+      mensaje:resultado.detalleSunat || resultado.descripcion,
+      resuelto:tieneCdr, resolucion:tieneCdr ? 'CDR_RECUPERADO' : null });
+    const baseUrl = 'http://' + process.env.CPE_HOST + ':8080/descargas/' + ruc;
+    const archivo = ruc + '-' + codigo + '-' + serie + '-' + numero;
+    return res.status(tieneCdr || resultado.estado ? 200 : 400).json({
+      estado:aceptado,
+      nivel:tieneCdr ? (aceptado ? 'ACEPTADO' : 'RECHAZADO') : 'PENDIENTE',
+      codigo:codigoResultado, status_code:resultado.statusCode,
+      cdr_pendiente:tieneCdr ? '0' : '1', pendiente_detectado:!tieneCdr,
+      puede_reenviar:puedeReenviar, consumioCorrelativo:tieneCdr,
+      permiteReintento:!tieneCdr,
+      titulo_usuario:tieneCdr ? (aceptado ? 'Comprobante aceptado' : 'Comprobante rechazado') : 'Envío por confirmar',
+      mensaje_usuario:tieneCdr ? resultado.descripcion : puedeReenviar
+        ? 'SUNAT no encontró el comprobante en esta consulta. Puede reintentar el envío del mismo comprobante.'
+        : 'No se pudo completar la operación. Consulte el estado nuevamente. ' + (resultado.descripcion || ''),
+      respuesta_sunat_descripcion:resultado.descripcion,
+      detalle_sunat:resultado.detalleSunat,
+      ruta_xml:baseUrl + '/' + archivo + '.xml', ruta_cdr:baseUrl + '/R-' + archivo + '.xml',
+      ruta_pdf:baseUrl + '/' + archivo + '.pdf', codigo_hash:aceptado ? pendiente?.codigo_hash || null : null
+    });
+  } catch(error) {
+    try { await seguimiento.registrarResultado(req.body,{codigo:'CONSULTA',mensaje:error.message}); }
+    catch(registroError) { console.error('Error guardando consulta CDR:',registroError.message); }
+    return next(error);
   }
 };
 
@@ -243,15 +177,8 @@ async function procesarRespuestaConsultaCdr(soapResponse, dataConsulta) {
     const rawBuffer = entry.getData();
     const contenidoCDR = rawBuffer.toString('utf8');
 
-    // 🔹 Subir CDR con prefijo R- (versión asíncrona desconectada)
-    (async () => {
-      try {
-        await subirArchivoDesdeMemoria(ruc_emisor, codigo, serie, numero, contenidoCDR, 'R');
-        console.log('✅ CDR almacenado correctamente.');
-      } catch (error) {
-        console.error('❌ Error al almacenar CDR:', error);
-      }
-    })();
+    // Guardar el CDR antes de dar la consulta por resuelta.
+    await subirArchivoDesdeMemoria(ruc_emisor, codigo, serie, numero, contenidoCDR, 'R');
 
     // Extraer cbc:Description del CDR
     const descDoc = new DOMParser().parseFromString(contenidoCDR, 'text/xml');
@@ -261,8 +188,12 @@ async function procesarRespuestaConsultaCdr(soapResponse, dataConsulta) {
     const descNode = descSelect('//*[local-name()="Description"]', descDoc)[0];
     const descripcionCDR = descNode ? descNode.textContent.trim() : statusMessage;
 
+    const codeNode = descSelect('//*[local-name()="ResponseCode"]', descDoc)[0];
+    const codigoCDR = codeNode?.textContent.trim();
+    if (!codigoCDR || !/^\d+$/.test(codigoCDR)) throw new Error('CDR sin código de respuesta válido.');
     return {
-      estado: true,
+      estado: codigoCDR === '0',
+      codigo: codigoCDR,
       descripcion: descripcionCDR,
       statusCode: statusCode,
       statusMessage: statusMessage,

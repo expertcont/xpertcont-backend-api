@@ -22,6 +22,8 @@ const AdmZip = require('adm-zip');
 const fetch = require('node-fetch');
 const cpegenerarxmlnota = require('./cpe/cpegeneraxmlnota');
 
+const seguimiento = require('../services/cdrseguimiento.services');
+const { resolverPendiente, serializarComprobante } = require('../services/cdrflujo.services');
 const { esErrorCDRPendiente } = require('../services/cdrvalidapendiente.services');
 const { procesarCDRPendienteSunat } = require('../controllers/cpesunatgetcdr.controllers');
 require('dotenv').config();
@@ -103,18 +105,7 @@ const registrarCPESunat = async (req,res,next)=> {
         const { ruc } = dataVenta.empresa;
         const { codigo, serie, numero } = dataVenta.venta;
         
-        // 🟡 PRIMER PASO: verificar si existe en tabla de pendientes
-        const yaPendiente = await existeCDRPendiente({ 
-            ruc, 
-            codigo, 
-            serie, 
-            numero 
-        });
-        if (yaPendiente) {
-            console.log(`📌 CPE pendiente detectado ${ruc}-${codigo}-${serie}-${numero}`);
-            return procesarCDRPendienteSunat(req,res,next);
-        }
-        
+        if (await resolverPendiente(req, res, next, procesarCDRPendienteSunat)) return;
         //Flujo normal
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
@@ -206,7 +197,7 @@ const registrarCPESunat = async (req,res,next)=> {
         })();
 
         // Encapsulación final:
-        return responderSunat(res, resultadoSunat, dataVenta, sDigestInicial);
+        return await responderSunat(res, resultadoSunat, dataVenta, sDigestInicial);
         
     }catch(error){
         console.log(error);
@@ -215,7 +206,7 @@ const registrarCPESunat = async (req,res,next)=> {
     }
 };
 
-function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
+async function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
 
     const server_sftp = process.env.CPE_HOST;
     const ruta_xml = `http://${server_sftp}:8080/descargas/${dataVenta.empresa.ruc}/${dataVenta.empresa.ruc}-${dataVenta.venta.codigo}-${dataVenta.venta.serie}-${dataVenta.venta.numero}.xml`;
@@ -229,6 +220,12 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
     //---------------------------------------------------------
     // CDR ACEPTADO
     //---------------------------------------------------------
+    await seguimiento.registrarResultado(dataVenta, {
+        codigo: resultadoSunat.codigo, mensaje: descripcion, accion: 'ENVIO',
+        resuelto: ['ACEPTADO', 'RECHAZADO'].includes(resultadoSunat.nivel),
+        resolucion: resultadoSunat.nivel === 'ACEPTADO' ? 'REENVIO_ACEPTADO' :
+            resultadoSunat.nivel === 'RECHAZADO' ? 'REENVIO_RECHAZADO' : null
+    });
     if (resultadoSunat.nivel === "ACEPTADO") {
 
         return res.status(200).json({
@@ -281,12 +278,7 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
         );
 
         if (pendiente.esPendiente) {
-            registrarCdrPendienteDB({
-                documento_id: dataVenta.empresa.ruc,
-                codigo: dataVenta.venta.codigo,
-                serie: dataVenta.venta.serie,
-                numero: dataVenta.venta.numero
-            }).catch(err => console.error(err));
+            await seguimiento.guardarPendiente(dataVenta, resultadoSunat.codigo, resultadoSunat.detalleSunat || descripcion, sDigestInicial);
 
             return res.status(200).json({
                 estado: true,
@@ -300,7 +292,9 @@ function responderSunat(res, resultadoSunat, dataVenta, sDigestInicial) {
                 ruta_cdr,
                 ruta_pdf,
                 codigo_hash: sDigestInicial,
-                mensaje: "SUNAT aún no devuelve el CDR"
+                titulo_usuario: "Envío por confirmar",
+                mensaje_usuario: "No pudimos confirmar el resultado del envío. Consulte el estado para completar la operación.",
+                mensaje: "Envío por confirmar"
             });
         }
 
@@ -913,48 +907,6 @@ async function generarPDFTicketEncomiendaV2(req, res) {
   }
 }
 
-const existeCDRPendiente = async ({ruc, codigo, serie, numero}) =>{
-  try{
-    const strSQL = `
-      SELECT 1
-      FROM api_cdrpendiente
-      WHERE documento_id = $1
-      AND codigo   = $2
-      AND serie    = $3
-      AND numero   = $4
-    `;
-    //console.log(strSQL,[ruc,documento_identidad, codigo,serie,numero]);
-
-    const result = await pool.query(strSQL,[ruc, codigo,serie,numero]);
-    return result.rowCount > 0;
-  } catch (error){
-    console.error('Error en existeCDRPendiente:', error);
-    return false;
-  }
-};
-
-const registrarCdrPendienteDB = async ({documento_id, codigo, serie, numero}) => {
-  try {
-      const strSQL = `
-          INSERT INTO api_cdrpendiente
-          (documento_id, codigo, serie, numero, ctrl_crea)
-          VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-          RETURNING *
-      `;
-      const result = await pool.query(strSQL, [documento_id, codigo, serie, numero]);
-
-      // Validar si se insertó al menos una fila
-      if (result.rowCount > 0) {
-          return true;
-      } else {
-          return false;
-      }
-  } catch (error) {
-      console.error('Error al registrar tabla api_cdrpendiente:', error); // para depuración
-      return false;
-  }
-};
-
 //
 // 🔹 Endpoint para ticket 80mm
 //
@@ -978,7 +930,7 @@ const registrarCPETicketEncomiendaPDFV2 = async (req, res, next) => {
 };
 
 module.exports = {
-    registrarCPESunat,
+    registrarCPESunat: serializarComprobante(registrarCPESunat),
     registrarCPESunatPrevioPDF,
     registrarCPESunatPrevioPDFA4,
     registrarCPETicketEncomiendaPDF,

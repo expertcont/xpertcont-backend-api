@@ -102,9 +102,11 @@ const LAYOUT = {
   // gapAbove separa el QR del texto anterior.
   qr: {
     size: 111,
-    minBottom: 6,
+    minBottom: 23,
     preferredY: 96,
     gapAbove: 8,
+    emailGap: 9,
+    emailSize: 6.8,
   },
 };
 
@@ -337,6 +339,12 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
   const receiverDoc = encomienda.destinatario_documento || encomienda.destinatario_documento_id || '-';
   const receiverArrivalZone = clean(encomienda.destinatario_zona);
   const receiverAddress = clean(encomienda.destinatario_direccion);
+  const registeredByEmail = clean(
+    encomienda.registrado_por_correo ||
+    encomienda.ctrl_crea_us ||
+    jsonTicket.ticket?.registrado_por_correo ||
+    ''
+  );
   const originOptionalLineHeight = 6.6;
   const senderZoneLines = senderOriginZone ? wrap(senderOriginZone, regular, 7.1, CW - 65, 2) : [];
   const senderPickupAddressLines = senderPickupAddress ? wrap(senderPickupAddress, regular, 7.1, CW - 65, 2) : [];
@@ -459,6 +467,9 @@ const generarPdfTicketEncomienda = async (logo, jsonTicket) => {
     Math.min(LAYOUT.qr.preferredY, cursorY - LAYOUT.qr.gapAbove - LAYOUT.qr.size)
   );
   page.drawImage(qrImage, { x: (W - LAYOUT.qr.size) / 2, y: qrY, width: LAYOUT.qr.size, height: LAYOUT.qr.size });
+  if (registeredByEmail) {
+    centered(page, `Registrado por: ${registeredByEmail}`, qrY - LAYOUT.qr.emailGap, LAYOUT.qr.emailSize, regular, MUTED);
+  }
 
   const pdfBytes = await pdfDoc.save();
   return { estado: true, buffer_pdf: pdfBytes };

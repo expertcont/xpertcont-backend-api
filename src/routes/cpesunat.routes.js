@@ -4,8 +4,6 @@ const {registrarCPESunat, registrarCPESunatPrevioPDF, registrarCPESunatPrevioPDF
 const {registrarCPEResumenSunat, consultarCPEResumenSunat} = require('../controllers/cpesunatresumen.controllers')
 
 router.post('/cpesunat', registrarCPESunat);
-// El seguimiento ampliado solo corresponde al flujo de transporte.
-router.post('/cpesunat/transporte', require('../controllers/cpesunattransporte.controllers').registrarCPESunat);
 router.post('/cpesunatresumen', registrarCPEResumenSunat);
 router.post('/cpesunatresumen/ticket', consultarCPEResumenSunat);
 router.post('/cpesunatpdfprevio', registrarCPESunatPrevioPDF);

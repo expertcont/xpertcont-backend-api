@@ -102,25 +102,25 @@ const registrarCPESunat = async (req,res,next)=> {
         //Desestructuramos valores escenciales, verificacion inicial de cdr_pendiente
         const { ruc } = dataVenta.empresa;
         const { codigo, serie, numero } = dataVenta.venta;
-
+        
         // 🟡 PRIMER PASO: verificar si existe en tabla de pendientes
-        const yaPendiente = await existeCDRPendiente({
-            ruc,
-            codigo,
-            serie,
-            numero
+        const yaPendiente = await existeCDRPendiente({ 
+            ruc, 
+            codigo, 
+            serie, 
+            numero 
         });
         if (yaPendiente) {
             console.log(`📌 CPE pendiente detectado ${ruc}-${codigo}-${serie}-${numero}`);
             return procesarCDRPendienteSunat(req,res,next);
         }
-
+        
         //Flujo normal
         //00. Consulta previa datos necesarios para procesos posteriores: certificado,password, usuario secundario, url
         const { rows } = await pool.query(`
           SELECT certificado, password, secundario_user,secundario_passwd, url_envio, logo
                 ,cert_externo,cert_username,cert_password,cert_url
-          FROM api_usuariocertificado
+          FROM api_usuariocertificado 
           WHERE documento_id = $1
         `, [dataVenta.empresa.ruc]);
         //Aqui lo estamos cargando datos sensibles  ... fijos en API
@@ -129,7 +129,7 @@ const registrarCPESunat = async (req,res,next)=> {
         //01. Genera XML desde el servicio y canonicalizo el resultado
         let xmlComprobante;
         if (dataVenta.venta.codigo === '07'){
-            xmlComprobante = await cpegenerarxmlnota(dataVenta);
+            xmlComprobante = await cpegenerarxmlnota(dataVenta);  
         }else{
             xmlComprobante = await cpegeneraxml(dataVenta);
         }
@@ -154,7 +154,7 @@ const registrarCPESunat = async (req,res,next)=> {
             xmlContent: xmlComprobante,
           });
           console.log(resultFirma.xmlFirmado);
-
+          
           xmlComprobanteFirmado = resultFirma.xmlFirmado;
           sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
 
@@ -168,7 +168,7 @@ const registrarCPESunat = async (req,res,next)=> {
           }
           xmlComprobanteFirmado = await signerManual.getSignedXML();
           sDigestInicial = obtenerDigestValue(xmlComprobanteFirmado);
-        }
+        }        
 
         //me guardo una copia del xmlFirmado en servidor ubuntu
         //03. Guardar xml firmado en Server Ubuntu, version asyncrono(desconectado)
@@ -187,15 +187,15 @@ const registrarCPESunat = async (req,res,next)=> {
             console.error('Error al almacenar XML:', error);
           }
         })();
-
+        
         //04. Construir SOAP
         let contenidoSOAP = await empaquetarYGenerarSOAP(dataVenta.empresa.ruc,dataVenta.venta.codigo,dataVenta.venta.serie,dataVenta.venta.numero,xmlComprobanteFirmado,secundario_user,secundario_passwd);
-
+        
         //05. Enviar SOAP y recepcionar respuesta SUNAT
         //console.log('requestSoap: ', contenidoSOAP);
         const respuestaSoap = await enviarSOAPSunat(contenidoSOAP,url_envio,dataVenta.empresa.modo);
         //console.log('📩 Respuesta recibida de SUNAT:', respuestaSoap);
-
+        
         // 06. Procesar respuesta SUNAT
         const resultadoSunat = await procesarRespuestaSunat(respuestaSoap, dataVenta);
 
@@ -207,7 +207,7 @@ const registrarCPESunat = async (req,res,next)=> {
 
         // Encapsulación final:
         return responderSunat(res, resultadoSunat, dataVenta, sDigestInicial);
-
+        
     }catch(error){
         console.log(error);
         //res.json({error:error.message});
@@ -766,11 +766,11 @@ async function generarPDFPrevioSunat(req, res, formatoPDF) {
     }
 
     const { logo: logoBuffer } = rows[0];
-
+    
     //(null o valor)esto llega en json, en solicitud renovar pdf o pdf libre
     //const sDigestInicial = dataVenta.venta.r_vfirmado;
     const sDigestInicial = dataVenta?.venta?.r_vfirmado ?? "";
-
+    
     // 2️⃣ Generar PDF esperando respuesta)
     await procesarPDFCPE(formatoPDF, logoBuffer, dataVenta, sDigestInicial);
 
@@ -983,4 +983,4 @@ module.exports = {
     registrarCPESunatPrevioPDFA4,
     registrarCPETicketEncomiendaPDF,
     registrarCPETicketEncomiendaPDFV2
- };
+ }; 

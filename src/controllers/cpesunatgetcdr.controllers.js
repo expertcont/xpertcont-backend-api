@@ -23,7 +23,7 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
     // 01. Consulta previa datos necesarios: usuario secundario
     const { rows } = await pool.query(`
       SELECT secundario_user, secundario_passwd
-      FROM api_usuariocertificado
+      FROM api_usuariocertificado 
       WHERE documento_id = $1
     `, [ruc_emisor]);
 
@@ -77,7 +77,7 @@ const procesarCDRPendienteSunat = async (req, res, next) => {
         serie,
         numero
       ]);
-
+      
       //Nota: codigo_hash=null, en backend cliente, no debe actualizarlo simplemente en caso null
       res.status(200).json({
         estado: true,
@@ -128,7 +128,7 @@ function construirSOAPConsultaCdr(ruc_emisor, codigo, serie, numero, usuarioSol,
   const username = `${ruc_emisor}${usuarioSol}`;
 
   const soapXml = `<?xml version="1.0" encoding="UTF-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" 
                   xmlns:ser="http://service.sunat.gob.pe"
                   xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd">
   <soapenv:Header>
@@ -158,7 +158,7 @@ function construirSOAPConsultaCdr(ruc_emisor, codigo, serie, numero, usuarioSol,
  */
 async function procesarRespuestaConsultaCdr(soapResponse, dataConsulta) {
   try {
-    //Para procesar,
+    //Para procesar, 
     const { ruc:ruc_emisor } = dataConsulta.empresa;
     const { codigo, serie, numero } = dataConsulta.venta;
 
@@ -292,13 +292,13 @@ async function enviarSOAPSunat(soapXml,urlEnvio) {
       });
       const respuestaTexto = await response.text();
       return respuestaTexto;
-
+  
     } catch (error) {
       console.log('❌ Error al enviar SOAP:', error);
       throw error;
     }
   }
-
+  
 // Exportar función principal
 module.exports = {
   procesarCDRPendienteSunat
